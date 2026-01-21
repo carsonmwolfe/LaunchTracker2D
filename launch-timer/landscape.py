@@ -61,490 +61,592 @@ def draw_stars(canvas):
 def draw_pixel_grass(canvas):
     """Draw pixel grass details on the ground."""
     random.seed(123)
-    grass_colors = ['#4a7c2a', '#6a9c4a', '#5a8c3a']
+    grass_colors = ['#4a7c2a', '#6a9c4a', '#5a8c3a', '#3a6c1a']
     
-    for i in range(100):
+    # Draw grass blades throughout the grassy area
+    for i in range(400):  # Increased from 100 to 400 for better coverage
         x = random.randint(0, 800)
-        y = random.randint(368, 387)
+        y = random.randint(368, 495)  # Cover the whole grass area
         color = random.choice(grass_colors)
-        if random.choice([True, False]):
-            canvas.create_rectangle(x, y, x+2, y+4, fill=color, outline='')
+        
+        # Mix of different grass styles
+        style = random.randint(1, 4)
+        if style == 1:
+            # Single vertical blade
+            canvas.create_line(x, y, x, y-3, fill=color, width=1)
+        elif style == 2:
+            # Small tuft
+            canvas.create_rectangle(x, y, x+2, y+3, fill=color, outline='')
+        elif style == 3:
+            # Tiny dot
+            canvas.create_rectangle(x, y, x+1, y+1, fill=color, outline='')
         else:
-            canvas.create_line(x, y, x, y+3, fill=color, width=1)
+            # Angled blade
+            canvas.create_line(x, y, x+1, y-3, fill=color, width=1)
 
 
+def draw_roads(canvas):
+    """Draw simple road system with parking and pavement areas."""
+    road_color = '#3a3a3a'
+    line_color = '#6a6a3a'
+    pavement_color = '#5a5a5a'
+    
+    # Main horizontal road - moved down to avoid launch pad
+    road_y = 420  # Changed from 370 to 420
+    road_height = 18
+    
+    # Single straight road across the entire screen
+    canvas.create_rectangle(
+        0, road_y, 800, road_y + road_height,
+        fill=road_color, outline='', tags='road'
+    )
+    
+    # Road edges
+    canvas.create_rectangle(
+        0, road_y, 800, road_y + 2,
+        fill='#5a5a5a', outline='', tags='road'
+    )
+    canvas.create_rectangle(
+        0, road_y + road_height - 2, 800, road_y + road_height,
+        fill='#5a5a5a', outline='', tags='road'
+    )
+    
+    # Center dashed yellow line
+    for x in range(0, 800, 20):
+        canvas.create_rectangle(
+            x, road_y + road_height // 2 - 1,
+            x + 10, road_y + road_height // 2 + 1,
+            fill=line_color, outline='', tags='road'
+        )
+    
+    # === PARKING AND PAVEMENT AREAS UNDER BUILDINGS ===
+    
+    # VAB parking area - large paved area
+    vab_pavement_x = 50
+    vab_pavement_y = 350
+    vab_pavement_w = 160
+    vab_pavement_h = 65
+    canvas.create_rectangle(
+        vab_pavement_x, vab_pavement_y,
+        vab_pavement_x + vab_pavement_w, vab_pavement_y + vab_pavement_h,
+        fill=pavement_color, outline='', tags='pavement'
+    )
+    
+    # Parking spaces on VAB pavement
+    parking_color = '#4a4a4a'
+    for i in range(6):
+        px = vab_pavement_x + 10 + (i * 25)
+        py = vab_pavement_y + 10
+        # Parking space
+        canvas.create_rectangle(
+            px, py, px + 20, py + 35,
+            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+        )
+    
+    # Hangar parking area
+    hangar_pavement_x = 235
+    hangar_pavement_y = 350
+    hangar_pavement_w = 100
+    hangar_pavement_h = 65
+    canvas.create_rectangle(
+        hangar_pavement_x, hangar_pavement_y,
+        hangar_pavement_x + hangar_pavement_w, hangar_pavement_y + hangar_pavement_h,
+        fill=pavement_color, outline='', tags='pavement'
+    )
+    
+    # Parking spaces on Hangar pavement
+    for i in range(3):
+        px = hangar_pavement_x + 10 + (i * 28)
+        py = hangar_pavement_y + 10
+        canvas.create_rectangle(
+            px, py, px + 20, py + 35,
+            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+        )
+    
+    # LCC parking area
+    lcc_pavement_x = 320
+    lcc_pavement_y = 350
+    lcc_pavement_w = 90
+    lcc_pavement_h = 65
+    canvas.create_rectangle(
+        lcc_pavement_x, lcc_pavement_y,
+        lcc_pavement_x + lcc_pavement_w, lcc_pavement_y + lcc_pavement_h,
+        fill=pavement_color, outline='', tags='pavement'
+    )
+    
+    # Parking spaces on LCC pavement
+    for i in range(3):
+        px = lcc_pavement_x + 8 + (i * 28)
+        py = lcc_pavement_y + 10
+        canvas.create_rectangle(
+            px, py, px + 20, py + 35,
+            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+        )
 
-#!/usr/bin/env python3
-"""
-VAB building - exact replica of the reference image.
-"""
+
+def draw_back_fence(canvas):
+    """Draw the top fence that goes behind the launch pad."""
+    fence_color = '#8a8a8a'
+    post_color = '#6a6a6a'
+    
+    fence_left = 520  # Updated to match new left fence position
+    fence_right = 720
+    fence_top = 340
+    
+    # Top fence (Horizontal) - drawn behind launch pad
+    for x in range(fence_left, fence_right, 20):
+        # Fence post
+        canvas.create_rectangle(
+            x, fence_top, x + 3, fence_top + 18,
+            fill=post_color, outline='', tags='fence_back'
+        )
+        # Horizontal rails connecting posts
+        if x + 20 < fence_right:
+            canvas.create_rectangle(
+                x + 3, fence_top + 4, x + 20, fence_top + 6,
+                fill=fence_color, outline='', tags='fence_back'
+            )
+            canvas.create_rectangle(
+                x + 3, fence_top + 12, x + 20, fence_top + 14,
+                fill=fence_color, outline='', tags='fence_back'
+            )
+
+
+def draw_security_fence_and_shack(canvas):
+    """Draw security fence surrounding launch pad (left, right, bottom sides) and guard shack."""
+    fence_color = '#8a8a8a'
+    post_color = '#6a6a6a'
+    
+    # Define launch pad security perimeter
+    fence_left = 520
+    fence_right = 720
+    fence_top = 340
+    fence_bottom = 440  # Not on road (road is at 420)
+    
+    # === LEFT SIDE FENCE (Vertical) ===
+    for y in range(fence_top, fence_bottom+3, 20):
+        # Fence post
+        canvas.create_rectangle(
+            fence_left, y, fence_left + 3, y + 18,
+            fill=post_color, outline='', tags='fence'
+        )
+        # Horizontal rails
+        canvas.create_rectangle(
+            fence_left, y + 4, fence_left + 3, y + 6,
+            fill=fence_color, outline='', tags='fence'
+        )
+        canvas.create_rectangle(
+            fence_left, y + 12, fence_left + 3, y + 14,
+            fill=fence_color, outline='', tags='fence'
+        )
+    
+    # === RIGHT SIDE FENCE (Vertical) ===
+    for y in range(fence_top, fence_bottom, 20):
+        # Fence post
+        canvas.create_rectangle(
+            fence_right, y, fence_right + 3, y + 18,
+            fill=post_color, outline='', tags='fence'
+        )
+        # Horizontal rails
+        canvas.create_rectangle(
+            fence_right, y + 4, fence_right + 3, y + 6,
+            fill=fence_color, outline='', tags='fence'
+        )
+        canvas.create_rectangle(
+            fence_right, y + 12, fence_right + 3, y + 14,
+            fill=fence_color, outline='', tags='fence'
+        )
+    
+    # === BOTTOM FENCE (Horizontal) ===
+    for x in range(fence_left, fence_right+10, 20):
+        # Fence post
+        canvas.create_rectangle(
+            x, fence_bottom, x + 3, fence_bottom + 18,
+            fill=post_color, outline='', tags='fence'
+        )
+        # Horizontal rails connecting posts
+        if x + 30 < fence_right:
+            canvas.create_rectangle(
+                x + 3, fence_bottom + 4, x + 20, fence_bottom + 6,
+                fill=fence_color, outline='', tags='fence'
+            )
+            canvas.create_rectangle(
+                x + 3, fence_bottom + 12, x + 20, fence_bottom + 14,
+                fill=fence_color, outline='', tags='fence'
+            )
+    
+    # === GUARD SHACK closer to road ===
+    shack_x = 525
+    shack_y = 395  # Much closer to road (road is at 420)
+    shack_w = 20
+    shack_h = 25
+    
+    # Shack body
+    canvas.create_rectangle(
+        shack_x, shack_y, shack_x + shack_w, shack_y + shack_h,
+        fill='#d8d8d8', outline='#3a3a3a', width=2, tags='fence'
+    )
+    
+    # Shack roof
+    canvas.create_polygon(
+        shack_x - 2, shack_y,
+        shack_x + shack_w // 2, shack_y - 8,
+        shack_x + shack_w + 2, shack_y,
+        fill='#8a4a4a', outline='#3a3a3a', tags='fence'
+    )
+    
+    # Window
+    canvas.create_rectangle(
+        shack_x + 4, shack_y + 5, shack_x + 10, shack_y + 12,
+        fill='#5a7a9a', outline='#3a3a3a', tags='fence'
+    )
+    
+    # Door
+    canvas.create_rectangle(
+        shack_x + 12, shack_y + 10, shack_x + 18, shack_y + shack_h,
+        fill='#5a4a3a', outline='#3a3a3a', tags='fence'
+    )
 
 def draw_vab_building(canvas):
-    """Draw the Vehicle Assembly Building exactly matching the reference."""
+    """Draw the Vehicle Assembly Building matching the reference image."""
     vab_x = 60
     vab_y = 200
     main_width = 140
     main_height = 150
     
-    # === BACKGROUND ELEMENTS FIRST ===
-    
-    # Far right gray panels (background depth)
+    # === BACKGROUND/DEPTH ELEMENTS (right side stepped panels) ===
+    # Far right dark gray stepped panels for 3D depth effect
     canvas.create_rectangle(
         vab_x + main_width, vab_y + 10,
         vab_x + main_width + 25, vab_y + main_height,
-        fill="#7a7e84", outline=""
+        fill="#5a5e64", outline=""
     )
     canvas.create_rectangle(
-        vab_x + main_width + 25, vab_y + 15,
+        vab_x + main_width + 25, vab_y + 20,
         vab_x + main_width + 40, vab_y + main_height,
-        fill="#5a5e64", outline=""
+        fill="#4a4a4a", outline=""
     )
     
-    # === MAIN BUILDING BODY ===
+    # === MAIN BUILDING BODY (cream/beige color) ===
     canvas.create_rectangle(
         vab_x, vab_y,
         vab_x + main_width, vab_y + main_height,
-        fill="#f0ebe3", outline=""
+        fill="#e8dfd0", outline="#000000", width=2
     )
     
-    # Black outline around main building
+    # === TOP ROOF SECTION (dark gray) ===
     canvas.create_rectangle(
         vab_x, vab_y,
-        vab_x + main_width, vab_y + main_height,
-        fill="", outline="#000000", width=2
+        vab_x + main_width, vab_y + 10,
+        fill="#4a4e54", outline=""
     )
     
-    # === TOP ROOF SECTION ===
-    canvas.create_rectangle(
-        vab_x, vab_y,
-        vab_x + main_width, vab_y + 12,
-        fill="#3a3e44", outline=""
-    )
+    # Roof equipment (small structures on top)
+    canvas.create_rectangle(vab_x + 25, vab_y - 8, vab_x + 33, vab_y, 
+                          fill="#3a3a3a", outline="#000000", width=1)
+    canvas.create_rectangle(vab_x + 90, vab_y - 8, vab_x + 98, vab_y, 
+                          fill="#3a3a3a", outline="#000000", width=1)
     
-    # Roof equipment
-    canvas.create_rectangle(vab_x + 25, vab_y - 8, vab_x + 33, vab_y, fill="#5a4e44", outline="")
-    canvas.create_rectangle(vab_x + 50, vab_y - 6, vab_x + 57, vab_y, fill="#4a4a4a", outline="")
-    canvas.create_rectangle(vab_x + 100, vab_y - 8, vab_x + 108, vab_y, fill="#4a4a4a", outline="")
+    # === CENTER DARK GRAY TOWER SECTION ===
+    center_x = vab_x + 48
+    center_width = 48
+    tower_top = vab_y + 15
     
-    # === CENTER TOWER SECTION (DARK GRAY) ===
-    center_x = vab_x + 50
-    center_width = 44
-    tower_top = vab_y + 25
+    # Tower body (no outline)
     canvas.create_rectangle(
         center_x, tower_top,
         center_x + center_width, vab_y + main_height,
         fill="#5a5e64", outline=""
     )
     
-    # White border around center tower
-    canvas.create_rectangle(
+    # White outline - top only
+    canvas.create_line(
         center_x, tower_top,
-        center_x + center_width, vab_y + main_height,
-        fill="", outline="#ffffff", width=2
+        center_x + center_width, tower_top,
+        fill="#ffffff", width=2
     )
     
-    # === MAIN DOOR INSIDE CENTER TOWER ===
-    door_x = center_x + 8
-    door_y = tower_top + 15
+    # White outline - left side
+    canvas.create_line(
+        center_x, tower_top,
+        center_x, vab_y + main_height,
+        fill="#ffffff", width=2
+    )
+    
+    # White outline - right side
+    canvas.create_line(
+        center_x + center_width, tower_top,
+        center_x + center_width, vab_y + main_height,
+        fill="#ffffff", width=2
+    )
+    
+    # === MAIN DOOR INSIDE CENTER TOWER (extended to ground) ===
+    door_x = center_x + 10
+    door_y = tower_top + 20
     door_w = 28
-    door_h = 88
+    door_h = (vab_y + main_height) - door_y - 2  # Stop 2 pixels before bottom to account for building border
     
+    # Door frame (black border)
+    canvas.create_rectangle(
+        door_x - 2, door_y - 2,
+        door_x + door_w + 2, door_y + door_h + 2,
+        fill="#000000", outline=""
+    )
+    
+    # Door background (lighter gray)
     canvas.create_rectangle(
         door_x, door_y,
         door_x + door_w, door_y + door_h,
-        fill="#e0e0e0", outline=""
+        fill="#b0b0b0", outline=""
     )
     
-    # Door horizontal lines
-    for i in range(16):
-        line_y = door_y + 3 + i * 5
-        if line_y < door_y + door_h - 2:
+    # Door horizontal stripes (darker gray) - more stripes to fill the height
+    stripe_count = int(door_h / 5.5)
+    for i in range(stripe_count):
+        stripe_y = door_y + 2 + i * 5.5
+        if stripe_y < door_y + door_h - 2:
             canvas.create_rectangle(
-                door_x + 2, line_y,
-                door_x + door_w - 2, line_y + 2,
-                fill="#9a9ea4", outline=""
+                door_x + 2, stripe_y,
+                door_x + door_w - 2, stripe_y + 2,
+                fill="#707070", outline=""
             )
     
-    # === LOWER PROTRUDING SECTION ===
-    lower_section_y = vab_y + 95
-    lower_section_h = 45
-    lower_section_x = center_x - 8
-    lower_section_w = center_width + 16
+    # === AMERICAN FLAG (left side, vertical orientation) ===
+    flag_x = vab_x + 10
+    flag_y = vab_y + 30
+    flag_w = 32  
+    flag_h = 55
     
-    # Main protruding box (white with border)
-    canvas.create_rectangle(
-        lower_section_x, lower_section_y,
-        lower_section_x + lower_section_w, lower_section_y + lower_section_h,
-        fill="#f0ebe3", outline="#000000", width=2
-    )
-    
-    # Door inside lower section
-    lower_door_x = lower_section_x + 10
-    lower_door_w = 28
-    canvas.create_rectangle(
-        lower_door_x, lower_section_y + 8,
-        lower_door_x + lower_door_w, lower_section_y + lower_section_h - 3,
-        fill="#e0e0e0", outline=""
-    )
-    
-    # Lower door horizontal lines
-    for i in range(6):
-        line_y = lower_section_y + 10 + i * 5
-        canvas.create_rectangle(
-            lower_door_x + 2, line_y,
-            lower_door_x + lower_door_w - 2, line_y + 2,
-            fill="#9a9ea4", outline=""
-        )
-    
-    # Gray side panels on lower section
-    canvas.create_rectangle(
-        lower_section_x + lower_section_w, lower_section_y + 5,
-        lower_section_x + lower_section_w + 12, lower_section_y + lower_section_h,
-        fill="#7a7e84", outline=""
-    )
-    
-    # === AMERICAN FLAG (HORIZONTAL) ===
-    flag_x = vab_x + 12
-    flag_y = vab_y + 28
-    flag_w = 50  # Wider
-    flag_h = 70  # Taller
-    
-    # Horizontal stripes - 13 total (7 red, 6 white)
-    stripe_h = flag_h / 13
+    # Vertical red stripes - 13 total (7 red, 6 white)
+    stripe_w = flag_w / 13
     for i in range(13):
         if i % 2 == 0:  # Red stripes
             canvas.create_rectangle(
-                flag_x, flag_y + i * stripe_h,
-                flag_x + flag_w, flag_y + (i + 1) * stripe_h,
+                flag_x + i * stripe_w, flag_y,
+                flag_x + (i + 1) * stripe_w, flag_y + flag_h,
                 fill="#b22234", outline=""
             )
         else:  # White stripes
             canvas.create_rectangle(
-                flag_x, flag_y + i * stripe_h,
-                flag_x + flag_w, flag_y + (i + 1) * stripe_h,
+                flag_x + i * stripe_w, flag_y,
+                flag_x + (i + 1) * stripe_w, flag_y + flag_h,
                 fill="#ffffff", outline=""
             )
     
     # Blue canton - top left, covers first 7 stripes
-    canton_h = flag_h * (7/13)
-    canton_w = flag_w * 0.4
+    canton_w = flag_w * (7/13)
+    canton_h = flag_h * 0.54
     canvas.create_rectangle(
         flag_x, flag_y,
         flag_x + canton_w, flag_y + canton_h,
         fill="#3c3b6e", outline=""
     )
     
-    # Plus stars (6 rows x 5 cols)
-    for row in range(6):
-        for col in range(5):
-            star_x = flag_x + 2 + col * 3.5
-            star_y = flag_y + 2 + row * 4.5
+    # Plus stars in canton (arranged in grid: 5 rows x 4 cols)
+    star_rows = 5
+    star_cols = 4
+    star_spacing_x = canton_w / (star_cols + 1)
+    star_spacing_y = canton_h / (star_rows + 1)
+    
+    for row in range(star_rows):
+        for col in range(star_cols):
+            star_x = flag_x + (col + 1) * star_spacing_x
+            star_y = flag_y + (row + 1) * star_spacing_y
             # Vertical bar
             canvas.create_rectangle(
-                star_x + 0.5, star_y,
-                star_x + 1.5, star_y + 3,
+                star_x - 0.5, star_y - 1.5,
+                star_x + 0.5, star_y + 1.5,
                 fill="#ffffff", outline=""
             )
             # Horizontal bar
             canvas.create_rectangle(
-                star_x, star_y + 1,
-                star_x + 2, star_y + 2,
+                star_x - 1.5, star_y - 0.5,
+                star_x + 1.5, star_y + 0.5,
                 fill="#ffffff", outline=""
             )
-    
-    # === NASA LOGO ===
-    nasa_x = vab_x + 100
-    nasa_y = vab_y + 42
-    logo_size = 55
-    
-    # Blue circle
-    canvas.create_oval(
-        nasa_x, nasa_y,
-        nasa_x + logo_size, nasa_y + logo_size,
-        fill="#1f4ea8", outline=""
-    )
-    
-    # White "NASA" text - larger
-    canvas.create_text(
-        nasa_x + logo_size / 2, nasa_y + logo_size / 2 - 4,
-        text="NASA",
-        fill="#ffffff",
-        font=("Arial", 13, "bold"),
-        anchor="center"
-    )
-    
-    # White orbital ring
-    canvas.create_arc(
-        nasa_x + 5, nasa_y + 10,
-        nasa_x + logo_size - 5, nasa_y + logo_size - 10,
-        start=200, extent=160,
-        outline="#ffffff", width=3, style="arc"
-    )
-    
-    # Red chevron - more prominent
-    cx = nasa_x + logo_size / 2
-    cy = nasa_y + logo_size / 2
-    canvas.create_polygon(
-        cx - 11, cy + 6,
-        cx - 3, cy - 10,
-        cx + 11, cy + 6,
-        cx + 3, cy + 15,
-        fill="#d83b3b", outline=""
-    )
-    
-    # White stars on logo - more visible
-    star_positions = [
-        (12, 16), (logo_size - 16, logo_size - 20),
-        (20, logo_size - 12), (logo_size - 12, 18),
-        (logo_size / 2 - 4, 8), (logo_size / 2 + 4, logo_size - 8)
-    ]
-    for star_pos in star_positions:
-        canvas.create_oval(
-            nasa_x + star_pos[0], nasa_y + star_pos[1],
-            nasa_x + star_pos[0] + 3, nasa_y + star_pos[1] + 3,
-            fill="#ffffff", outline=""
-        )
-    
-    # === LOWER SECTION DETAILS ===
-    
-    # Three tall doors at bottom - better proportioned
-    door_bottom_y = vab_y + main_height
-    door_height = 38
-    door_width = 14
-    door_spacing = 16
-    
-    # Left door
-    canvas.create_rectangle(
-        vab_x + 8, door_bottom_y - door_height,
-        vab_x + 8 + door_width, door_bottom_y,
-        fill="#3a4a54", outline="#2a3a44", width=2
-    )
-    
-    # Center door (darker)
-    canvas.create_rectangle(
-        center_x - 1, door_bottom_y - door_height,
-        center_x - 1 + door_width, door_bottom_y,
-        fill="#2a3a44", outline="#1a2a34", width=2
-    )
-    
-    # Right door
-    canvas.create_rectangle(
-        center_x + 28, door_bottom_y - door_height,
-        center_x + 28 + door_width, door_bottom_y,
-        fill="#3a4a54", outline="#2a3a44", width=2
-    )
-    
-    # Small blue windows bottom left
-    window_y = vab_y + main_height - 8
-    for i in range(3):
-        canvas.create_rectangle(
-            vab_x + 10 + i * 14, window_y,
-            vab_x + 16 + i * 14, window_y + 6,
-            fill="#4a6a8a", outline="#3a5a7a"
-        )
-    
-    # Small blue windows bottom right
-    for i in range(4):
-        canvas.create_rectangle(
-            vab_x + 108 + i * 8, window_y,
-            vab_x + 114 + i * 8, window_y + 6,
-            fill="#4a6a8a", outline="#3a5a7a"
-        )
-def draw_secondary_building(canvas):
-    """Draw the Launch Control Center building (left building in reference)."""
-    # Position to right of VAB
-    lcc_x = 320
-    lcc_y = 265
-    lcc_width = 50
-    lcc_height = 85
-    
-    # Main building body - cream/tan color
-    canvas.create_rectangle(lcc_x, lcc_y, lcc_x+lcc_width, lcc_y+lcc_height, 
-                           fill='#e8dcc8', outline='')
-    
-    # Top dark section with NASA logo - dark gray
-    top_height = 28
-    canvas.create_rectangle(lcc_x, lcc_y, lcc_x+lcc_width, lcc_y+top_height, 
-                           fill='#5a5a5a', outline='')
-    
-    # NASA meatball logo in top section - centered
-    logo_x = lcc_x + lcc_width/2 - 12
-    logo_y = lcc_y + 6
-    logo_size = 24
-    
-    # Blue circle
-    canvas.create_oval(logo_x, logo_y, logo_x+logo_size, logo_y+logo_size, 
-                      fill='#1e3a8a', outline='')
-    
-    # Red chevron
-    center_x = logo_x + logo_size/2
-    center_y = logo_y + logo_size/2
-    canvas.create_polygon(
-        center_x-5, center_y,
-        center_x, center_y-5,
-        center_x+5, center_y,
-        center_x, center_y+5,
-        fill='#dc2626', outline=''
-    )
-    
-    # White orbital arc
-    canvas.create_arc(logo_x+2, logo_y+4, logo_x+logo_size-2, logo_y+logo_size-4, 
-                     start=200, extent=140, outline='#ffffff', width=2, style='arc')
-    
-    # White stars on logo
-    canvas.create_oval(logo_x+4, logo_y+7, logo_x+7, logo_y+10, fill='#ffffff', outline='')
-    canvas.create_oval(logo_x+logo_size-7, logo_y+logo_size-10, logo_x+logo_size-4, logo_y+logo_size-7, 
-                      fill='#ffffff', outline='')
-    
-    # Upper section windows - two rows of blue windows
-    window_start_y = lcc_y + top_height + 5
-    for row in range(2):
-        for col in range(4):
-            win_x = lcc_x + 6 + col*11
-            win_y = window_start_y + row*8
-            canvas.create_rectangle(win_x, win_y, win_x+7, win_y+6, 
-                                   fill='#4a6a8a', outline='#3a5a7a')
-    
-    # Middle section - multiple rows of blue windows
-    middle_start_y = lcc_y + top_height + 25
-    for row in range(3):
-        for col in range(4):
-            win_x = lcc_x + 6 + col*11
-            win_y = middle_start_y + row*12
-            canvas.create_rectangle(win_x, win_y, win_x+7, win_y+8, 
-                                   fill='#4a6a8a', outline='#3a5a7a')
-    
-    # Bottom white/light section
-    bottom_y = lcc_y + lcc_height - 12
-    canvas.create_rectangle(lcc_x, bottom_y, lcc_x+lcc_width, lcc_y+lcc_height, 
-                           fill='#d8d8d8', outline='')
-    
-    # Bottom blue windows - single row
-    for i in range(6):
-        canvas.create_rectangle(lcc_x + 4 + i*7, bottom_y+3, 
-                               lcc_x + 8 + i*7, bottom_y+8, 
-                               fill='#4a6a8a', outline='#3a5a7a')
-    
-    # Dark right side panel for 3D depth
-    canvas.create_rectangle(lcc_x+lcc_width, lcc_y+5, lcc_x+lcc_width+12, lcc_y+lcc_height, 
-                           fill='#5a5a5a', outline='')
-    
-    # Darker far right edge
-    canvas.create_rectangle(lcc_x+lcc_width+12, lcc_y+8, lcc_x+lcc_width+18, lcc_y+lcc_height, 
-                           fill='#3a3a3a', outline='')
 
+
+def draw_secondary_building(canvas):
+    """Draw an OPF-style hangar building matching the reference."""
+    # Position moved right, away from VAB, and decreased height
+    hangar_x = 250
+    hangar_y = 290
+    hangar_width = 70
+    hangar_height = 60
+    
+    # More rounded roof using arc - properly positioned to attach to building
+    roof_height = 20
+    canvas.create_arc(
+        hangar_x - 5, hangar_y - roof_height,
+        hangar_x + hangar_width + 5, hangar_y + 5,
+        start=0, extent=180,
+        fill='#5a5e64', outline='#3a3a3a', width=2, style='chord'
+    )
+    
+    # Main building body - cream/white color
+    canvas.create_rectangle(
+        hangar_x, hangar_y, 
+        hangar_x + hangar_width, hangar_y + hangar_height,
+        fill='#e8e8e8', outline='#3a3a3a', width=2
+    )
+    
+    # Small blue windows on right side
+    for i in range(2):
+        canvas.create_rectangle(
+            hangar_x + hangar_width - 12, hangar_y + 8 + i * 10,
+            hangar_x + hangar_width - 6, hangar_y + 13 + i * 10,
+            fill='#4a6a8a', outline='#3a5a7a'
+        )
+    
+    # Horizontal line separator
+    canvas.create_line(
+        hangar_x + 5, hangar_y + 18,
+        hangar_x + hangar_width - 5, hangar_y + 18,
+        fill='#5a7a9a', width=2
+    )
+    
+    # Large hangar door - dark blue
+    door_x = hangar_x + 10
+    door_y = hangar_y + 22
+    door_w = 50
+    door_h = hangar_height - 24
+    
+    # Door opening (dark blue interior)
+    canvas.create_rectangle(
+        door_x, door_y,
+        door_x + door_w, door_y + door_h,
+        fill='#1a3a5a', outline='#2a2a2a', width=2
+    )
+    
+    # Darker inner door section
+    canvas.create_rectangle(
+        door_x + 5, door_y + 3,
+        door_x + door_w - 5, door_y + door_h - 3,
+        fill='#0a2a4a', outline=''
+    )
+    
+    # Side windows next to door
+    # Left windows
+    canvas.create_rectangle(
+        hangar_x + 5, door_y + 3,
+        hangar_x + 9, door_y + 9,
+        fill='#4a6a8a', outline='#3a5a7a'
+    )
 
 def draw_operations_building(canvas):
-    """Draw the OPF (Orbiter Processing Facility) building (right building in reference)."""
-    # Position closer to the secondary building
-    opf_x = 400
-    opf_y = 260
-    opf_width = 100
-    opf_height = 90
+    """Draw the Launch Control Center (LCC) from Kennedy Space Center."""
+    # Position closer to hangar (moved left)
+    lcc_x = 330
+    lcc_y = 240
+    lcc_width = 80
+    lcc_height = 110
     
-    # Main building body - cream/tan
-    canvas.create_rectangle(opf_x, opf_y, opf_x+opf_width, opf_y+opf_height, 
-                           fill='#e8dcc8', outline='')
-    
-    # Stepped/curved roofline - multiple dark sections at different heights
-    roof_sections = [
-        (opf_x+8, 5, 18),
-        (opf_x+28, 7, 18),
-        (opf_x+48, 6, 18),
-        (opf_x+68, 4, 15),
-    ]
-    
-    for x_pos, height, width in roof_sections:
-        canvas.create_rectangle(x_pos, opf_y-height, x_pos+width, opf_y, 
-                               fill='#4a4a4a', outline='')
-    
-    # Top section with OPF text and NASA logo
-    top_section_height = 35
-    
-    # "OPF" text - blue letters
-    canvas.create_text(opf_x + 20, opf_y + 18, 
-                      text="O P F", fill='#2a4a8a', 
-                      font=('Courier', 11, 'bold'), anchor='w')
-    
-    # NASA logo - top right
-    logo_x = opf_x + opf_width - 32
-    logo_y = opf_y + 10
-    logo_size = 24
-    
-    # Blue circle
-    canvas.create_oval(logo_x, logo_y, logo_x+logo_size, logo_y+logo_size, 
-                      fill='#1e3a8a', outline='')
-    
-    # Red chevron
-    center_x = logo_x + logo_size/2
-    center_y = logo_y + logo_size/2
-    canvas.create_polygon(
-        center_x-5, center_y,
-        center_x, center_y-5,
-        center_x+5, center_y,
-        center_x, center_y+5,
-        fill='#dc2626', outline=''
+    # Main building body - cream/beige color
+    canvas.create_rectangle(
+        lcc_x, lcc_y, 
+        lcc_x + lcc_width, lcc_y + lcc_height,
+        fill='#e8dfd0', outline='#000000', width=2
     )
     
-    # White orbital arc
-    canvas.create_arc(logo_x+2, logo_y+4, logo_x+logo_size-2, logo_y+logo_size-4, 
-                     start=200, extent=140, outline='#ffffff', width=2, style='arc')
+    # Top section - dark gray roof area
+    roof_height = 15
+    canvas.create_rectangle(
+        lcc_x, lcc_y,
+        lcc_x + lcc_width, lcc_y + roof_height,
+        fill='#4a4e54', outline=''
+    )
     
-    # White stars on logo
-    canvas.create_oval(logo_x+4, logo_y+7, logo_x+7, logo_y+10, fill='#ffffff', outline='')
-    canvas.create_oval(logo_x+logo_size-7, logo_y+logo_size-10, logo_x+logo_size-4, logo_y+logo_size-7, 
-                      fill='#ffffff', outline='')
+    # Roof equipment (small structures on top)
+    canvas.create_rectangle(
+        lcc_x + 15, lcc_y - 6,
+        lcc_x + 23, lcc_y,
+        fill='#3a3a3a', outline='#000000', width=1
+    )
+    canvas.create_rectangle(
+        lcc_x + 55, lcc_y - 6,
+        lcc_x + 63, lcc_y,
+        fill='#3a3a3a', outline='#000000', width=1
+    )
     
-    # Small windows on upper right
-    for i in range(3):
-        canvas.create_rectangle(opf_x + opf_width - 15, opf_y + 12 + i*7, 
-                               opf_x + opf_width - 9, opf_y + 17 + i*7, 
-                               fill='#4a6a8a', outline='#3a5a7a')
+    # Famous "Firing Room" windows - multiple rows of blue/dark windows
+    firing_room_top = lcc_y + roof_height + 5
+    firing_room_height = 45
     
-    # Large door/bay opening - very dark blue
-    door_x = opf_x + 25
-    door_y = opf_y + 50
-    door_width = 50
+    # Dark section behind windows
+    canvas.create_rectangle(
+        lcc_x + 5, firing_room_top,
+        lcc_x + lcc_width - 5, firing_room_top + firing_room_height,
+        fill='#2a2a2a', outline=''
+    )
     
-    canvas.create_rectangle(door_x, door_y, door_x+door_width, opf_y+opf_height, 
-                           fill='#1a3a5a', outline='')
+    # Multiple rows of windows (the iconic firing room windows)
+    window_rows = 4
+    window_cols = 8
+    window_w = 7
+    window_h = 8
     
-    # Door inner darker section
-    canvas.create_rectangle(door_x+6, door_y+6, door_x+door_width-6, opf_y+opf_height-12, 
-                           fill='#0a2a4a', outline='')
+    for row in range(window_rows):
+        for col in range(window_cols):
+            win_x = lcc_x + 8 + col * 9
+            win_y = firing_room_top + 4 + row * 10
+            canvas.create_rectangle(
+                win_x, win_y,
+                win_x + window_w, win_y + window_h,
+                fill='#4a6a8a', outline='#3a5a7a'
+            )
     
-    # Door frame - very dark
-    canvas.create_rectangle(door_x-3, door_y, door_x, opf_y+opf_height, 
-                           fill='#2a2a2a', outline='')
-    canvas.create_rectangle(door_x+door_width, door_y, door_x+door_width+3, opf_y+opf_height, 
-                           fill='#2a2a2a', outline='')
+    # Middle section - regular office windows
+    middle_start = firing_room_top + firing_room_height + 8
     
-    # Small windows on left side of door
+    for row in range(3):
+        for col in range(6):
+            win_x = lcc_x + 10 + col * 12
+            win_y = middle_start + row * 12
+            canvas.create_rectangle(
+                win_x, win_y,
+                win_x + 8, win_y + 8,
+                fill='#5a7a9a', outline='#4a6a8a'
+            )
+    
+    # Bottom section - entrance area
+    bottom_start = lcc_y + lcc_height - 15
+    
+    # Entrance door
+    door_x = lcc_x + lcc_width // 2 - 10
+    canvas.create_rectangle(
+        door_x, bottom_start,
+        door_x + 20, lcc_y + lcc_height - 2,
+        fill='#3a3a3a', outline='#2a2a2a', width=1
+    )
+    
+    # Small windows on sides of entrance
     for i in range(2):
-        canvas.create_rectangle(opf_x + 10, opf_y + 55 + i*13, 
-                               opf_x + 18, opf_y + 63 + i*13, 
-                               fill='#4a6a8a', outline='#3a5a7a')
+        # Left side
+        canvas.create_rectangle(
+            lcc_x + 8, bottom_start + 3,
+            lcc_x + 14, bottom_start + 9,
+            fill='#5a7a9a', outline='#4a6a8a'
+        )
+        # Right side
+        canvas.create_rectangle(
+            lcc_x + lcc_width - 14, bottom_start + 3,
+            lcc_x + lcc_width - 8, bottom_start + 9,
+            fill='#5a7a9a', outline='#4a6a8a'
+        )
     
-    # Small windows on right side of door
-    for i in range(2):
-        canvas.create_rectangle(opf_x + opf_width - 18, opf_y + 55 + i*13, 
-                               opf_x + opf_width - 10, opf_y + 63 + i*13, 
-                               fill='#4a6a8a', outline='#3a5a7a')
+    # Right side depth panels (3D effect)
+    canvas.create_rectangle(
+        lcc_x + lcc_width, lcc_y + 8,
+        lcc_x + lcc_width + 12, lcc_y + lcc_height,
+        fill='#6a6e74', outline=''
+    )
     
-    # Bottom white section
-    bottom_y = opf_y + opf_height - 12
-    canvas.create_rectangle(opf_x, bottom_y, opf_x+opf_width, opf_y+opf_height, 
-                           fill='#d8d8d8', outline='')
-    
-    # Bottom windows
-    for i in range(10):
-        canvas.create_rectangle(opf_x + 5 + i*9, bottom_y + 3, 
-                               opf_x + 10 + i*9, bottom_y + 8, 
-                               fill='#4a6a8a', outline='#3a5a7a')
-    
-    # Dark right side for depth
-    canvas.create_rectangle(opf_x+opf_width, opf_y+8, opf_x+opf_width+15, opf_y+opf_height, 
-                           fill='#4a4a4a', outline='')
+    canvas.create_rectangle(
+        lcc_x + lcc_width + 12, lcc_y + 12,
+        lcc_x + lcc_width + 20, lcc_y + lcc_height,
+        fill='#5a5e64', outline=''
+    )
+
 def draw_launch_tower(canvas):
     """Draw the launch tower structure based on Saturn V Mobile Launcher."""
     # Mobile Launcher Platform positioning
@@ -642,12 +744,29 @@ def draw_launch_tower(canvas):
     canvas.create_rectangle(tower_x+21, crane_y-30, tower_x+24, crane_y-20, fill='#909090', outline='')
     canvas.create_oval(tower_x+19, crane_y-33, tower_x+26, crane_y-30, fill='#ff0000', outline='')
     
-    # Warning lights on tower
+    # Warning lights on tower (red - always on)
     light_heights = [tower_top_y+40, tower_top_y+100, tower_top_y+160]
     for light_y in light_heights:
         if light_y < tower_base_y:
             canvas.create_oval(tower_x-2, light_y, tower_x+2, light_y+4, fill='#ff4444', outline='')
             canvas.create_oval(tower_x+tower_width-2, light_y, tower_x+tower_width+2, light_y+4, fill='#ff4444', outline='')
+    
+    # Blinking white lights on the right-hand side thick red beam
+    # Position them on the right vertical leg at different heights
+    white_light_positions = [
+        (tower_x + tower_width - 3, tower_top_y + 60),   # Upper light on right beam
+        (tower_x + tower_width - 3, tower_top_y + 140),  # Lower light on right beam
+    ]
+    
+    for light_x, light_y in white_light_positions:
+        if light_y < tower_base_y:
+            # Draw white light (will be toggled on/off)
+            canvas.create_oval(
+                light_x, light_y, 
+                light_x + 6, light_y + 6, 
+                fill='#3a3a3a', outline='#2a2a2a',  # Start off
+                tags='tower_light'
+            )
 
 
 def draw_pond_with_gator(canvas, gator_visible=False, gator_animation_phase=0):
@@ -658,8 +777,9 @@ def draw_pond_with_gator(canvas, gator_visible=False, gator_animation_phase=0):
         gator_visible: Whether gator should be visible at all
         gator_animation_phase: 0-1 float for animation (0=submerged, 1=fully surfaced)
     """
-    pond_x = 720
-    pond_y = 370
+    # Move pond up to area between buildings and launch pad
+    pond_x = 460
+    pond_y = 380
     
     # Pond water - dark blue/green
     canvas.create_oval(pond_x, pond_y, pond_x+60, pond_y+25, fill='#2a5a4a', outline='#1a4a3a', width=2, tags='pond')
@@ -828,7 +948,7 @@ def draw_bird(canvas, x, y, flap_up=True, bird_color='#2a2a2a'):
 
 
 def draw_car(canvas, x, y, car_color='#3a7bc8'):
-    """Draw a simple pixel car and return IDs."""
+    """Draw a simple pixel car (horizontal orientation) and return IDs."""
     car_ids = []
     # Car body
     car_ids.append(canvas.create_rectangle(x, y, x+12, y+6, fill=car_color, outline='', tags='car'))
@@ -840,6 +960,22 @@ def draw_car(canvas, x, y, car_color='#3a7bc8'):
     # Wheels
     car_ids.append(canvas.create_oval(x+1, y+5, x+4, y+8, fill='#1a1a1a', outline='', tags='car'))
     car_ids.append(canvas.create_oval(x+8, y+5, x+11, y+8, fill='#1a1a1a', outline='', tags='car'))
+    return car_ids
+
+
+def draw_car_vertical(canvas, x, y, car_color='#3a7bc8'):
+    """Draw a simple pixel car (vertical orientation for parking) and return IDs."""
+    car_ids = []
+    # Car body (rotated 90 degrees - now vertical)
+    car_ids.append(canvas.create_rectangle(x, y, x+6, y+12, fill=car_color, outline='', tags='car'))
+    # Car top/cabin (front of car when vertical)
+    car_ids.append(canvas.create_rectangle(x-3, y+2, x, y+10, fill=car_color, outline='', tags='car'))
+    # Windows
+    car_ids.append(canvas.create_rectangle(x-2, y+3, x, y+5, fill='#add8e6', outline='', tags='car'))
+    car_ids.append(canvas.create_rectangle(x-2, y+7, x, y+9, fill='#add8e6', outline='', tags='car'))
+    # Wheels
+    car_ids.append(canvas.create_oval(x+5, y+1, x+8, y+4, fill='#1a1a1a', outline='', tags='car'))
+    car_ids.append(canvas.create_oval(x+5, y+8, x+8, y+11, fill='#1a1a1a', outline='', tags='car'))
     return car_ids
 
 
@@ -855,14 +991,20 @@ def draw_background(canvas):
     if hour >= 18 or hour < 6:
         draw_stars(canvas)
     
-    # Ocean - teal/turquoise
-    canvas.create_rectangle(0, 350, 800, 600, fill=colors['ocean'], outline='')
+    # Ocean - teal/turquoise (lower on screen now)
+    canvas.create_rectangle(0, 500, 800, 600, fill=colors['ocean'], outline='')
     
     # Horizon line - darker teal
-    canvas.create_rectangle(0, 350, 800, 365, fill=colors['horizon'], outline='')
+    canvas.create_rectangle(0, 500, 800, 515, fill=colors['horizon'], outline='')
     
-    # Grassy ground area
-    canvas.create_rectangle(0, 365, 800, 390, fill='#5a8c3a', outline='')
+    # Grassy ground area (extended downwards to y=500)
+    canvas.create_rectangle(0, 365, 800, 500, fill='#5a8c3a', outline='')
+    
+    # Extra grass coverage to ensure no gaps or blue blocks
+    canvas.create_rectangle(0, 388, 800, 500, fill='#5a8c3a', outline='')
+    
+    # Draw roads BEFORE grass so grass appears on top
+    draw_roads(canvas)
     
     # Add pixel grass details
     draw_pixel_grass(canvas)
@@ -871,8 +1013,15 @@ def draw_background(canvas):
     draw_vab_building(canvas)
     draw_secondary_building(canvas)
     draw_operations_building(canvas)
+    
+    # Draw back fence BEFORE launch tower/pad so it appears behind
+    draw_back_fence(canvas)
+    
     draw_launch_tower(canvas)
     draw_launch_pad(canvas)
+    
+    # Draw remaining fence sides (left, right, bottom) and guard shack
+    draw_security_fence_and_shack(canvas)
     
     # Draw pond (gator will be animated separately)
     draw_pond_with_gator(canvas, gator_visible=False)
