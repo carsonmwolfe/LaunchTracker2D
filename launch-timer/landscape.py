@@ -85,17 +85,23 @@ def draw_pixel_grass(canvas):
             canvas.create_line(x, y, x+1, y-3, fill=color, width=1)
 
 
+#!/usr/bin/env python3
+"""
+Improved parking lot design with better perspective and visual appeal.
+"""
+
 def draw_roads(canvas):
-    """Draw simple road system with parking and pavement areas."""
+    """Draw simple road system with improved parking and pavement areas."""
     road_color = '#3a3a3a'
     line_color = '#6a6a3a'
     pavement_color = '#5a5a5a'
+    parking_line_color = '#d8d848'  # Brighter yellow for visibility
     
-    # Main horizontal road - moved down to avoid launch pad
-    road_y = 420  # Changed from 370 to 420
+    # Main horizontal road
+    road_y = 420
     road_height = 18
     
-    # Single straight road across the entire screen
+    # Road surface
     canvas.create_rectangle(
         0, road_y, 800, road_y + road_height,
         fill=road_color, outline='', tags='road'
@@ -119,70 +125,261 @@ def draw_roads(canvas):
             fill=line_color, outline='', tags='road'
         )
     
-    # === PARKING AND PAVEMENT AREAS UNDER BUILDINGS ===
+    # === IMPROVED PARKING AREAS ===
     
-    # VAB parking area - large paved area
-    vab_pavement_x = 50
-    vab_pavement_y = 350
-    vab_pavement_w = 160
-    vab_pavement_h = 65
+    # VAB parking area with angled spots
+    draw_angled_parking_lot(canvas, 50, 368, 160, 52, 'vab')
+    
+    # Hangar parking area with angled spots
+    draw_angled_parking_lot(canvas, 235, 368, 100, 52, 'hangar')
+    
+    # LCC parking area with angled spots
+    draw_angled_parking_lot(canvas, 340, 368, 90, 52, 'lcc')
+
+
+def draw_angled_parking_lot(canvas, x, y, width, height, lot_name):
+    """
+    Draw an angled parking lot with diagonal parking spaces.
+    
+    Args:
+        x, y: Top-left corner of parking lot
+        width, height: Dimensions of parking lot
+        lot_name: Tag identifier
+    """
+    pavement_color = '#5a5a5a'
+    parking_space_color = '#4a4a4a'
+    line_color = '#d8d848'  # Yellow parking lines
+    
+    # Draw pavement base
     canvas.create_rectangle(
-        vab_pavement_x, vab_pavement_y,
-        vab_pavement_x + vab_pavement_w, vab_pavement_y + vab_pavement_h,
-        fill=pavement_color, outline='', tags='pavement'
+        x, y, x + width, y + height,
+        fill=pavement_color, outline='', tags=f'{lot_name}_pavement'
     )
     
-    # Parking spaces on VAB pavement
-    parking_color = '#4a4a4a'
-    for i in range(6):
-        px = vab_pavement_x + 10 + (i * 25)
-        py = vab_pavement_y + 10
-        # Parking space
+    # Add subtle texture to pavement (small random dots)
+    import random
+    random.seed(hash(lot_name))  # Consistent randomness per lot
+    for _ in range(15):
+        dot_x = x + random.randint(2, width - 2)
+        dot_y = y + random.randint(2, height - 2)
+        dot_color = '#4a4a4a' if random.random() > 0.5 else '#6a6a6a'
         canvas.create_rectangle(
-            px, py, px + 20, py + 35,
-            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+            dot_x, dot_y, dot_x + 1, dot_y + 1,
+            fill=dot_color, outline='', tags=f'{lot_name}_pavement'
         )
     
-    # Hangar parking area
-    hangar_pavement_x = 235
-    hangar_pavement_y = 350
-    hangar_pavement_w = 100
-    hangar_pavement_h = 65
-    canvas.create_rectangle(
-        hangar_pavement_x, hangar_pavement_y,
-        hangar_pavement_x + hangar_pavement_w, hangar_pavement_y + hangar_pavement_h,
-        fill=pavement_color, outline='', tags='pavement'
-    )
+    # Calculate number of spaces based on width
+    space_width = 22
+    num_spaces = width // space_width
+    spacing = (width - 4) / num_spaces
     
-    # Parking spaces on Hangar pavement
-    for i in range(3):
-        px = hangar_pavement_x + 10 + (i * 28)
-        py = hangar_pavement_y + 10
-        canvas.create_rectangle(
-            px, py, px + 20, py + 35,
-            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+    # Draw angled parking spaces (60-degree angle)
+    for i in range(num_spaces):
+        space_x = x + 2 + i * spacing
+        
+        # Define angled parking space as polygon (diagonal)
+        # Creates a parallelogram tilted ~60 degrees
+        points = [
+            space_x, y + height - 5,              # Bottom left
+            space_x + 12, y + 8,                  # Top left
+            space_x + 20, y + 8,                  # Top right
+            space_x + 8, y + height - 5,          # Bottom right
+        ]
+        
+        # Parking space background (slightly darker)
+        canvas.create_polygon(
+            points,
+            fill=parking_space_color, outline='', 
+            tags=f'{lot_name}_pavement'
+        )
+        
+        # Yellow parking lines (outline the space)
+        canvas.create_line(
+            space_x, y + height - 5,
+            space_x + 12, y + 8,
+            fill=line_color, width=1.5, tags=f'{lot_name}_pavement'
+        )
+        canvas.create_line(
+            space_x + 8, y + height - 5,
+            space_x + 20, y + 8,
+            fill=line_color, width=1.5, tags=f'{lot_name}_pavement'
         )
     
-    # LCC parking area
-    lcc_pavement_x = 320
-    lcc_pavement_y = 350
-    lcc_pavement_w = 90
-    lcc_pavement_h = 65
-    canvas.create_rectangle(
-        lcc_pavement_x, lcc_pavement_y,
-        lcc_pavement_x + lcc_pavement_w, lcc_pavement_y + lcc_pavement_h,
-        fill=pavement_color, outline='', tags='pavement'
+    # Draw bottom edge line
+    canvas.create_line(
+        x + 2, y + height - 5,
+        x + width - 2, y + height - 5,
+        fill=line_color, width=2, tags=f'{lot_name}_pavement'
     )
     
-    # Parking spaces on LCC pavement
-    for i in range(3):
-        px = lcc_pavement_x + 8 + (i * 28)
-        py = lcc_pavement_y + 10
+    # Draw top edge line
+    canvas.create_line(
+        x + 12, y + 8,
+        x + width - 8, y + 8,
+        fill=line_color, width=2, tags=f'{lot_name}_pavement'
+    )
+
+
+def draw_perpendicular_parking_lot(canvas, x, y, width, height, lot_name):
+    """
+    Alternative: Draw perpendicular parking lot (like current style but improved).
+    
+    This version keeps vertical parking but adds better visual details.
+    """
+    pavement_color = '#5a5a5a'
+    parking_space_color = '#4a4a4a'
+    line_color = '#d8d848'
+    
+    # Pavement base
+    canvas.create_rectangle(
+        x, y, x + width, y + height,
+        fill=pavement_color, outline='', tags=f'{lot_name}_pavement'
+    )
+    
+    # Number of parking spaces
+    space_width = 22
+    num_spaces = width // space_width
+    spacing = (width - 4) / num_spaces
+    
+    for i in range(num_spaces):
+        space_x = x + 2 + i * spacing
+        space_y = y + 8
+        
+        # Parking space (darker rectangle)
         canvas.create_rectangle(
-            px, py, px + 20, py + 35,
-            fill=parking_color, outline='#ffffff', width=1, tags='pavement'
+            space_x, space_y,
+            space_x + 18, space_y + 38,
+            fill=parking_space_color, outline='', 
+            tags=f'{lot_name}_pavement'
+        )
+        
+        # T-shaped parking line (entry marking)
+        # Horizontal top bar
+        canvas.create_rectangle(
+            space_x, space_y,
+            space_x + 18, space_y + 2,
+            fill=line_color, outline='', 
+            tags=f'{lot_name}_pavement'
+        )
+        # Left vertical line
+        canvas.create_rectangle(
+            space_x, space_y,
+            space_x + 2, space_y + 38,
+            fill=line_color, outline='', 
+            tags=f'{lot_name}_pavement'
+        )
+        # Right vertical line
+        canvas.create_rectangle(
+            space_x + 16, space_y,
+            space_x + 18, space_y + 38,
+            fill=line_color, outline='', 
+            tags=f'{lot_name}_pavement'
+        )
+    
+    # Add directional arrows in the parking lot aisle
+    arrow_y = y + height - 10
+    for i in range(3):
+        arrow_x = x + width // 2 - 10 + i * 8
+        # Simple arrow pointing down (toward parking)
+        canvas.create_polygon(
+            arrow_x, arrow_y - 3,
+            arrow_x + 2, arrow_y - 3,
+            arrow_x + 1, arrow_y,
+            fill='#d8d848', outline='', tags=f'{lot_name}_pavement'
         )
 
+
+def draw_herringbone_parking_lot(canvas, x, y, width, height, lot_name):
+    """
+    Another alternative: Herringbone/chevron pattern parking.
+    Creates visual interest with opposing angles.
+    """
+    pavement_color = '#5a5a5a'
+    parking_space_color = '#4a4a4a'
+    line_color = '#d8d848'
+    
+    # Pavement base
+    canvas.create_rectangle(
+        x, y, x + width, y + height,
+        fill=pavement_color, outline='', tags=f'{lot_name}_pavement'
+    )
+    
+    # Draw two rows of angled spaces facing opposite directions
+    num_spaces_per_row = width // 28
+    
+    # Top row - angled right
+    for i in range(num_spaces_per_row):
+        space_x = x + 4 + i * 28
+        points = [
+            space_x, y + 26,
+            space_x + 10, y + 8,
+            space_x + 18, y + 8,
+            space_x + 8, y + 26,
+        ]
+        canvas.create_polygon(points, fill=parking_space_color, outline='', tags=f'{lot_name}_pavement')
+        canvas.create_line(space_x, y + 26, space_x + 10, y + 8, fill=line_color, width=1.5, tags=f'{lot_name}_pavement')
+        canvas.create_line(space_x + 8, y + 26, space_x + 18, y + 8, fill=line_color, width=1.5, tags=f'{lot_name}_pavement')
+    
+    # Bottom row - angled left (mirror)
+    for i in range(num_spaces_per_row):
+        space_x = x + 4 + i * 28
+        points = [
+            space_x + 10, y + height - 5,
+            space_x + 20, y + 28,
+            space_x + 28, y + 28,
+            space_x + 18, y + height - 5,
+        ]
+        canvas.create_polygon(points, fill=parking_space_color, outline='', tags=f'{lot_name}_pavement')
+        canvas.create_line(space_x + 10, y + height - 5, space_x + 20, y + 28, fill=line_color, width=1.5, tags=f'{lot_name}_pavement')
+        canvas.create_line(space_x + 18, y + height - 5, space_x + 28, y + 28, fill=line_color, width=1.5, tags=f'{lot_name}_pavement')
+    
+    # Center dividing line
+    canvas.create_line(
+        x + 2, y + 27,
+        x + width - 2, y + 27,
+        fill=line_color, width=2, tags=f'{lot_name}_pavement'
+    )
+
+
+# Example usage showing different styles:
+if __name__ == "__main__":
+    import tkinter as tk
+    
+    root = tk.Tk()
+    root.title("Parking Lot Design Comparison")
+    
+    canvas = tk.Canvas(root, width=800, height=500, bg='#5a8c3a')
+    canvas.pack()
+    
+    # Style 1: Angled parking (recommended - most realistic)
+    canvas.create_text(130, 20, text="Angled Parking", font=('Courier', 10, 'bold'), fill='#ffffff')
+    draw_angled_parking_lot(canvas, 50, 30, 160, 52, 'style1')
+    
+    # Style 2: Improved perpendicular
+    canvas.create_text(360, 20, text="Perpendicular (Improved)", font=('Courier', 10, 'bold'), fill='#ffffff')
+    draw_perpendicular_parking_lot(canvas, 270, 30, 180, 52, 'style2')
+    
+    # Style 3: Herringbone
+    canvas.create_text(570, 20, text="Herringbone", font=('Courier', 10, 'bold'), fill='#ffffff')
+    draw_herringbone_parking_lot(canvas, 480, 30, 140, 52, 'style3')
+    
+    # Show in context with road
+    canvas.create_text(400, 120, text="In Context with Road:", font=('Courier', 10, 'bold'), fill='#ffffff')
+    
+    # Create grass
+    canvas.create_rectangle(0, 140, 800, 300, fill='#5a8c3a', outline='')
+    
+    # Road
+    canvas.create_rectangle(0, 280, 800, 298, fill='#3a3a3a', outline='')
+    for x in range(0, 800, 20):
+        canvas.create_rectangle(x, 288, x + 10, 290, fill='#6a6a3a', outline='')
+    
+    # Parking lots alongside road
+    draw_angled_parking_lot(canvas, 50, 228, 160, 52, 'context1')
+    draw_perpendicular_parking_lot(canvas, 235, 228, 100, 52, 'context2')
+    draw_herringbone_parking_lot(canvas, 360, 228, 140, 52, 'context3')
+    
+    root.mainloop()
 
 def draw_back_fence(canvas):
     """Draw the top fence that goes behind the launch pad."""
@@ -190,8 +387,8 @@ def draw_back_fence(canvas):
     post_color = '#6a6a6a'
     
     fence_left = 520  # Updated to match new left fence position
-    fence_right = 720
-    fence_top = 340
+    fence_right = 730
+    fence_top = 347
     
     # Top fence (Horizontal) - drawn behind launch pad
     for x in range(fence_left, fence_right, 20):
@@ -224,7 +421,7 @@ def draw_security_fence_and_shack(canvas):
     fence_bottom = 440  # Not on road (road is at 420)
     
     # === LEFT SIDE FENCE (Vertical) ===
-    for y in range(fence_top, fence_bottom+3, 20):
+    for y in range(fence_top, fence_bottom+10, 20):
         # Fence post
         canvas.create_rectangle(
             fence_left, y, fence_left + 3, y + 18,
@@ -236,7 +433,7 @@ def draw_security_fence_and_shack(canvas):
             fill=fence_color, outline='', tags='fence'
         )
         canvas.create_rectangle(
-            fence_left, y + 12, fence_left + 3, y + 14,
+            fence_left, y + 6, fence_left + 3, y + 14,
             fill=fence_color, outline='', tags='fence'
         )
     
@@ -258,7 +455,7 @@ def draw_security_fence_and_shack(canvas):
         )
     
     # === BOTTOM FENCE (Horizontal) ===
-    for x in range(fence_left, fence_right+10, 20):
+    for x in range(fence_left, fence_right+20, 20):
         # Fence post
         canvas.create_rectangle(
             x, fence_bottom, x + 3, fence_bottom + 18,
@@ -267,16 +464,16 @@ def draw_security_fence_and_shack(canvas):
         # Horizontal rails connecting posts
         if x + 30 < fence_right:
             canvas.create_rectangle(
-                x + 3, fence_bottom + 4, x + 20, fence_bottom + 6,
+                x + 5, fence_bottom + 4, x + 40, fence_bottom + 6,
                 fill=fence_color, outline='', tags='fence'
             )
             canvas.create_rectangle(
-                x + 3, fence_bottom + 12, x + 20, fence_bottom + 14,
+                x + 3, fence_bottom + 12, x + 40, fence_bottom + 14,
                 fill=fence_color, outline='', tags='fence'
             )
     
     # === GUARD SHACK closer to road ===
-    shack_x = 525
+    shack_x = 490
     shack_y = 395  # Much closer to road (road is at 420)
     shack_w = 20
     shack_h = 25
@@ -310,7 +507,7 @@ def draw_security_fence_and_shack(canvas):
 def draw_vab_building(canvas):
     """Draw the Vehicle Assembly Building matching the reference image."""
     vab_x = 60
-    vab_y = 200
+    vab_y = 215
     main_width = 140
     main_height = 150
     
@@ -470,12 +667,12 @@ def draw_secondary_building(canvas):
     """Draw an OPF-style hangar building matching the reference."""
     # Position moved right, away from VAB, and decreased height
     hangar_x = 250
-    hangar_y = 290
+    hangar_y = 305
     hangar_width = 70
     hangar_height = 60
     
     # More rounded roof using arc - properly positioned to attach to building
-    roof_height = 20
+    roof_height = 10
     canvas.create_arc(
         hangar_x - 5, hangar_y - roof_height,
         hangar_x + hangar_width + 5, hangar_y + 5,
@@ -537,7 +734,7 @@ def draw_operations_building(canvas):
     """Draw the Launch Control Center (LCC) from Kennedy Space Center."""
     # Position closer to hangar (moved left)
     lcc_x = 330
-    lcc_y = 240
+    lcc_y = 255
     lcc_width = 80
     lcc_height = 110
     
@@ -778,7 +975,7 @@ def draw_pond_with_gator(canvas, gator_visible=False, gator_animation_phase=0):
         gator_animation_phase: 0-1 float for animation (0=submerged, 1=fully surfaced)
     """
     # Move pond up to area between buildings and launch pad
-    pond_x = 460
+    pond_x = 735
     pond_y = 380
     
     # Pond water - dark blue/green
@@ -978,24 +1175,23 @@ def draw_car_vertical(canvas, x, y, car_color='#3a7bc8'):
     car_ids.append(canvas.create_oval(x+5, y+8, x+8, y+11, fill='#1a1a1a', outline='', tags='car'))
     return car_ids
 
-
 def draw_background(canvas):
     """Draw the complete Kennedy Space Center background."""
     colors = get_sky_colors()
     
-    # Sky - changes based on time of day
-    canvas.create_rectangle(0, 0, 800, 350, fill=colors['sky'], outline='')
+    # Sky - changes based on time of day - ADD TAGS
+    canvas.create_rectangle(0, 0, 800, 400, fill=colors['sky'], outline='', tags='sky')
     
-    # Add stars if nighttime
+    # Add stars if nighttime - ADD TAGS
     hour = datetime.now().hour
     if hour >= 18 or hour < 6:
         draw_stars(canvas)
     
-    # Ocean - teal/turquoise (lower on screen now)
-    canvas.create_rectangle(0, 500, 800, 600, fill=colors['ocean'], outline='')
+    # Ocean - teal/turquoise (lower on screen now) - ADD TAGS
+    canvas.create_rectangle(0, 500, 800, 600, fill=colors['ocean'], outline='', tags='ocean')
     
-    # Horizon line - darker teal
-    canvas.create_rectangle(0, 500, 800, 515, fill=colors['horizon'], outline='')
+    # Horizon line - darker teal - ADD TAGS
+    canvas.create_rectangle(0, 500, 800, 515, fill=colors['horizon'], outline='', tags='horizon')
     
     # Grassy ground area (extended downwards to y=500)
     canvas.create_rectangle(0, 365, 800, 500, fill='#5a8c3a', outline='')
@@ -1026,7 +1222,7 @@ def draw_background(canvas):
     # Draw pond (gator will be animated separately)
     draw_pond_with_gator(canvas, gator_visible=False)
     
-    # Draw clouds
+    # Draw clouds - ALREADY HAVE TAGS
     cloud1 = draw_flat_cloud(canvas, 150, 60, colors['cloud'])
     cloud2 = draw_flat_cloud(canvas, 420, 90, colors['cloud'])
     cloud3 = draw_flat_cloud(canvas, 650, 50, colors['cloud'])

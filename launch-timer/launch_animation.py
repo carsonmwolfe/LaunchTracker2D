@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 Launch animation - handles rocket liftoff sequence at T-0.
+Enhanced with realistic flame based on real fire reference.
 """
+
+import random
+import math
 
 class LaunchAnimation:
     def __init__(self, canvas, rocket_tag, initial_x, initial_y, vehicle_name=None):
@@ -26,28 +30,27 @@ class LaunchAnimation:
         self.is_launching = False
         self.launch_frame = 0
         self.velocity = 0
-        self.acceleration = 0.08  # Slower acceleration
-        self.max_velocity = 4  # Slower max speed
+        self.acceleration = 0.08
+        self.max_velocity = 4
         
         # Flame parameters
         self.flame_ids = []
         self.flame_intensity = 0
+        self.flame_particles = []  # Individual flame particles
+        self.vent_particles = []  # Horizontal venting particles
         
         # Callback for when launch completes
         self.on_complete_callback = None
         
     def start_launch(self, on_complete=None):
-        """
-        Begin the launch sequence.
-        
-        Args:
-            on_complete: Callback function to call when launch completes
-        """
+        """Begin the launch sequence."""
         if not self.is_launching:
             self.is_launching = True
             self.launch_frame = 0
             self.velocity = 0
             self.current_y = self.initial_y
+            self.flame_particles = []
+            self.vent_particles = []
             self.on_complete_callback = on_complete
             self.animate_launch()
     
@@ -58,23 +61,33 @@ class LaunchAnimation:
         
         self.launch_frame += 1
         
-        # Startup phase (frames 0-60): Build up flame for 2 seconds at 30 FPS
-        if self.launch_frame < 60:
-            self.flame_intensity = min(1.0, self.launch_frame / 60)
-            self.draw_pixelated_flame()
+        # Startup phase (frames 0-150): Build up flame for 5 seconds at 30 FPS
+        if self.launch_frame < 150:
+            self.flame_intensity = min(1.0, self.launch_frame / 150)
+            self.draw_horizontal_vents()  # Draw venting
+            self.draw_realistic_flame()
         
-        # Liftoff phase (frames 60+): Rocket rises
-        elif self.launch_frame >= 60:
+        # Liftoff phase (frames 150+): Rocket rises
+        elif self.launch_frame >= 150:
             # Accelerate rocket upward
             self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
             
+            # Debug output every 30 frames
+            if (self.launch_frame - 150) % 30 == 0:
+                rocket_items = self.canvas.find_withtag(self.rocket_tag)
+                print(f"Frame {self.launch_frame}: Moving {len(rocket_items)} elements, velocity={self.velocity:.2f}, current_y={self.current_y:.2f}")
+                if len(rocket_items) > 0:
+                    # Check position of first rocket element
+                    coords = self.canvas.coords(rocket_items[0])
+                    print(f"  First element coords: {coords}")
+            
             # Move ALL rocket elements using the tag
-            self.canvas.move(self.rocket_tag, 0, -self.velocity)
+            move_result = self.canvas.move(self.rocket_tag, 0, -self.velocity)
             
             self.current_y -= self.velocity
             
             # Draw exhaust flames
-            self.draw_pixelated_flame()
+            self.draw_realistic_flame()
             
             # Check if rocket is off screen
             if self.current_y < -200:
@@ -83,10 +96,10 @@ class LaunchAnimation:
         
         # Continue animation
         if self.is_launching:
-            self.canvas.after(33, self.animate_launch)  # ~30 FPS
+            self.canvas.after(33, self.animate_launch)
     
-    def draw_pixelated_flame(self):
-        """Draw realistic rocket exhaust flame with gradients."""
+    def draw_realistic_flame(self):
+        """Draw realistic flame based on actual fire reference."""
         # Clear previous flames
         for flame_id in self.flame_ids:
             try:
@@ -98,97 +111,223 @@ class LaunchAnimation:
         if self.flame_intensity == 0:
             return
         
-        # Flame position (below rocket)
+        # Flame stays at rocket's current position
         flame_x = self.initial_x
         flame_y = self.current_y + 8
         
-        # Pixel size for blocky look
-        pixel_size = 3
+        # Update and age existing particles
+        new_particles = []
+        for particle in self.flame_particles:
+            particle['age'] += 1
+            # Particles move DOWN (away from rocket moving up)
+            particle['y'] += particle['velocity_y']
+            particle['x'] += particle['velocity_x']
+            
+            # Particle dies after certain age
+            if particle['age'] < particle['lifetime']:
+                new_particles.append(particle)
         
-        # Scale based on intensity
-        scale = self.flame_intensity
+        self.flame_particles = new_particles
         
-        # Define flame pattern - wider at top, narrower at bottom, with gradient layers
-        # Format: (row, [(x_offset, width, color)])
-        flame_layers = [
-            # Row 0 - Bottom tip (brightest white)
-            (0, [(0, 1, '#ffffff')]),
-            
-            # Row 1-2 - Bright white core expanding
-            (1, [(0, 2, '#ffffff')]),
-            (2, [(-1, 1, '#ffffee'), (0, 2, '#ffffff'), (1, 1, '#ffffee')]),
-            
-            # Row 3-5 - Brilliant yellow
-            (3, [(-1, 1, '#ffff99'), (-0.5, 2, '#ffffcc'), (0.5, 2, '#ffffff'), (1.5, 1, '#ffffcc'), (2, 1, '#ffff99')]),
-            (4, [(-2, 1, '#ffee66'), (-1, 2, '#ffffaa'), (0, 2, '#ffffdd'), (1, 2, '#ffffaa'), (2, 1, '#ffee66')]),
-            (5, [(-2, 1, '#ffdd55'), (-1, 1, '#ffee88'), (0, 3, '#ffffbb'), (1, 1, '#ffee88'), (2, 1, '#ffdd55')]),
-            
-            # Row 6-8 - Yellow to orange transition
-            (6, [(-3, 1, '#ffcc44'), (-2, 2, '#ffdd77'), (-0.5, 3, '#ffee99'), (1.5, 2, '#ffdd77'), (3, 1, '#ffcc44')]),
-            (7, [(-3, 1, '#ffbb33'), (-2, 1, '#ffcc66'), (-1, 2, '#ffdd88'), (0, 2, '#ffee99'), (1, 2, '#ffdd88'), (2, 1, '#ffcc66'), (3, 1, '#ffbb33')]),
-            (8, [(-3, 1, '#ffaa22'), (-2, 2, '#ffbb55'), (0, 3, '#ffcc77'), (2, 2, '#ffbb55'), (3, 1, '#ffaa22')]),
-            
-            # Row 9-11 - Orange
-            (9, [(-4, 1, '#ff9911'), (-3, 2, '#ffaa44'), (-1, 3, '#ffbb66'), (1, 3, '#ffbb66'), (3, 2, '#ffaa44'), (4, 1, '#ff9911')]),
-            (10, [(-4, 1, '#ff8800'), (-3, 1, '#ff9922'), (-2, 2, '#ffaa55'), (0, 2, '#ffbb77'), (1, 2, '#ffaa55'), (2, 1, '#ff9922'), (4, 1, '#ff8800')]),
-            (11, [(-4, 1, '#ff7700'), (-3, 2, '#ff8833'), (-1, 2, '#ff9955'), (0, 2, '#ffaa66'), (1, 2, '#ff9955'), (2, 2, '#ff8833'), (4, 1, '#ff7700')]),
-            
-            # Row 12-14 - Orange to red
-            (12, [(-4, 1, '#ff6600'), (-3, 1, '#ff7722'), (-2, 2, '#ff8844'), (0, 3, '#ff9955'), (2, 2, '#ff8844'), (3, 1, '#ff7722'), (4, 1, '#ff6600')]),
-            (13, [(-4, 1, '#ff5500'), (-3, 2, '#ff6633'), (-1, 2, '#ff7755'), (1, 2, '#ff7755'), (2, 2, '#ff6633'), (4, 1, '#ff5500')]),
-            (14, [(-4, 1, '#ff4400'), (-3, 1, '#ff5522'), (-2, 2, '#ff6644'), (0, 2, '#ff7766'), (1, 2, '#ff6644'), (2, 1, '#ff5522'), (3, 1, '#ff4400')]),
-            
-            # Row 15-17 - Red
-            (15, [(-3, 1, '#ff3300'), (-2, 2, '#ff4422'), (0, 2, '#ff5544'), (1, 2, '#ff4422'), (3, 1, '#ff3300')]),
-            (16, [(-3, 1, '#ee2200'), (-2, 1, '#ff3311'), (-1, 2, '#ff4433'), (1, 2, '#ff4433'), (2, 1, '#ff3311'), (3, 1, '#ee2200')]),
-            (17, [(-3, 1, '#dd1100'), (-2, 2, '#ee2222'), (0, 2, '#ff3333'), (1, 2, '#ee2222'), (2, 1, '#dd1100')]),
-            
-            # Row 18-20 - Deep red tips
-            (18, [(-2, 1, '#cc0000'), (-1, 2, '#dd1111'), (1, 2, '#dd1111'), (2, 1, '#cc0000')]),
-            (19, [(-2, 1, '#bb0000'), (-1, 1, '#cc1100'), (0, 1, '#dd2200'), (1, 1, '#cc1100'), (2, 1, '#bb0000')]),
-            (20, [(-1, 1, '#aa0000'), (0, 1, '#bb0000'), (1, 1, '#aa0000')]),
-        ]
+        # Spawn new flame particles at rocket base
+        num_particles = int(20 * self.flame_intensity)
+        for _ in range(num_particles):
+            # Create particle at rocket's current base position
+            particle = {
+                'x': flame_x + random.uniform(-8, 8),
+                'y': flame_y,
+                'velocity_x': random.uniform(-0.5, 0.5),
+                'velocity_y': random.uniform(2.0, 4.5),  # Downward speed (positive = down)
+                'age': 0,
+                'lifetime': random.randint(12, 25),
+                'size': random.uniform(3, 8),
+                'type': random.choice(['core', 'core', 'mid', 'outer'])  # More core particles
+            }
+            self.flame_particles.append(particle)
         
-        # Add outer glow layers for more realistic gradient effect (using lighter solid colors)
-        glow_layers = [
-            # Outer orange glow (lighter tints)
-            (8, [(-5, 1, '#ffa080'), (5, 1, '#ffa080')]),
-            (10, [(-5, 1, '#ff9070'), (5, 1, '#ff9070')]),
-            (12, [(-5, 1, '#ff8060'), (5, 1, '#ff8060')]),
-            # Outer red glow
-            (14, [(-4, 1, '#ff7050'), (4, 1, '#ff7050')]),
-            (16, [(-4, 1, '#ff6040'), (4, 1, '#ff6040')]),
-            (18, [(-3, 1, '#ee5030'), (3, 1, '#ee5030')]),
-        ]
+        # Draw particles from front to back (lower/newer first for proper layering)
+        sorted_particles = sorted(self.flame_particles, key=lambda p: p['y'])
         
-        # Draw glow first (behind)
-        for row_offset, pixels in glow_layers:
-            y = flame_y + row_offset * pixel_size * scale
-            for x_offset, width, color in pixels:
-                x = flame_x + x_offset * pixel_size * scale
+        for particle in sorted_particles:
+            age_ratio = particle['age'] / particle['lifetime']
+            
+            # Determine color based on age and type
+            if particle['type'] == 'core':
+                # Hot white/yellow core
+                if age_ratio < 0.2:
+                    color = '#ffffff'
+                elif age_ratio < 0.4:
+                    color = '#ffffcc'
+                elif age_ratio < 0.6:
+                    color = '#ffff88'
+                else:
+                    color = '#ffdd44'
+            elif particle['type'] == 'mid':
+                # Orange middle zone
+                if age_ratio < 0.3:
+                    color = '#ffcc00'
+                elif age_ratio < 0.5:
+                    color = '#ffaa00'
+                elif age_ratio < 0.7:
+                    color = '#ff8800'
+                else:
+                    color = '#ff6600'
+            else:
+                # Red/dark outer zone
+                if age_ratio < 0.25:
+                    color = '#ff6600'
+                elif age_ratio < 0.5:
+                    color = '#ff4400'
+                elif age_ratio < 0.75:
+                    color = '#dd2200'
+                else:
+                    color = '#aa1100'
+            
+            # Fade out near end of life
+            if age_ratio > 0.85:
+                if random.random() > 0.7:  # Start becoming transparent/invisible
+                    continue
+            
+            # Size decreases with age
+            current_size = particle['size'] * (1.2 - age_ratio * 0.8)
+            
+            # Add shimmer/wobble
+            wobble_x = math.sin(particle['age'] * 0.3) * 1.5
+            wobble_y = math.cos(particle['age'] * 0.4) * 0.8
+            
+            draw_x = particle['x'] + wobble_x
+            draw_y = particle['y'] + wobble_y
+            
+            # Draw particle as oval for more organic look
+            particle_id = self.canvas.create_oval(
+                draw_x - current_size/2, draw_y - current_size/2,
+                draw_x + current_size/2, draw_y + current_size/2,
+                fill=color, outline='', tags='launch_flame'
+            )
+            self.flame_ids.append(particle_id)
+        
+        # Add bright core glow at base
+        num_core = int(8 * self.flame_intensity)
+        for i in range(num_core):
+            core_x = flame_x + random.uniform(-5, 5)
+            core_y = flame_y + random.uniform(0, 8)
+            core_size = random.uniform(4, 9)
+            
+            # Bright white/yellow core with occasional flicker
+            brightness = random.uniform(0.9, 1.0)
+            if brightness > 0.95:
+                core_color = '#ffffff'
+            else:
+                core_color = '#ffffee'
+            
+            core_id = self.canvas.create_oval(
+                core_x - core_size/2, core_y - core_size/2,
+                core_x + core_size/2, core_y + core_size/2,
+                fill=core_color, outline='', tags='launch_flame'
+            )
+            self.flame_ids.append(core_id)
+        
+        # Add sparks (occasional bright particles shooting downward)
+        if random.random() > 0.5:
+            num_sparks = random.randint(2, 4)
+            for _ in range(num_sparks):
+                spark_x = flame_x + random.uniform(-12, 12)
+                spark_y = flame_y + random.uniform(5, 35)
+                spark_size = random.uniform(1.5, 3)
+                spark_color = random.choice(['#ffffff', '#ffffcc', '#ffff88'])
                 
-                pixel_id = self.canvas.create_rectangle(
-                    x - pixel_size * width / 2, y,
-                    x + pixel_size * width / 2, y + pixel_size,
-                    fill=color, outline='', tags='launch_flame'
+                spark_id = self.canvas.create_rectangle(
+                    spark_x, spark_y,
+                    spark_x + spark_size, spark_y + spark_size,
+                    fill=spark_color, outline='', tags='launch_flame'
                 )
-                self.flame_ids.append(pixel_id)
+                self.flame_ids.append(spark_id)
         
-        # Draw main flame
-        for row_offset, pixels in flame_layers:
-            y = flame_y + row_offset * pixel_size * scale
-            for x_offset, width, color in pixels:
-                x = flame_x + x_offset * pixel_size * scale
+        # Add heat distortion lines below rocket
+        if self.launch_frame >= 150:  # Only during active burn
+            for i in range(3):
+                distortion_x = flame_x + random.uniform(-15, 15)
+                distortion_y = flame_y + random.uniform(40, 70)
+                wave_offset = math.sin(self.launch_frame * 0.2 + i) * 3
                 
-                # Create pixel with proper width
-                pixel_id = self.canvas.create_rectangle(
-                    x - pixel_size * width / 2, y,
-                    x + pixel_size * width / 2, y + pixel_size,
-                    fill=color, outline='', tags='launch_flame'
+                distortion_id = self.canvas.create_line(
+                    distortion_x + wave_offset, distortion_y,
+                    distortion_x + wave_offset + random.uniform(-2, 2), distortion_y + 8,
+                    fill='#ffaa44', width=1, tags='launch_flame'
                 )
-                self.flame_ids.append(pixel_id)
-
-
+                self.flame_ids.append(distortion_id)
+    
+    def draw_horizontal_vents(self):
+        """Draw horizontal gas venting from rocket sides during pre-launch."""
+        # Vent position - halfway up the rocket body
+        vent_y = self.current_y - 60  # Halfway up a typical rocket
+        vent_x_left = self.initial_x - 12  # Left side of rocket
+        vent_x_right = self.initial_x + 12  # Right side of rocket
+        
+        # Update existing vent particles
+        new_vents = []
+        for vent in self.vent_particles:
+            vent['age'] += 1
+            vent['x'] += vent['velocity_x']
+            vent['y'] += vent['velocity_y']
+            
+            # Vent particles fade and drift
+            if vent['age'] < vent['lifetime']:
+                new_vents.append(vent)
+        
+        self.vent_particles = new_vents
+        
+        # Spawn new vent particles (occasional bursts)
+        if random.random() > 0.7:  # 30% chance each frame
+            # Left side vent
+            for _ in range(random.randint(2, 4)):
+                vent = {
+                    'x': vent_x_left,
+                    'y': vent_y + random.uniform(-3, 3),
+                    'velocity_x': random.uniform(-1.5, -0.5),  # Move left
+                    'velocity_y': random.uniform(-0.3, 0.3),  # Slight vertical drift
+                    'age': 0,
+                    'lifetime': random.randint(20, 35),
+                    'size': random.uniform(2, 5),
+                    'color': random.choice(['#ffffff', '#f5f5f5', '#eeeeee', '#e8e8e8'])
+                }
+                self.vent_particles.append(vent)
+            
+            # Right side vent
+            for _ in range(random.randint(2, 4)):
+                vent = {
+                    'x': vent_x_right,
+                    'y': vent_y + random.uniform(-3, 3),
+                    'velocity_x': random.uniform(0.5, 1.5),  # Move right
+                    'velocity_y': random.uniform(-0.3, 0.3),  # Slight vertical drift
+                    'age': 0,
+                    'lifetime': random.randint(20, 35),
+                    'size': random.uniform(2, 5),
+                    'color': random.choice(['#ffffff', '#f5f5f5', '#eeeeee', '#e8e8e8'])
+                }
+                self.vent_particles.append(vent)
+        
+        # Draw vent particles
+        for vent in self.vent_particles:
+            age_ratio = vent['age'] / vent['lifetime']
+            
+            # Fade out near end of life
+            if age_ratio > 0.7:
+                if random.random() > 0.5:  # Start becoming transparent
+                    continue
+            
+            # Size increases slightly as gas expands
+            current_size = vent['size'] * (1.0 + age_ratio * 0.5)
+            
+            # Slight wobble
+            wobble = math.sin(vent['age'] * 0.2) * 0.5
+            
+            vent_id = self.canvas.create_oval(
+                vent['x'] - current_size/2, vent['y'] + wobble - current_size/2,
+                vent['x'] + current_size/2, vent['y'] + wobble + current_size/2,
+                fill=vent['color'], outline='', tags='launch_flame'
+            )
+            self.flame_ids.append(vent_id)
     
     def complete_launch(self):
         """Clean up after launch animation completes."""
@@ -201,13 +340,14 @@ class LaunchAnimation:
             except:
                 pass
         self.flame_ids = []
+        self.flame_particles = []
+        self.vent_particles = []
         
-        # Delete rocket (it's off screen)
+        # Delete rocket
         self.canvas.delete(self.rocket_tag)
         
         print("Launch complete!")
         
-        # Call completion callback if provided
         if self.on_complete_callback:
             self.on_complete_callback()
     
@@ -222,3 +362,5 @@ class LaunchAnimation:
             except:
                 pass
         self.flame_ids = []
+        self.flame_particles = []
+        self.vent_particles = []

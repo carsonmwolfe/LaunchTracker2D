@@ -5,64 +5,159 @@ UI elements for the launch display including countdown, info sign, and animation
 
 import random
 
-
 def draw_info_sign(canvas, launch_data, vehicle_name):
-    """Draw launch info sign to the right of the launch pad.
-    
-    Position is based on launch tower location:
-    - Launch tower is at x=635 (tower_x = platform_x + 85, where platform_x = 550)
-    - Sign should be positioned to the right of the tower
-    """
+    """Draw launch info sign extending from the right edge of the screen."""
     if not launch_data:
         return
     
-    # Position sign to the right of the launch tower/pad area
-    # Tower is around x=635-680, so sign goes at x=720
-    sign_x = 720
-    sign_y = 290
-    sign_width = 70
-    sign_height = 55
-    
-    # Sign post - metal pole
-    canvas.create_rectangle(sign_x-2, sign_y+sign_height, sign_x+2, sign_y+sign_height+20, 
-                           fill='#5a5a5a', outline='#4a4a4a', width=1)
+    # Position - extends from right edge
+    sign_x = 800  # Right edge of canvas
+    sign_y = 150
+    sign_width = 85  # Extends leftward from edge
+    sign_height = 160
     
     # Sign board - dark background with bright border
-    canvas.create_rectangle(sign_x-sign_width, sign_y, sign_x+sign_width, sign_y+sign_height, 
-                           fill='#1a1a1a', outline='#ffd93d', width=3)
+    canvas.create_rectangle(sign_x-sign_width, sign_y, sign_x, sign_y+sign_height, 
+                           fill='#0a0a0a', outline='#ffd93d', width=3, tags='info_sign')
     
-    # Inner border for style
-    canvas.create_rectangle(sign_x-sign_width+4, sign_y+4, sign_x+sign_width-4, sign_y+sign_height-4, 
-                           fill='', outline='#3a3a3a', width=1)
+    # Title header with background
+    canvas.create_rectangle(sign_x-sign_width, sign_y, sign_x, sign_y+24,
+                           fill='#ffd93d', outline='', tags='info_sign')
+    canvas.create_text(sign_x-sign_width/2, sign_y+12, text="NEXT LAUNCH",
+                      font=('Courier', 10, 'bold'), fill='#000000', anchor='center', tags='info_sign')
     
-    # Mission name - top line
+    y_offset = sign_y + 36
+    
+    def wrap_text(text, max_chars):
+        """Wrap text to multiple lines."""
+        if len(text) <= max_chars:
+            return [text]
+        
+        words = text.split()
+        lines = []
+        current_line = ""
+        
+        for word in words:
+            test_line = current_line + word + " "
+            if len(test_line) <= max_chars + 1:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line.strip())
+                current_line = word + " "
+        
+        if current_line:
+            lines.append(current_line.strip())
+        
+        return lines[:3]
+    
+    # Mission name - larger, centered, prominent
     mission_name = launch_data.get('name', 'Unknown Mission')
-    if len(mission_name) > 22:
-        mission_name = mission_name[:19] + "..."
-    canvas.create_text(sign_x, sign_y+12, text=mission_name,
-                       font=('Courier', 8, 'bold'), fill='#ffffff', anchor='center')
+    mission_lines = wrap_text(mission_name, 20)
     
-    # Provider - second line
-    provider = launch_data.get('provider', {}).get('name', 'Unknown')
-    if len(provider) > 22:
-        provider = provider[:19] + "..."
-    canvas.create_text(sign_x, sign_y+25, text=provider,
-                       font=('Courier', 7), fill='#74b9ff', anchor='center')
+    for line in mission_lines:
+        canvas.create_text(sign_x-sign_width/2, y_offset, text=line,
+                          font=('Courier', 7, 'bold'), fill='#ffffff',
+                          anchor='center', tags='info_sign')
+        y_offset += 9
     
-    # Vehicle - third line
+    # Divider line
+    y_offset += 8
+    canvas.create_line(sign_x-sign_width+10, y_offset, sign_x-10, y_offset,
+                      fill='#3a3a3a', width=1, tags='info_sign')
+    y_offset += 12
+    
+    # Vehicle info
+    canvas.create_text(sign_x-sign_width+12, y_offset, text="VEHICLE",
+                      font=('Courier', 7, 'bold'), fill='#888888', 
+                      anchor='w', tags='info_sign')
+    y_offset += 10
+    
     vehicle = vehicle_name
-    if len(vehicle) > 22:
-        vehicle = vehicle[:19] + "..."
-    canvas.create_text(sign_x, sign_y+36, text=vehicle,
-                       font=('Courier', 7), fill='#a29bfe', anchor='center')
+    vehicle_lines = wrap_text(vehicle, 20)
+    for line in vehicle_lines[:2]:
+        canvas.create_text(sign_x-sign_width/2, y_offset, text=line,
+                          font=('Courier', 7), fill='#4a90e2', 
+                          anchor='center', tags='info_sign')
+        y_offset += 9
     
-    # Pad name - bottom line
+    y_offset += 7
+    
+    # Provider info
+    canvas.create_text(sign_x-sign_width+12, y_offset, text="PROVIDER",
+                      font=('Courier', 7, 'bold'), fill='#888888', 
+                      anchor='w', tags='info_sign')
+    y_offset += 10
+    
+    provider = launch_data.get('provider', {}).get('name', 'Unknown')
+    provider_lines = wrap_text(provider, 20)
+    for line in provider_lines[:2]:
+        canvas.create_text(sign_x-sign_width/2, y_offset, text=line,
+                          font=('Courier', 7), fill='#ffffff', 
+                          anchor='center', tags='info_sign')
+        y_offset += 9
+    
+    y_offset += 7
+    
+    # Location info
+    canvas.create_text(sign_x-sign_width+12, y_offset, text="LOCATION",
+                      font=('Courier', 7, 'bold'), fill='#888888', 
+                      anchor='w', tags='info_sign')
+    y_offset += 10
+    
     pad = launch_data.get('pad', {})
-    pad_name = pad.get('name', 'Unknown Pad')
-    if len(pad_name) > 22:
-        pad_name = pad_name[:19] + "..."
-    canvas.create_text(sign_x, sign_y+47, text=pad_name,
-                       font=('Courier', 6), fill='#ffd93d', anchor='center')
+    location = pad.get('location', {}).get('name', 'Unknown')
+    # Shorten common location names
+    location = location.replace('Space Force Station', 'SFS')
+    location = location.replace('Air Force Base', 'AFB')
+    location = location.replace('Space Launch Site', 'SLS')
+    location_lines = wrap_text(location, 20)
+    for line in location_lines[:2]:
+        canvas.create_text(sign_x-sign_width/2, y_offset, text=line,
+                          font=('Courier', 6), fill='#ffffff', 
+                          anchor='center', tags='info_sign')
+        y_offset += 8
+    
+    # Divider line before status
+    y_offset += 6
+    canvas.create_line(sign_x-sign_width+10, y_offset, sign_x-10, y_offset,
+                      fill='#3a3a3a', width=1, tags='info_sign')
+    y_offset += 12
+    
+    # Status badge at bottom - more prominent
+    # launch_description can be a string or dict
+    launch_desc = launch_data.get('launch_description', '')
+    if isinstance(launch_desc, dict):
+        status = launch_desc.get('description', 'Unknown')
+    else:
+        status = launch_desc if launch_desc else 'Unknown'
+    
+    status_colors = {
+        'Go': '#00ff88',
+        'Go for Launch': '#00ff88',
+        'TBD': '#ffd93d', 
+        'To Be Determined': '#ffd93d',
+        'To Be Confirmed': '#ffd93d',
+        'Success': '#00ff88',
+        'Failure': '#ff4444',
+        'Hold': '#ff9933',
+        'In Flight': '#4a90e2'
+    }
+    status_color = status_colors.get(status, "#008f37")
+    
+    # Status box with colored background
+    canvas.create_rectangle(sign_x-sign_width+12, y_offset-2, 
+                           sign_x-12, y_offset+18,
+                           fill=status_color, outline='', tags='info_sign')
+    
+    # Shorten status text if needed
+    status_text = ('Go')
+    canvas.create_text(sign_x-sign_width/2, y_offset+8, text=status_text.upper(),
+                       font=('Courier', 9, 'bold'), fill='#00ff88', 
+                       anchor='center', tags='info_sign')
+    print(status_text)
+    print(launch_desc)
+
 
 def draw_countdown_display(canvas, countdown, launch_data):
     """Draw the countdown display at the top of the screen."""
@@ -101,31 +196,59 @@ def draw_countdown_display(canvas, countdown, launch_data):
             canvas.create_text(x+box_width/2, y_pos+40, text=label,
                                font=('Courier', 7), fill='#666666', tags="countdown")
     else:
-        date_str = launch_data.get('date_str', 'TBD') if launch_data else 'TBD'
+        date_str = launch_data.get('sort_date', 'TBD') if launch_data else 'TBD'
         canvas.create_rectangle(250, 20, 550, 70, fill='#1a1a1a',
                                 outline='#ffd93d', width=2, tags="countdown")
         canvas.create_text(400, 45, text=date_str,
                            font=('Courier', 12, 'bold'), fill='#ffd93d', tags="countdown")
 
 
-def draw_smoke_effect(canvas, smoke_frame, launch_data, pad_x=605, pad_y=340):
-    """Draw animated smoke rising from rocket base."""
+def draw_smoke_effect(canvas, smoke_frame, launch_data, pad_x=620, pad_y=340, is_launching=False):
+    """Draw slow horizontal white venting from left side of rocket that expands as it drifts."""
     canvas.delete("smoke")
     
+    # Don't draw smoke if rocket is launching
+    if is_launching:
+        return
+    
     if launch_data:
-        for i in range(8):
-            smoke_y = pad_y + 5 - (smoke_frame + i * 3) % 40
-            smoke_x = pad_x + random.randint(-15, 15)
-            opacity = 255 - ((smoke_frame + i * 3) % 40) * 6
+        # Vent position - halfway up the rocket on left side
+        vent_y = pad_y - 60  # Halfway up a typical rocket
+        vent_x_start = pad_x - 12  # Left side of rocket
+        
+        # Left side venting only - slow billowing cloud
+        for i in range(12):  # More particles for continuous cloud
+            # Slow horizontal movement to the left
+            distance = (smoke_frame * 0.5 + i * 6) % 100  # Slower movement
+            smoke_x = vent_x_start - distance
             
-            if opacity > 50:
-                gray_val = hex(max(100, min(200, 150 + random.randint(-20, 20))))[2:]
+            # Slight vertical drift - less random jitter
+            vertical_drift = (distance * 0.08)
+            smoke_y = vent_y + vertical_drift + (i % 3 - 1) * 2  # Reduced random positioning
+            
+            # Opacity fades as it gets further away
+            opacity = 255 - (distance * 2.5)
+            
+            if opacity > 20:
+                # White/light gray colors - brighter near source
+                if distance < 20:
+                    # Start small and bright near rocket
+                    gray_val = hex(max(235, min(255, 245 + (i % 5 - 2) * 3)))[2:]  # Less variation
+                    size = 4 + (i % 3)  # Consistent small size
+                else:
+                    # Expand and become slightly darker as it drifts
+                    gray_val = hex(max(200, min(240, 220 + (i % 5 - 2) * 5)))[2:]  # Less variation
+                    # Size grows with distance - starts at 4-6, grows to 10-16
+                    size = 4 + (i % 3) + int(distance / 6)
+                
                 if len(gray_val) == 1:
                     gray_val = '0' + gray_val
                 smoke_color = f'#{gray_val}{gray_val}{gray_val}'
-                size = random.randint(3, 7)
-                canvas.create_rectangle(
-                    smoke_x, smoke_y, smoke_x + size, smoke_y + size,
+                
+                # Draw as oval for softer, cloudier appearance
+                canvas.create_oval(
+                    smoke_x - size/2, smoke_y - size/2, 
+                    smoke_x + size/2, smoke_y + size/2,
                     fill=smoke_color, outline='', tags="smoke"
                 )
 
@@ -134,3 +257,47 @@ def draw_attribution(canvas):
     """Draw the data source attribution at the bottom."""
     canvas.create_text(400, 580, text="Data: RocketLaunch.Live",
                        font=('Courier', 7), fill='#666666')
+    
+def draw_update_notification(canvas, offset_x=0):
+    """Draw update notification that slides in from right.
+    
+    Args:
+        offset_x: Horizontal offset (0 = fully visible, positive = offscreen to right)
+    """
+    # Position
+    notif_x = 800 - offset_x  # Starts offscreen (800+), slides to edge (800)
+    notif_y = 10
+    notif_width = 140
+    notif_height = 30
+    
+    # Notification box
+    canvas.create_rectangle(
+        notif_x - notif_width, notif_y,
+        notif_x, notif_y + notif_height,
+        fill='#2a2a2a', outline='#4a90e2', width=2, tags='update_notification'
+    )
+    
+    # Icon (small dot indicator)
+    canvas.create_oval(
+        notif_x - notif_width + 8, notif_y + 11,
+        notif_x - notif_width + 16, notif_y + 19,
+        fill='#00ff88', outline='', tags='update_notification'
+    )
+    
+    # Text
+    canvas.create_text(
+        notif_x - notif_width/2 + 6, notif_y + 10,
+        text="DATA UPDATED",
+        font=('Courier', 8, 'bold'), fill='#ffffff',
+        anchor='center', tags='update_notification'
+    )
+    
+    # Timestamp
+    from datetime import datetime
+    time_str = datetime.now().strftime("%H:%M:%S")
+    canvas.create_text(
+        notif_x - notif_width/2 + 6, notif_y + 22,
+        text=time_str,
+        font=('Courier', 7), fill='#aaaaaa',
+        anchor='center', tags='update_notification'
+    )

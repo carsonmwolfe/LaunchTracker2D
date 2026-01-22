@@ -1,75 +1,148 @@
-#!/usr/bin/env python3
-"""
-Rocket drawing functions for different vehicle types.
-"""
-
-
 def draw_falcon_9(canvas, x, y):
-    """Draw Falcon 9 style rocket - more accurate based on reference."""
-    # First stage - white with black interstage
-    canvas.create_rectangle(x-10, y-140, x+10, y-15, fill='#f5f5f5', outline='')
-    canvas.create_rectangle(x+6, y-140, x+10, y-15, fill='#d0d0d0', outline='')
+    """Draw Falcon 9 based on actual reference - clean and accurate with proper proportions."""
     
-    # Black interstage section
-    canvas.create_rectangle(x-10, y-145, x+10, y-140, fill='#1a1a1a', outline='')
+    # === ENGINE SECTION (Bottom - Black) ===
+    # Black engine base
+    canvas.create_rectangle(x-10, y-12, x+10, y-5, fill='#1a1a1a', outline='#000000', width=1)
+    canvas.create_rectangle(x+7, y-12, x+10, y-5, fill='#0a0a0a', outline='')
     
-    # Second stage - white
-    canvas.create_rectangle(x-9, y-170, x+9, y-145, fill='#f8f8f8', outline='')
-    canvas.create_rectangle(x+5, y-170, x+9, y-145, fill='#d8d8d8', outline='')
-    
-    # Payload fairing - gray/silver rounded top
-    # Lower fairing section
-    canvas.create_rectangle(x-9, y-175, x+9, y-170, fill='#c0c0c0', outline='')
-    # Rounded nose cone
-    canvas.create_polygon(x-9, y-175, x-7, y-185, x-4, y-190, x, y-193, 
-                         x+4, y-190, x+7, y-185, x+9, y-175, fill='#b0b0b0', outline='', smooth=True)
-    canvas.create_polygon(x+5, y-175, x+7, y-185, x, y-193, fill='#989898', outline='', smooth=True)
-    
-    # "SPACEX" text on body (simplified as dark text)
-    text_y = y-95
-    # Vertical letters (simplified as rectangles)
-    for i in range(6):  # 6 letters
-        canvas.create_rectangle(x-3, text_y+i*7, x-1, text_y+i*7+4, fill='#2a2a2a', outline='')
-    
-    # American flag
-    flag_y = y-110
-    canvas.create_rectangle(x-8, flag_y, x+8, flag_y+6, fill='#ffffff', outline='')
-    # Red stripes
-    for i in range(4):
-        if i % 2 == 0:
-            canvas.create_rectangle(x-8, flag_y+i*1.5, x+8, flag_y+(i+1)*1.5, fill='#d62828', outline='')
-    # Blue canton
-    canvas.create_rectangle(x-8, flag_y, x-3, flag_y+3, fill='#003f87', outline='')
-    
-    # Landing legs - black triangular
-    canvas.create_polygon(x-10, y-25, x-18, y-8, x-10, y-15, fill='#2a2a2a', outline='')
-    canvas.create_polygon(x-10, y-35, x-16, y-25, x-10, y-25, fill='#1a1a1a', outline='')
-    canvas.create_polygon(x+10, y-25, x+18, y-8, x+10, y-15, fill='#2a2a2a', outline='')
-    canvas.create_polygon(x+10, y-35, x+16, y-25, x+10, y-25, fill='#1a1a1a', outline='')
-    
-    # Grid fins (small black rectangles on sides)
-    canvas.create_rectangle(x-14, y-155, x-10, y-145, fill='#3a3a3a', outline='')
-    canvas.create_rectangle(x+10, y-155, x+14, y-145, fill='#3a3a3a', outline='')
-    
-    # Engine section - Merlin engines (9 engines in octaweb)
-    # Octaweb structure - black base
-    canvas.create_rectangle(x-11, y-15, x+11, y-5, fill='#2a2a2a', outline='')
-    canvas.create_rectangle(x+7, y-15, x+11, y-5, fill='#1a1a1a', outline='')
-    
-    # 9 Merlin engines in octaweb pattern
-    engine_y = y-8
-    # Center engine
-    canvas.create_oval(x-2, engine_y-2, x+2, engine_y+2, fill='#5a5a5a', outline='')
-    # Ring of 8 engines around center
+    # 9 Merlin engines in octaweb pattern with proper engine bells
     engine_positions = [
-        (x-6, engine_y), (x+6, engine_y),  # Left and right
-        (x-4, engine_y-3), (x+4, engine_y-3),  # Upper sides
-        (x-4, engine_y+3), (x+4, engine_y+3),  # Lower sides
-        (x-2, engine_y+4), (x+2, engine_y+4)  # Bottom
+        (x, y-8),  # Center
+        (x-3, y-8), (x+3, y-8),    # Left and right of center
+        (x-1.5, y-6), (x+1.5, y-6),  # Lower pair
+        (x-1.5, y-10), (x+1.5, y-10), # Upper pair
+        (x-5, y-8), (x+5, y-8),    # Far left and right
     ]
     for ex, ey in engine_positions:
-        canvas.create_oval(ex-1.5, ey-1.5, ex+1.5, ey+1.5, fill='#4a4a4a', outline='')
-
+        # Engine bell (black, protruding down)
+        canvas.create_oval(ex-2, ey-1, ex+2, ey+3, fill='#1a1a1a', outline='#000000', width=1)
+        # Inner nozzle (darker)
+        canvas.create_oval(ex-1.5, ey, ex+1.5, ey+2.5, fill='#0a0a0a', outline='')
+        # Throat/opening (very dark)
+        canvas.create_oval(ex-1, ey+0.5, ex+1, ey+2, fill='#2a2a2a', outline='')
+    
+    # === LANDING LEGS (Retracted - vertical against body) ===
+    # Left leg (thin vertical strip)
+    canvas.create_rectangle(x-11, y-35, x-9, y-10, fill='#2a2a2a', outline='#000000', width=1)
+    # Right leg (thin vertical strip)
+    canvas.create_rectangle(x+9, y-35, x+11, y-10, fill='#2a2a2a', outline='#000000', width=1)
+    
+    # === FIRST STAGE (White body) - SHORTENED ===
+    canvas.create_rectangle(x-8, y-95, x+8, y-12, fill='#f5f5f5', outline='#000000', width=1)
+    # Right side shading
+    canvas.create_rectangle(x+5, y-95, x+8, y-12, fill='#d5d5d5', outline='')
+    
+    # === SPACEX LOGO (vertical text) ===
+    text_y = y-75
+    # "SPACEX" written vertically - simplified as rectangles
+    logo_letters = [
+        (text_y),      # S
+        (text_y + 8),  # P
+        (text_y + 16), # A
+        (text_y + 24), # C
+        (text_y + 32), # E
+        (text_y + 40), # X
+    ]
+    for letter_y in logo_letters:
+        canvas.create_rectangle(x-2.5, letter_y, x+2.5, letter_y+6, fill='#2a5a9a', outline='')
+    
+    # === AMERICAN FLAG (small, above logo) ===
+    flag_y = y-86
+    canvas.create_rectangle(x-3.5, flag_y, x+3.5, flag_y+4, fill='#ffffff', outline='')
+    # Red stripes
+    for i in [0, 2]:
+        canvas.create_rectangle(x-3.5, flag_y+i, x+3.5, flag_y+i+1, fill='#d62828', outline='')
+    # Blue canton
+    canvas.create_rectangle(x-3.5, flag_y, x-1, flag_y+2, fill='#003f87', outline='')
+    
+    # === GRID FINS (Small black rectangles on sides) ===
+    # Left grid fin
+    canvas.create_rectangle(x-11, y-92, x-8, y-87, fill='#2a2a2a', outline='#000000', width=1)
+    # Right grid fin
+    canvas.create_rectangle(x+8, y-92, x+11, y-87, fill='#2a2a2a', outline='#000000', width=1)
+    
+    # === BLACK INTERSTAGE ===
+    canvas.create_rectangle(x-8, y-102, x+8, y-95, fill='#1a1a1a', outline='#000000', width=1)
+    canvas.create_rectangle(x+5, y-102, x+8, y-95, fill='#0a0a0a', outline='')
+    
+    # === SECOND STAGE (White) - SHORTENED ===
+    canvas.create_rectangle(x-7, y-125, x+7, y-102, fill='#f5f5f5', outline='#000000', width=1)
+    # Right side shading
+    canvas.create_rectangle(x+4, y-125, x+7, y-102, fill='#d5d5d5', outline='')
+    
+    # === PAYLOAD FAIRING (White, with 45-degree shoulder and smooth ogive taper) ===
+    
+    # Fairing structure from bottom to top:
+    # 1. 45-degree shoulder extending outward
+    # 2. Cylindrical section
+    # 3. Smooth ogive taper to point
+    
+    # Build the complete fairing outline as a polygon
+    fairing_points = [
+        # Start at second stage top left
+        x-7, y-125,
+        # 45-degree shoulder going OUT and UP (left side)
+        x-10, y-130,
+        # Cylindrical section (left side)
+        x-10, y-140,
+        # Smooth ogive curve to point (left side)
+        x-9.5, y-145,
+        x-9, y-150,
+        x-8, y-155,
+        x-6.5, y-160,
+        x-5, y-164,
+        x-3.5, y-167,
+        x-2, y-169,
+        x-1, y-170,
+        # Top point
+        x, y-171,
+        # Smooth ogive curve down (right side - mirror)
+        x+1, y-170,
+        x+2, y-169,
+        x+3.5, y-167,
+        x+5, y-164,
+        x+6.5, y-160,
+        x+8, y-155,
+        x+9, y-150,
+        x+9.5, y-145,
+        # Cylindrical section (right side)
+        x+10, y-140,
+        # 45-degree shoulder going IN and DOWN (right side)
+        x+10, y-130,
+        x+7, y-125,
+    ]
+    
+    # Main fairing body (light gray)
+    canvas.create_polygon(fairing_points, fill='#e8e8e8', outline='#000000', width=1, smooth=True)
+    
+    # Shading on right side of fairing
+    fairing_shade_points = [
+        x+4, y-125,
+        x+7, y-130,
+        x+7, y-140,
+        x+7.5, y-145,
+        x+8, y-150,
+        x+8.5, y-155,
+        x+7.5, y-160,
+        x+6, y-164,
+        x+4, y-167,
+        x+2, y-169,
+        x+1, y-170,
+        x, y-171,
+        x+1, y-170,
+        x+2, y-169,
+        x+3.5, y-167,
+        x+5, y-164,
+        x+6.5, y-160,
+        x+8, y-155,
+        x+9, y-150,
+        x+9.5, y-145,
+        x+10, y-140,
+        x+10, y-130,
+        x+7, y-125,
+    ]
+    canvas.create_polygon(fairing_shade_points, fill='#c8c8c8', outline='', smooth=True)
 
 def draw_starship(canvas, x, y):
     """Draw Starship style rocket - more accurate based on reference."""
