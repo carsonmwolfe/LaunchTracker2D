@@ -155,8 +155,6 @@ def draw_info_sign(canvas, launch_data, vehicle_name):
     canvas.create_text(sign_x-sign_width/2, y_offset+8, text=status_text.upper(),
                        font=('Courier', 9, 'bold'), fill='#00ff88', 
                        anchor='center', tags='info_sign')
-    print(status_text)
-    print(launch_desc)
 
 
 def draw_countdown_display(canvas, countdown, launch_data):
@@ -258,46 +256,3 @@ def draw_attribution(canvas):
     canvas.create_text(400, 580, text="Data: RocketLaunch.Live",
                        font=('Courier', 7), fill='#666666')
     
-def draw_update_notification(canvas, offset_x=0):
-    """Draw update notification that slides in from right.
-    
-    Args:
-        offset_x: Horizontal offset (0 = fully visible, positive = offscreen to right)
-    """
-    # Position
-    notif_x = 800 - offset_x  # Starts offscreen (800+), slides to edge (800)
-    notif_y = 10
-    notif_width = 140
-    notif_height = 30
-    
-    # Notification box
-    canvas.create_rectangle(
-        notif_x - notif_width, notif_y,
-        notif_x, notif_y + notif_height,
-        fill='#2a2a2a', outline='#4a90e2', width=2, tags='update_notification'
-    )
-    
-    # Icon (small dot indicator)
-    canvas.create_oval(
-        notif_x - notif_width + 8, notif_y + 11,
-        notif_x - notif_width + 16, notif_y + 19,
-        fill='#00ff88', outline='', tags='update_notification'
-    )
-    
-    # Text
-    canvas.create_text(
-        notif_x - notif_width/2 + 6, notif_y + 10,
-        text="DATA UPDATED",
-        font=('Courier', 8, 'bold'), fill='#ffffff',
-        anchor='center', tags='update_notification'
-    )
-    
-    # Timestamp
-    from datetime import datetime
-    time_str = datetime.now().strftime("%H:%M:%S")
-    canvas.create_text(
-        notif_x - notif_width/2 + 6, notif_y + 22,
-        text=time_str,
-        font=('Courier', 7), fill='#aaaaaa',
-        anchor='center', tags='update_notification'
-    )

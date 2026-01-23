@@ -7,7 +7,7 @@ Main entry point for the application.
 import tkinter as tk
 import random
 from api_client import fetch_launches, get_countdown
-from landscape import draw_background, draw_bird, draw_car, draw_car_vertical
+from landscape import draw_background, draw_bird, draw_car
 from rockets import draw_rocket_on_pad
 from ui_elements import (
     draw_info_sign,
@@ -35,11 +35,6 @@ class LaunchPadDisplay:
         self.launch_time = None
         self.vehicle_name = None
 
-        # Update notification animation
-        self.notification_active = False
-        self.notification_offset = 150  # Start offscreen
-        self.notification_timer = 0
-        
         # Animation variables
         self.smoke_frame = 0
         self.light_blink_state = False
@@ -95,7 +90,7 @@ class LaunchPadDisplay:
         self.animate_aircraft()
         self.animate_tower_lights()
         self.animate_sky_colors()
-        self.animate_notification()
+
     
     def fetch_and_display(self):
         """Fetch launch data and display it."""
@@ -139,9 +134,6 @@ class LaunchPadDisplay:
         # Draw spotlights AFTER rocket so they appear on top
         from landscape import draw_spotlights
         draw_spotlights(self.canvas, self.vehicle_name)
-        
-        # Trigger update notification
-        self.show_update_notification()
     
     def draw_rocket_with_tag(self):
         """Draw the rocket with a 'rocket' tag on all elements."""
@@ -455,51 +447,14 @@ class LaunchPadDisplay:
         
         self.root.after(50, self.animate_birds)
 
-    def show_update_notification(self):
-        """Trigger the update notification to slide in."""
-        self.notification_active = True
-        self.notification_offset = 150  # Start offscreen
-        self.notification_timer = 0
-    
-    def animate_notification(self):
-        """Animate the update notification sliding in and out."""
-        if self.notification_active:
-            self.notification_timer += 1
-            
-            # Slide in from RIGHT (frames 0-20)
-            if self.notification_timer <= 20:
-                # Start at 150 (offscreen right), move to 0 (visible)
-                self.notification_offset = 150 * (1 - (self.notification_timer / 20))
-            # Stay visible (frames 21-100) - visible for ~2.4 seconds
-            elif self.notification_timer <= 100:
-                self.notification_offset = 0
-            # Slide out to RIGHT (frames 101-120)
-            elif self.notification_timer <= 120:
-                # Move from 0 (visible) to 150 (offscreen right)
-                progress = (self.notification_timer - 100) / 20
-                self.notification_offset = 150 * progress
-            # Hide notification
-            else:
-                self.notification_active = False
-                self.canvas.delete('update_notification')
-                self.root.after(30, self.animate_notification)
-                return
-        
-        # Redraw notification if active
-        if self.notification_active:
-            from ui_elements import draw_update_notification
-            self.canvas.delete('update_notification')
-            draw_update_notification(self.canvas, self.notification_offset)
-        
-        self.root.after(30, self.animate_notification)
+   
     
     def spawn_cars(self):
-        """Create initial cars that will drive on the road and park."""
+        """Create initial cars that will drive on the road."""
         car_colors = ['#3a7bc8', '#d44444', '#f5f5f5', '#2a2a2a', '#ffd93d', '#4a9d5f']
         road_y = 429
         
         for i in range(4):
-            will_park = random.choice([True, False])
             direction = random.choice([-1, 1])
             
             if direction == 1:
@@ -510,21 +465,6 @@ class LaunchPadDisplay:
             speed = random.uniform(0.5, 1.0)
             color = random.choice(car_colors)
             
-            parking_spot = None
-            if will_park:
-                parking_areas = [
-                    {'name': 'vab', 'x_range': (60, 200), 'y': 390},
-                    {'name': 'hangar', 'x_range': (245, 325), 'y': 390},
-                    {'name': 'lcc', 'x_range': (348, 422), 'y': 390}
-                ]
-                parking_area = random.choice(parking_areas)
-                parking_spot = {
-                    'area': parking_area['name'],
-                    'x': random.randint(parking_area['x_range'][0], parking_area['x_range'][1]),
-                    'y': parking_area['y'],
-                    'reached': False
-                }
-            
             car_ids = draw_car(self.canvas, x, road_y, color)
             self.cars.append({
                 'ids': car_ids,
@@ -532,124 +472,35 @@ class LaunchPadDisplay:
                 'direction': direction,
                 'color': color,
                 'x': x,
-                'y': road_y,
-                'will_park': will_park,
-                'parking_spot': parking_spot,
-                'is_parked': False,
-                'parked_timer': 0,
-                'turning_to_park': False,
-                'type': 'horizontal'
+                'y': road_y
             })
     
     def animate_cars(self):
-        """Animate cars driving on the road, parking, and leaving."""
+        """Animate cars driving on the road."""
         road_y = 429
         
         for car in self.cars:
-            if car['is_parked']:
-                car['parked_timer'] += 1
-                if car['parked_timer'] > 167:
-                    for car_id in car['ids']:
-                        self.canvas.delete(car_id)
-                    car['ids'] = []
-                    
-                    direction = random.choice([-1, 1])
-                    if direction == 1:
-                        new_x = -50
-                    else:
-                        new_x = 850
-                    
-                    will_park = random.choice([True, False])
-                    parking_spot = None
-                    
-                    if will_park:
-                        parking_areas = [
-                            {'name': 'vab', 'x_range': (60, 200), 'y': 390},
-                            {'name': 'hangar', 'x_range': (245, 325), 'y': 390},
-                            {'name': 'lcc', 'x_range': (348, 422), 'y': 390}
-                        ]
-                        parking_area = random.choice(parking_areas)
-                        parking_spot = {
-                            'area': parking_area['name'],
-                            'x': random.randint(parking_area['x_range'][0], parking_area['x_range'][1]),
-                            'y': parking_area['y'],
-                            'reached': False
-                        }
-                    
-                    new_speed = random.uniform(0.5, 1.0)
-                    car['ids'] = draw_car(self.canvas, new_x, road_y, car['color'])
-                    car['speed'] = new_speed * direction
-                    car['direction'] = direction
-                    car['x'] = new_x
-                    car['y'] = road_y
-                    car['will_park'] = will_park
-                    car['parking_spot'] = parking_spot
-                    car['is_parked'] = False
-                    car['parked_timer'] = 0
-                    car['turning_to_park'] = False
-                    car['type'] = 'horizontal'
-                
-                continue
-            
-            if car['will_park'] and not car['turning_to_park'] and car['parking_spot']:
-                parking_x = car['parking_spot']['x']
-                
-                if abs(car['x'] - parking_x) < 5:
-                    car['turning_to_park'] = True
-                    for car_id in car['ids']:
-                        self.canvas.delete(car_id)
-                    car['ids'] = draw_car_vertical(self.canvas, parking_x, car['parking_spot']['y'], car['color'])
-                    car['x'] = parking_x
-                    car['y'] = car['parking_spot']['y']
-                    car['is_parked'] = True
-                    car['type'] = 'vertical'
-                    continue
-            
             for car_id in car['ids']:
                 self.canvas.move(car_id, car['speed'], 0)
             
             car['x'] += car['speed']
             
-            if car['ids'] and not car['will_park']:
-                if (car['direction'] == 1 and car['x'] > 850) or (car['direction'] == -1 and car['x'] < -50):
-                    for car_id in car['ids']:
-                        self.canvas.delete(car_id)
-                    
-                    direction = random.choice([-1, 1])
-                    if direction == 1:
-                        new_x = -50
-                    else:
-                        new_x = 850
-                    
-                    will_park = random.choice([True, False])
-                    parking_spot = None
-                    
-                    if will_park:
-                        parking_areas = [
-                            {'name': 'vab', 'x_range': (60, 200), 'y': 390},
-                            {'name': 'hangar', 'x_range': (245, 325), 'y': 390},
-                            {'name': 'lcc', 'x_range': (348, 422), 'y': 390}
-                        ]
-                        parking_area = random.choice(parking_areas)
-                        parking_spot = {
-                            'area': parking_area['name'],
-                            'x': random.randint(parking_area['x_range'][0], parking_area['x_range'][1]),
-                            'y': parking_area['y'],
-                            'reached': False
-                        }
-                    
-                    new_speed = random.uniform(0.5, 1.0)
-                    car['ids'] = draw_car(self.canvas, new_x, road_y, car['color'])
-                    car['speed'] = new_speed * direction
-                    car['direction'] = direction
-                    car['x'] = new_x
-                    car['y'] = road_y
-                    car['will_park'] = will_park
-                    car['parking_spot'] = parking_spot
-                    car['is_parked'] = False
-                    car['parked_timer'] = 0
-                    car['turning_to_park'] = False
-                    car['type'] = 'horizontal'
+            # Respawn car when it goes off screen
+            if (car['direction'] == 1 and car['x'] > 850) or (car['direction'] == -1 and car['x'] < -50):
+                for car_id in car['ids']:
+                    self.canvas.delete(car_id)
+                
+                direction = random.choice([-1, 1])
+                if direction == 1:
+                    new_x = -50
+                else:
+                    new_x = 850
+                
+                new_speed = random.uniform(0.5, 1.0)
+                car['ids'] = draw_car(self.canvas, new_x, road_y, car['color'])
+                car['speed'] = new_speed * direction
+                car['direction'] = direction
+                car['x'] = new_x
         
         self.root.after(60, self.animate_cars)
     
@@ -711,7 +562,6 @@ class LaunchPadDisplay:
                 # Update the info sign with new data
                 self.canvas.delete('info_sign')
                 draw_info_sign(self.canvas, self.launch_data, self.vehicle_name)
-                self.show_update_notification()
                 return
             
             # Check if in flight or completed
@@ -891,9 +741,6 @@ class LaunchPadDisplay:
         from landscape import draw_spotlights
         self.canvas.delete('spotlight')
         draw_spotlights(self.canvas, self.vehicle_name)
-        
-        # Show update notification
-        self.show_update_notification()
         
         print("Next launch loaded!")
 
