@@ -17,6 +17,7 @@ from ui_elements import (
 )
 from launch_animation import LaunchAnimation
 from aircraft import T38Aircraft
+from weather import WeatherSystem
 
 
 class LaunchPadDisplay:
@@ -34,6 +35,9 @@ class LaunchPadDisplay:
         self.launch_data = None
         self.launch_time = None
         self.vehicle_name = None
+
+        self.weather = WeatherSystem(self.canvas)
+        self.weather.fetch_weather()  # Initial weather fetch
 
         # Animation variables
         self.smoke_frame = 0
@@ -76,7 +80,7 @@ class LaunchPadDisplay:
         self.test_button.place(x=10, y=10)
         
         # Fetch and display launch data
-        self.fetch_and_display()
+        self.fetch_and_display(is_initial=True)
         
         # Start countdown update loop
         self.update_countdown()
@@ -90,33 +94,39 @@ class LaunchPadDisplay:
         self.animate_aircraft()
         self.animate_tower_lights()
         self.animate_sky_colors()
+        self.animate_weather()
+        self.refresh_weather()  # Start weather refresh cycle
 
     
-    def fetch_and_display(self):
+    def fetch_and_display(self, is_initial=True):
         """Fetch launch data and display it."""
-        launches = fetch_launches(1)
+        print("Fetching fresh launch data...")
+        launches = fetch_launches(5)
         
         if not launches:
-            self.canvas.create_text(400, 50, text="NO DATA",
+            print("ERROR: No upcoming launches found!")
+            self.canvas.create_text(400, 50, text="NO UPCOMING LAUNCHES",
                                    font=('Courier', 16, 'bold'), fill='#ff4444')
+            # Retry in 60 seconds
+            self.root.after(60000, lambda: self.fetch_and_display(is_initial=False))
             return
         
+        # Use the first upcoming launch
         self.launch_data = launches[0]
         self.launch_time = self.launch_data.get('t0') or self.launch_data.get('win_open')
         self.vehicle_name = self.launch_data.get('vehicle', {}).get('name', 'Unknown')
         
-        # Check if rocket is currently in flight
-        # launch_description can be a string or dict
-        launch_desc = self.launch_data.get('launch_description', '')
-        if isinstance(launch_desc, dict):
-            status = launch_desc.get('description', '')
-        else:
-            status = launch_desc
+        print(f"\n=== SELECTED LAUNCH ===")
+        print(f"Name: {self.launch_data.get('name')}")
+        print(f"Vehicle: {self.vehicle_name}")
+        print(f"Status: {self.launch_data.get('status', {}).get('name')}")
+        print(f"Launch time: {self.launch_time}")
+        print(f"======================\n")
         
-        if status == 'In Flight':
-            print("Rocket is in flight - not displaying on pad")
-        else:
-            # Draw rocket
+        # Only draw rocket and create animator if it's the initial load
+        # or if we're explicitly refreshing after a launch
+        if is_initial:
+            # Draw rocket on pad
             self.draw_rocket_with_tag()
             
             # Create launch animator
@@ -128,12 +138,100 @@ class LaunchPadDisplay:
                 vehicle_name=self.vehicle_name
             )
         
+        # Clear and redraw info sign
+        self.canvas.delete('info_sign')
         draw_info_sign(self.canvas, self.launch_data, self.vehicle_name)
         draw_attribution(self.canvas)
         
         # Draw spotlights AFTER rocket so they appear on top
         from landscape import draw_spotlights
+        self.canvas.delete('spotlight')
         draw_spotlights(self.canvas, self.vehicle_name)
+        
+        # Schedule next data refresh in 5 minutes ONLY if we're not close to launch
+        if not is_initial:  # Don't schedule on initial load
+            return
+            
+        countdown = get_countdown(self.launch_time)
+        if countdown and countdown != "LAUNCHED":
+            seconds_to_launch = countdown.get('total_seconds', 0)
+            # Only schedule refresh if launch is more than 10 minutes away
+            if seconds_to_launch > 600:
+                print(f"Scheduling data refresh in 5 minutes (launch is {seconds_to_launch/60:.1f} minutes away)")
+                self.root.after(300000, self.safe_refresh)
+            else:
+                print(f"Not scheduling refresh - launch is only {seconds_to_launch/60:.1f} minutes away")
+    
+    def safe_refresh(self):
+        """Safely refresh data only if conditions are right."""
+        # Don't refresh if we're currently launching
+        if self.launch_animator and self.launch_animator.is_launching:
+            print("Skipping refresh - launch in progress")
+            # Try again in 2 minutes
+            self.root.after(120000, self.safe_refresh)
+            return
+        
+        # Check if we're still far from launch
+        if self.launch_time:
+            countdown = get_countdown(self.launch_time)
+            if countdown and countdown != "LAUNCHED":
+                seconds_to_launch = countdown.get('total_seconds', 0)
+                if seconds_to_launch < 300:  # Less than 5 minutes
+                    print(f"Skipping refresh - too close to launch ({seconds_to_launch/60:.1f} minutes)")
+                    # Try again in 1 minute
+                    self.root.after(60000, self.safe_refresh)
+                    return
+        
+        print("Performing safe data refresh...")
+        # Fetch fresh data
+        launches = fetch_launches(5)
+        
+        if not launches:
+            print("No launches found during refresh")
+            self.root.after(300000, self.safe_refresh)
+            return
+        
+        current_launch_id = self.launch_data.get('id') if self.launch_data else None
+        new_launch = launches[0]
+        new_launch_id = new_launch.get('id')
+        
+        if new_launch_id != current_launch_id:
+            # Launch has changed! Need full refresh
+            print(f"Launch has changed! Old: {current_launch_id}, New: {new_launch_id}")
+            self.load_next_launch()
+        else:
+            # Same launch - check if launch time changed
+            old_time = self.launch_time
+            new_time = new_launch.get('t0') or new_launch.get('win_open')
+            
+            if new_time != old_time:
+                print(f"⚠️ LAUNCH TIME CHANGED!")
+                print(f"   Old time: {old_time}")
+                print(f"   New time: {new_time}")
+                self.launch_time = new_time
+            
+            # Update launch data
+            self.launch_data = new_launch
+            
+            # Refresh info sign with updated data
+            self.canvas.delete('info_sign')
+            draw_info_sign(self.canvas, self.launch_data, self.vehicle_name)
+            
+            print("Data refreshed successfully")
+            
+            # Schedule next refresh
+            self.root.after(300000, self.safe_refresh)
+    
+    def load_next_launch(self):
+        """Load the next launch after current one completes."""
+        print("Loading next launch...")
+        
+        # Clean up current rocket
+        self.canvas.delete('launch_flame')
+        self.canvas.delete('rocket')
+        
+        # Fetch fresh data and display
+        self.fetch_and_display(is_initial=True)
     
     def draw_rocket_with_tag(self):
         """Draw the rocket with a 'rocket' tag on all elements."""
@@ -270,39 +368,39 @@ class LaunchPadDisplay:
         return periods[2][2]  # Return day colors
     
     def animate_sky_colors(self):
-        """Animate sky color transitions based on time of day."""
-        colors = self.get_current_sky_colors_with_transition()
+        """Animate sky color transitions based on time of day AND WEATHER."""
+        # Get weather-adjusted sky color
+        sky_color = self.weather.get_weather_sky_color()
         
         # Update sky rectangle
         sky_items = self.canvas.find_withtag('sky')
         for item in sky_items:
-            self.canvas.itemconfig(item, fill=colors['sky'])
+            self.canvas.itemconfig(item, fill=sky_color)
         
-        # Update ocean
+        # Update ocean (darker in storms)
+        ocean_color = '#0d1a2e' if self.weather.weather_condition in ['rain', 'thunderstorm'] else '#1a8b9e'
         ocean_items = self.canvas.find_withtag('ocean')
         for item in ocean_items:
-            self.canvas.itemconfig(item, fill=colors['ocean'])
+            self.canvas.itemconfig(item, fill=ocean_color)
         
         # Update horizon
+        horizon_color = '#050d1a' if self.weather.weather_condition in ['rain', 'thunderstorm'] else '#156673'
         horizon_items = self.canvas.find_withtag('horizon')
         for item in horizon_items:
-            self.canvas.itemconfig(item, fill=colors['horizon'])
+            self.canvas.itemconfig(item, fill=horizon_color)
         
-        # Update clouds
+        # Update cloud colors based on weather
+        cloud_color = self.weather.get_cloud_color()
         cloud_items = self.canvas.find_withtag('cloud')
         for item in cloud_items:
-            self.canvas.itemconfig(item, fill=colors['cloud'])
+            self.canvas.itemconfig(item, fill=cloud_color)
         
-        # Update stars visibility (show/hide based on time)
-        from datetime import datetime
-        hour = datetime.now().hour
-        if hour >= 18 or hour < 6:
-            # Show stars at night
+        # Update stars visibility based on weather
+        if self.weather.should_show_stars():
             star_items = self.canvas.find_withtag('stars')
             for item in star_items:
                 self.canvas.itemconfig(item, state='normal')
         else:
-            # Hide stars during day
             star_items = self.canvas.find_withtag('stars')
             for item in star_items:
                 self.canvas.itemconfig(item, state='hidden')
@@ -314,6 +412,22 @@ class LaunchPadDisplay:
         
         # Check again in 30 seconds
         self.root.after(30000, self.animate_sky_colors)
+
+# Add this new method to update weather effects every frame:
+    def animate_weather(self):
+        """Animate weather effects (rain, lightning, fog)."""
+        self.weather.update()
+        self.root.after(50, self.animate_weather)
+    def refresh_weather(self):
+        """Refresh weather data every 15 minutes."""
+        print("Refreshing weather data...")
+        self.weather.fetch_weather()
+        
+        # Update sky colors immediately
+        self.animate_sky_colors()
+        
+        # Schedule next refresh in 60 minutes
+        self.root.after(3600000, self.refresh_weather)
     
     def animate_clouds(self):
         """Animate clouds moving horizontally."""
@@ -450,59 +564,125 @@ class LaunchPadDisplay:
    
     
     def spawn_cars(self):
-        """Create initial cars that will drive on the road."""
+        """Create initial cars that will drive on the road and stop at gate."""
         car_colors = ['#3a7bc8', '#d44444', '#f5f5f5', '#2a2a2a', '#ffd93d', '#4a9d5f']
         road_y = 429
         
-        for i in range(4):
-            direction = random.choice([-1, 1])
+        # Gate location (at the guard shack, just before fence)
+        self.gate_x = 490
+        self.gate_timer = 0  # Timer for gate openings
+        self.gate_open_interval = 3000  # Open gate every 3 seconds (in ms)
+        self.last_gate_open = 0
+        
+        for i in range(6):
+            # All cars approach from the left
+            x = -50 - (i * 80)  # Spread them out initially
             
-            if direction == 1:
-                x = -50 - (i * 40)
-            else:
-                x = 850 + (i * 40)
-            
-            speed = random.uniform(0.5, 1.0)
+            speed = random.uniform(0.8, 1.2)
             color = random.choice(car_colors)
             
             car_ids = draw_car(self.canvas, x, road_y, color)
             self.cars.append({
                 'ids': car_ids,
-                'speed': speed * direction,
-                'direction': direction,
+                'speed': speed,
+                'base_speed': speed,
                 'color': color,
                 'x': x,
-                'y': road_y
+                'y': road_y,
+                'state': 'approaching',  # approaching, waiting, entering, driving
+                'wait_start': 0
             })
     
     def animate_cars(self):
-        """Animate cars driving on the road."""
+        """Animate cars with gate queue system."""
+        import time
+        current_time = time.time() * 1000
         road_y = 429
         
-        for car in self.cars:
-            for car_id in car['ids']:
-                self.canvas.move(car_id, car['speed'], 0)
-            
-            car['x'] += car['speed']
-            
-            # Respawn car when it goes off screen
-            if (car['direction'] == 1 and car['x'] > 850) or (car['direction'] == -1 and car['x'] < -50):
-                for car_id in car['ids']:
-                    self.canvas.delete(car_id)
-                
-                direction = random.choice([-1, 1])
-                if direction == 1:
-                    new_x = -50
-                else:
-                    new_x = 850
-                
-                new_speed = random.uniform(0.5, 1.0)
-                car['ids'] = draw_car(self.canvas, new_x, road_y, car['color'])
-                car['speed'] = new_speed * direction
-                car['direction'] = direction
-                car['x'] = new_x
+        # Check if gate should open (every 3 seconds)
+        if current_time - self.last_gate_open >= self.gate_open_interval:
+            self.last_gate_open = current_time
+            # Let the first waiting car through
+            for car in self.cars:
+                if car['state'] == 'waiting':
+                    car['state'] = 'entering'
+                    car['wait_start'] = current_time
+                    break
         
-        self.root.after(60, self.animate_cars)
+        # Calculate how many cars are currently waiting
+        waiting_cars = [c for c in self.cars if c['state'] == 'waiting']
+        
+        for car in self.cars:
+            if car['state'] == 'approaching':
+                # Car is driving toward the gate
+                # Check if there are cars waiting ahead
+                cars_ahead = [c for c in self.cars if c['state'] in ['waiting', 'approaching'] and c['x'] < car['x'] and c['x'] > car['x'] - 100]
+                
+                if cars_ahead:
+                    # Stop behind the car ahead (maintain 15 pixel gap)
+                    closest_car = max(cars_ahead, key=lambda c: c['x'])
+                    stop_position = closest_car['x'] - 15
+                    
+                    if car['x'] >= stop_position:
+                        car['speed'] = 0
+                        car['state'] = 'waiting'
+                    else:
+                        car['speed'] = car['base_speed']
+                        for car_id in car['ids']:
+                            self.canvas.move(car_id, car['speed'], 0)
+                        car['x'] += car['speed']
+                else:
+                    # No cars ahead, check distance to gate
+                    if car['x'] >= self.gate_x - 20:
+                        # Reached gate, stop and wait
+                        car['speed'] = 0
+                        car['state'] = 'waiting'
+                    else:
+                        # Keep driving toward gate
+                        car['speed'] = car['base_speed']
+                        for car_id in car['ids']:
+                            self.canvas.move(car_id, car['speed'], 0)
+                        car['x'] += car['speed']
+            
+            elif car['state'] == 'waiting':
+                # Car is stopped at gate or in queue
+                # Don't move, just wait
+                pass
+            
+            elif car['state'] == 'entering':
+                # Gate opened, car is entering (drives for 2 seconds then goes to 'driving')
+                if current_time - car['wait_start'] < 2000:
+                    # Drive through gate for 2 seconds
+                    car['speed'] = car['base_speed']
+                    for car_id in car['ids']:
+                        self.canvas.move(car_id, car['speed'], 0)
+                    car['x'] += car['speed']
+                else:
+                    # Done entering, now freely driving
+                    car['state'] = 'driving'
+            
+            elif car['state'] == 'driving':
+                # Car is past the gate, driving freely
+                car['speed'] = car['base_speed']
+                for car_id in car['ids']:
+                    self.canvas.move(car_id, car['speed'], 0)
+                car['x'] += car['speed']
+                
+                # Check if car went off screen
+                if car['x'] > 850:
+                    # Respawn car on the left
+                    for car_id in car['ids']:
+                        self.canvas.delete(car_id)
+                    
+                    new_x = -50
+                    new_speed = random.uniform(0.8, 1.2)
+                    car['ids'] = draw_car(self.canvas, new_x, road_y, car['color'])
+                    car['speed'] = new_speed
+                    car['base_speed'] = new_speed
+                    car['x'] = new_x
+                    car['state'] = 'approaching'
+        
+        self.root.after(50, self.animate_cars)
     
     def animate_gator(self):
         """Animate alligator appearing and disappearing from pond."""

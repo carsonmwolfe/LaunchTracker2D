@@ -379,54 +379,135 @@ def draw_sls(canvas, x, y):
 
 
 def draw_electron(canvas, x, y):
-    """Draw Electron style rocket (small) - more accurate based on reference."""
-    # Main body - black carbon composite
-    canvas.create_rectangle(x-5, y-105, x+5, y, fill='#1a1a1a', outline='')
-    # Body shading
-    canvas.create_rectangle(x+3, y-105, x+5, y, fill='#0a0a0a', outline='')
+    """Draw Electron rocket - clean 2D pixel art style."""
+    # Color palette
+    body_color = '#1a1a1a'
+    band_color = '#9a9a9a'
+    text_color = '#d0d0d0'
+    red = '#b22222'
+    white = '#ffffff'
+    blue = '#1f3a8a'
+    engine_color = '#2a2a2a'
     
-    # Payload fairing - black pointed nose cone
-    canvas.create_polygon(x-5, y-105, x, y-120, x+5, y-105, fill='#1a1a1a', outline='')
-    canvas.create_polygon(x+3, y-105, x, y-120, x+5, y-105, fill='#0a0a0a', outline='')
+    # Rocket dimensions (scaled up 3x from 16px width for visibility)
+    body_width = 15
+    half_width = body_width // 2
     
-    # White/silver separation bands
-    canvas.create_rectangle(x-5, y-100, x+5, y-97, fill='#d0d0d0', outline='')
-    canvas.create_rectangle(x-5, y-65, x+5, y-62, fill='#d0d0d0', outline='')
-    
-    # "ELECTRON" text vertically on body (simplified white dots)
-    text_start_y = y-55
-    text_positions = [0, 6, 12, 18, 24, 30, 36, 42]  # 8 letters
-    for i, offset in enumerate(text_positions):
-        canvas.create_rectangle(x-3, text_start_y+offset, x-1, text_start_y+offset+3, fill='#e0e0e0', outline='')
-    
-    # Small American flag near bottom
-    flag_y = y-18
-    canvas.create_rectangle(x-4, flag_y, x+4, flag_y+5, fill='#ffffff', outline='')
-    # Red stripes (simplified)
-    canvas.create_rectangle(x-4, flag_y, x+4, flag_y+1, fill='#d62828', outline='')
-    canvas.create_rectangle(x-4, flag_y+2, x+4, flag_y+3, fill='#d62828', outline='')
-    canvas.create_rectangle(x-4, flag_y+4, x+4, flag_y+5, fill='#d62828', outline='')
-    # Blue canton
-    canvas.create_rectangle(x-4, flag_y, x-1, flag_y+3, fill='#003f87', outline='')
-    
-    # Landing legs (small triangular)
-    canvas.create_polygon(x-5, y-15, x-9, y-5, x-5, y-8, fill='#2a2a2a', outline='')
-    canvas.create_polygon(x+5, y-15, x+9, y-5, x+5, y-8, fill='#2a2a2a', outline='')
-    
-    # Engine section at base - Rutherford engines (9 small engines)
-    engine_base_y = y-8
-    # Engine cluster pattern (3x3 grid simplified)
-    engine_positions = [
-        (x-3, engine_base_y), (x, engine_base_y), (x+3, engine_base_y),
-        (x-2, engine_base_y+2), (x+2, engine_base_y+2),
-        (x-1, engine_base_y+4), (x+1, engine_base_y+4)
+    # === 1. NOSE CONE (rounded triangle, 6-8 pixels tall) ===
+    nose_rows = [
+        (0, 2),   # Top: 2 pixels wide
+        (1, 4),   # 4 pixels wide
+        (2, 6),   # 6 pixels wide
+        (3, 8),   # 8 pixels wide
+        (4, 10),  # 10 pixels wide
+        (5, 12),  # 12 pixels wide
+        (6, 14),  # 14 pixels wide
+        (7, 15),  # Full width
     ]
-    for ex, ey in engine_positions:
-        canvas.create_oval(ex-1, ey, ex+1, ey+2, fill='#4a3a2a', outline='')
     
-    # Engine mounting structure
-    canvas.create_rectangle(x-6, y-12, x+6, y-8, fill='#2a2a2a', outline='')
-
+    for row, width in nose_rows:
+        canvas.create_rectangle(
+            x - width // 2, y - 105 + row * 3,
+            x + width // 2, y - 102 + row * 3,
+            fill=body_color, outline='', tags='rocket'
+        )
+    
+    # === 2. UPPER BODY SECTION (10-12 pixels tall) ===
+    canvas.create_rectangle(
+        x - half_width, y - 81,
+        x + half_width, y - 45,
+        fill=body_color, outline='', tags='rocket'
+    )
+    
+    # === 3. UPPER SEPARATION BAND (1-2 pixels) ===
+    canvas.create_rectangle(
+        x - half_width, y - 45,
+        x + half_width, y - 39,
+        fill=band_color, outline='', tags='rocket'
+    )
+    
+    # === 4. MID BODY SECTION (18-22 pixels tall) ===
+    canvas.create_rectangle(
+        x - half_width, y - 39,
+        x + half_width, y + 27,
+        fill=body_color, outline='', tags='rocket'
+    )
+    
+    # === 5. LOWER SEPARATION BAND (1-2 pixels) ===
+    canvas.create_rectangle(
+        x - half_width, y + 27,
+        x + half_width, y + 33,
+        fill=band_color, outline='', tags='rocket'
+    )
+    
+    # === 6. LOWER BODY WITH VERTICAL TEXT (14-16 pixels tall) ===
+    canvas.create_rectangle(
+        x - half_width, y + 33,
+        x + half_width, y + 81,
+        fill=body_color, outline='', tags='rocket'
+    )
+    
+    # Vertical "ELECTRON" text (one letter per row, simplified pixel letters)
+    letters = ['E', 'L', 'E', 'C', 'T', 'R', 'O', 'N']
+    letter_start_y = y + 36
+    for i, letter in enumerate(letters):
+        canvas.create_text(
+            x, letter_start_y + i * 5,
+            text=letter,
+            font=('Courier', 7, 'bold'),
+            fill=text_color,
+            tags='rocket'
+        )
+    
+    # === 7. FLAG BAND (4 pixels tall) ===
+    flag_width = body_width - 4  # Slightly inset
+    flag_half = flag_width // 2
+    
+    # Red stripe (top, 1 pixel)
+    canvas.create_rectangle(
+        x - flag_half, y + 81,
+        x + flag_half, y + 84,
+        fill=red, outline='', tags='rocket'
+    )
+    
+    # White stripe (middle, 2 pixels)
+    canvas.create_rectangle(
+        x - flag_half, y + 84,
+        x + flag_half, y + 90,
+        fill=white, outline='', tags='rocket'
+    )
+    
+    # Blue stripe (bottom, 1 pixel)
+    canvas.create_rectangle(
+        x - flag_half, y + 90,
+        x + flag_half, y + 93,
+        fill=blue, outline='', tags='rocket'
+    )
+    
+    # === 8. ENGINE SECTION (3-4 pixels tall) ===
+    canvas.create_rectangle(
+        x - half_width, y + 93,
+        x + half_width, y + 105,
+        fill=body_color, outline='', tags='rocket'
+    )
+    
+    # === 9. ENGINE NOZZLES (5 nozzles, 2 pixels each, 1 pixel gap) ===
+    nozzle_width = 3
+    nozzle_height = 6
+    nozzle_spacing = 1
+    num_nozzles = 5
+    
+    # Calculate total width needed for nozzles
+    total_nozzle_width = num_nozzles * nozzle_width + (num_nozzles - 1) * nozzle_spacing
+    start_x = x - total_nozzle_width // 2
+    
+    for i in range(num_nozzles):
+        nozzle_x = start_x + i * (nozzle_width + nozzle_spacing)
+        canvas.create_rectangle(
+            nozzle_x, y + 105,
+            nozzle_x + nozzle_width, y + 105 + nozzle_height,
+            fill=engine_color, outline='', tags='rocket'
+        )
 
 def draw_generic_rocket(canvas, x, y):
     """Draw a generic rocket."""
