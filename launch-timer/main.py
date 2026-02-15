@@ -16,8 +16,13 @@ from ui_elements import (
     draw_attribution
 )
 from launch_animation import LaunchAnimation
-from aircraft import T38Aircraft
 from weather import WeatherSystem
+
+
+def _ts():
+    """Return a compact HH:MM:SS timestamp for log lines."""
+    from datetime import datetime
+    return datetime.now().strftime("%H:%M:%S")
 
 
 class LaunchPadDisplay:
@@ -51,9 +56,6 @@ class LaunchPadDisplay:
         # Gator animation
         self.gator_visible = False
         self.gator_timer = 0
-        
-        # T-38 Aircraft
-        self.aircraft = T38Aircraft(self.canvas)
         
         # Birds
         self.birds = []
@@ -91,7 +93,6 @@ class LaunchPadDisplay:
         self.animate_birds()
         self.animate_cars()
         self.animate_gator()
-        self.animate_aircraft()
         self.animate_tower_lights()
         self.animate_sky_colors()
         self.animate_weather()
@@ -100,11 +101,11 @@ class LaunchPadDisplay:
     
     def fetch_and_display(self, is_initial=True):
         """Fetch launch data and display it."""
-        print("Fetching fresh launch data...")
+        print(f"[{_ts()}] Fetching launch data...")
         launches = fetch_launches(5)
         
         if not launches:
-            print("ERROR: No upcoming launches found!")
+            print(f"[{_ts()}] ERROR: No upcoming launches found!")
             self.canvas.create_text(400, 50, text="NO UPCOMING LAUNCHES",
                                    font=('Courier', 16, 'bold'), fill='#ff4444')
             # Retry in 60 seconds
@@ -116,12 +117,7 @@ class LaunchPadDisplay:
         self.launch_time = self.launch_data.get('t0') or self.launch_data.get('win_open')
         self.vehicle_name = self.launch_data.get('vehicle', {}).get('name', 'Unknown')
         
-        print(f"\n=== SELECTED LAUNCH ===")
-        print(f"Name: {self.launch_data.get('name')}")
-        print(f"Vehicle: {self.vehicle_name}")
-        print(f"Status: {self.launch_data.get('status', {}).get('name')}")
-        print(f"Launch time: {self.launch_time}")
-        print(f"======================\n")
+        print(f"[{_ts()}] Selected: {self.launch_data.get('name')} | {self.vehicle_name} | T0: {self.launch_time}")
         
         # Only draw rocket and create animator if it's the initial load
         # or if we're explicitly refreshing after a launch
@@ -157,37 +153,33 @@ class LaunchPadDisplay:
             seconds_to_launch = countdown.get('total_seconds', 0)
             # Only schedule refresh if launch is more than 10 minutes away
             if seconds_to_launch > 600:
-                print(f"Scheduling data refresh in 5 minutes (launch is {seconds_to_launch/60:.1f} minutes away)")
+                print(f"[{_ts()}] Next refresh in 5 min (T-{seconds_to_launch/60:.0f}m)")
                 self.root.after(300000, self.safe_refresh)
             else:
-                print(f"Not scheduling refresh - launch is only {seconds_to_launch/60:.1f} minutes away")
+                print(f"[{_ts()}] Refresh paused — launch in {seconds_to_launch/60:.1f} min")
     
     def safe_refresh(self):
         """Safely refresh data only if conditions are right."""
         # Don't refresh if we're currently launching
         if self.launch_animator and self.launch_animator.is_launching:
-            print("Skipping refresh - launch in progress")
-            # Try again in 2 minutes
+            print(f"[{_ts()}] Refresh skipped — launch in progress")
             self.root.after(120000, self.safe_refresh)
             return
         
-        # Check if we're still far from launch
         if self.launch_time:
             countdown = get_countdown(self.launch_time)
             if countdown and countdown != "LAUNCHED":
                 seconds_to_launch = countdown.get('total_seconds', 0)
-                if seconds_to_launch < 300:  # Less than 5 minutes
-                    print(f"Skipping refresh - too close to launch ({seconds_to_launch/60:.1f} minutes)")
-                    # Try again in 1 minute
+                if seconds_to_launch < 300:
+                    print(f"[{_ts()}] Refresh skipped — T-{seconds_to_launch/60:.1f}m")
                     self.root.after(60000, self.safe_refresh)
                     return
         
-        print("Performing safe data refresh...")
-        # Fetch fresh data
+        print(f"[{_ts()}] Refreshing launch data...")
         launches = fetch_launches(5)
         
         if not launches:
-            print("No launches found during refresh")
+            print(f"[{_ts()}] No launches found during refresh")
             self.root.after(300000, self.safe_refresh)
             return
         
@@ -196,35 +188,26 @@ class LaunchPadDisplay:
         new_launch_id = new_launch.get('id')
         
         if new_launch_id != current_launch_id:
-            # Launch has changed! Need full refresh
-            print(f"Launch has changed! Old: {current_launch_id}, New: {new_launch_id}")
+            print(f"[{_ts()}] Launch changed → loading new mission")
             self.load_next_launch()
         else:
-            # Same launch - check if launch time changed
             old_time = self.launch_time
             new_time = new_launch.get('t0') or new_launch.get('win_open')
             
             if new_time != old_time:
-                print(f"⚠️ LAUNCH TIME CHANGED!")
-                print(f"   Old time: {old_time}")
-                print(f"   New time: {new_time}")
+                print(f"[{_ts()}] ⚠ Launch time changed: {old_time} → {new_time}")
                 self.launch_time = new_time
             
-            # Update launch data
             self.launch_data = new_launch
-            
-            # Refresh info sign with updated data
             self.canvas.delete('info_sign')
             draw_info_sign(self.canvas, self.launch_data, self.vehicle_name)
             
-            print("Data refreshed successfully")
-            
-            # Schedule next refresh
+            print(f"[{_ts()}] Data refreshed — next refresh in 5 min")
             self.root.after(300000, self.safe_refresh)
     
     def load_next_launch(self):
         """Load the next launch after current one completes."""
-        print("Loading next launch...")
+        print(f"[{_ts()}] Loading next launch...")
         
         # Clean up current rocket
         self.canvas.delete('launch_flame')
@@ -420,7 +403,7 @@ class LaunchPadDisplay:
         self.root.after(50, self.animate_weather)
     def refresh_weather(self):
         """Refresh weather data every 15 minutes."""
-        print("Refreshing weather data...")
+        print(f"[{_ts()}] Refreshing weather data...")
         self.weather.fetch_weather()
         
         # Update sky colors immediately
@@ -469,21 +452,6 @@ class LaunchPadDisplay:
                     self.canvas.itemconfig(light_id, fill='#3a3a3a', outline='#2a2a2a')
         
         self.root.after(30, self.animate_tower_lights)
-    
-    def animate_aircraft(self):
-        """Animate T-38 aircraft flyby."""
-        import time
-        current_time = time.time() * 1000
-        
-        # Check if it's time to start a new flyby
-        if self.aircraft.should_start_flyby(current_time):
-            self.aircraft.start_flyby()
-        
-        # Update aircraft if active
-        if self.aircraft.active:
-            self.aircraft.update(33)
-        
-        self.root.after(33, self.animate_aircraft)
     
     def spawn_birds(self):
         """Create initial birds at random positions off-screen."""
@@ -709,7 +677,7 @@ class LaunchPadDisplay:
         if not self.launch_data:
             return
         
-        print("Checking launch status...")
+        print(f"[{_ts()}] Checking launch status...")
         
         # Re-fetch launches to get updated status
         launches = fetch_launches(5)
@@ -735,44 +703,38 @@ class LaunchPadDisplay:
             new_launch_time = updated_launch.get('t0') or updated_launch.get('win_open')
             
             if new_launch_time != self.launch_time:
-                # Launch was postponed!
-                print(f"Launch postponed! New time: {new_launch_time}")
+                print(f"[{_ts()}] ⚠ Launch postponed → {new_launch_time}")
                 self.launch_time = new_launch_time
                 self.launch_data = updated_launch
-                # Update the info sign with new data
                 self.canvas.delete('info_sign')
                 draw_info_sign(self.canvas, self.launch_data, self.vehicle_name)
                 return
             
             # Check if in flight or completed
             if status == 'In Flight':
-                print("Launch is in flight - waiting for completion...")
-                # Check again in 30 seconds
+                print(f"[{_ts()}] In flight — rechecking in 30s")
                 self.root.after(30000, self.check_launch_status)
                 return
             
             # Check launch result if available
             result = updated_launch.get('result')
-            if result == 1:  # Success
-                print("Launch confirmed successful! Loading next launch...")
+            if result == 1:
+                print(f"[{_ts()}] Launch successful — loading next")
                 self.load_next_launch()
-            elif result == 2:  # Failure
-                print("Launch failed - loading next launch...")
+            elif result == 2:
+                print(f"[{_ts()}] Launch failed — loading next")
                 self.load_next_launch()
-            elif result == 3:  # Partial failure
-                print("Launch partial failure - loading next launch...")
+            elif result == 3:
+                print(f"[{_ts()}] Launch partial failure — loading next")
                 self.load_next_launch()
             elif status not in ['In Flight', 'Go', 'Go for Launch']:
-                # Launch completed (no longer in flight), load next
-                print(f"Launch status: {status} - loading next launch...")
+                print(f"[{_ts()}] Status: {status} — loading next")
                 self.load_next_launch()
             else:
-                # Still unclear, check again in 30 seconds
-                print("Status unclear, checking again in 30 seconds...")
+                print(f"[{_ts()}] Status unclear ({status}) — rechecking in 30s")
                 self.root.after(30000, self.check_launch_status)
         else:
-            # Couldn't find our launch, it might have been removed (scrubbed)
-            print("Launch data no longer available - loading next launch")
+            print(f"[{_ts()}] Launch no longer in feed (scrubbed?) — loading next")
             self.load_next_launch()
     
     def update_countdown(self):
@@ -798,30 +760,24 @@ class LaunchPadDisplay:
     def trigger_launch(self):
         """Trigger the launch animation at T-0."""
         if self.launch_animator and not self.launch_animator.is_launching:
-            print("T-0! Launching rocket!")
-            # Start checking status after launch animation
+            print(f"[{_ts()}] T-0! Ignition sequence start")
             self.launch_animator.start_launch(on_complete=self.check_post_launch_status)
     
     def check_post_launch_status(self):
         """Check status after launch animation completes."""
-        print("Launch animation complete, checking status...")
-        # Wait a few seconds then check if we should load next launch
+        print(f"[{_ts()}] Launch animation complete — checking status")
         self.root.after(5000, self.check_launch_status)
     
     def test_launch(self):
         if self.launch_animator:
-            print("Test launch initiated!")
-            # Debug: check if rocket elements exist
             rocket_items = self.canvas.find_withtag('rocket')
-            print(f"Found {len(rocket_items)} rocket elements")
+            print(f"[{_ts()}] Test launch — {len(rocket_items)} rocket elements")
             self.launch_animator.start_launch(on_complete=self.reset_same_rocket)
         else:
-            print("No rocket to launch!")
+            print(f"[{_ts()}] Test launch: no rocket on pad")
     
     def reset_same_rocket(self):
         """Reset the same rocket after a test launch."""
-        print("Resetting same rocket...")
-        
         self.canvas.delete('launch_flame')
         self.canvas.delete('rocket')
         
@@ -839,20 +795,19 @@ class LaunchPadDisplay:
         self.canvas.delete('spotlight')
         draw_spotlights(self.canvas, self.vehicle_name)
         
-        print("Rocket reset complete!")
+        print(f"[{_ts()}] Rocket reset")
     
     def load_next_launch(self):
         """Load the next launch after T-0 launch completes."""
-        print("Loading next launch...")
+        print(f"[{_ts()}] Loading next launch...")
         
         self.canvas.delete('launch_flame')
         self.canvas.delete('rocket')
         
-        # Fetch multiple launches to ensure we get a different one
         launches = fetch_launches(5)
         
         if not launches:
-            print("No more launches available")
+            print(f"[{_ts()}] No more launches available")
             return
         
         # Find a launch that's different from the current one AND not in flight
@@ -912,7 +867,7 @@ class LaunchPadDisplay:
                 vehicle_name=self.vehicle_name
             )
         else:
-            print("Next launch is also in flight - not displaying rocket")
+            print(f"[{_ts()}] Next launch also in flight — rocket not displayed")
             self.launch_animator = None
         
         self.canvas.delete('info_sign')
@@ -922,7 +877,7 @@ class LaunchPadDisplay:
         self.canvas.delete('spotlight')
         draw_spotlights(self.canvas, self.vehicle_name)
         
-        print("Next launch loaded!")
+        print(f"[{_ts()}] Loaded: {self.launch_data.get('name')} | T0: {self.launch_time}")
 
 
 def main():
