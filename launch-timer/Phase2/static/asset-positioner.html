@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Asset Positioner v2</title>
+<style>
+* { box-sizing: border-box; margin:0; padding:0; }
+body { background:#111; color:#eee; font-family:'Courier New',monospace; display:flex; flex-direction:column; align-items:center; padding:14px; gap:10px; }
+h1 { font-size:13px; letter-spacing:3px; color:#f5c400; }
+.sub { font-size:9px; color:#555; letter-spacing:1px; }
+.layout { display:flex; gap:14px; align-items:flex-start; }
+
+#c { display:block; border:2px solid #444; cursor:crosshair; image-rendering:pixelated; }
+
+.panel { width:255px; display:flex; flex-direction:column; gap:7px; flex-shrink:0; }
+
+.load-btn { background:#1a1a1a; border:1px dashed #444; padding:9px; text-align:center; font-size:11px; color:#888; cursor:pointer; letter-spacing:1px; }
+.load-btn:hover { border-color:#f5c400; color:#f5c400; }
+input[type=file] { display:none; }
+
+.sec { font-size:8px; letter-spacing:3px; color:#444; border-bottom:1px solid #222; padding-bottom:3px; text-transform:uppercase; }
+
+.alist { display:flex; flex-direction:column; gap:3px; max-height:160px; overflow-y:auto; }
+.arow { background:#1a1a1a; border:1px solid #2a2a2a; padding:5px 8px; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; }
+.arow:hover { border-color:#444; }
+.arow.active { border-color:#f5c400; background:#1e1800; }
+.arow .nm { flex:1; color:#bbb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.arow .sz { color:#444; font-size:8px; }
+.vbtn { background:none; border:1px solid #2a2a2a; color:#555; font-size:8px; padding:1px 4px; cursor:pointer; }
+.vbtn:hover { color:#eee; border-color:#888; }
+
+.pbox { background:#0d0d0d; border:1px solid #222; padding:9px; }
+.phint { font-size:9px; color:#333; }
+.pgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
+.pf label { display:block; font-size:8px; color:#555; margin-bottom:2px; letter-spacing:1px; }
+.pf input { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; color:#ccc; font-family:'Courier New',monospace; font-size:11px; padding:3px 5px; }
+.pf input:focus { outline:none; border-color:#f5c400; }
+.pf.full { grid-column:span 2; }
+
+/* Rotate slider */
+.rot-wrap { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.rot-wrap label { font-size:8px; color:#555; letter-spacing:1px; width:40px; flex-shrink:0; }
+.rot-wrap input[type=range] { flex:1; accent-color:#f5c400; }
+.rot-wrap .rot-val { font-size:10px; color:#f5c400; width:40px; text-align:right; }
+
+.lock-row { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:9px; color:#555; }
+.lock-row input { accent-color:#f5c400; }
+
+.codebox { background:#050505; border:1px solid #222; padding:9px; }
+.codebox pre { font-size:9px; color:#00e87a; white-space:pre-wrap; word-break:break-all; line-height:1.5; max-height:140px; overflow-y:auto; margin-top:4px; }
+
+.btn { background:#f5c400; color:#000; border:none; padding:7px; font-family:'Courier New',monospace; font-size:10px; font-weight:bold; letter-spacing:2px; cursor:pointer; width:100%; }
+.btn:hover { background:#ffd700; }
+.btn.save { background:#00cc55; color:#000; font-size:11px; padding:9px; }
+.btn.save:hover { background:#00ff66; }
+.btn.dim { background:#1a1a1a; color:#666; border:1px solid #2a2a2a; }
+.btn.dim:hover { background:#222; color:#aaa; }
+#saved { font-size:9px; color:#00e87a; text-align:center; height:12px; }
+
+.tip { font-size:8px; color:#333; line-height:1.8; border-top:1px solid #1a1a1a; padding-top:6px; }
+.tip span { color:#666; }
+
+.kb { display:inline-block; background:#222; border:1px solid #444; padding:0 4px; border-radius:2px; font-size:8px; color:#aaa; }
+</style>
+</head>
+<body>
+<h1>🚀 ASSET POSITIONER v2</h1>
+<p class="sub">Drag · Scale · Rotate · Save to app.js</p>
+<div class="layout">
+  <canvas id="c" width="800" height="600"></canvas>
+  <div class="panel">
+
+    <div class="load-btn" onclick="document.getElementById('fi').click()">
+      📂 Load PNG Assets
+      <br><span style="font-size:8px;color:#444;">select multiple files at once</span>
+    </div>
+    <input type="file" id="fi" multiple accept="image/*">
+
+    <div class="load-btn" onclick="document.getElementById('fjs').click()" style="border-color:#333;">
+      📄 Load app.js <span style="font-size:8px;color:#444;">(to enable Save)</span>
+    </div>
+    <input type="file" id="fjs" accept=".js">
+
+    <div class="sec">Assets</div>
+    <div class="alist" id="alist"><div style="font-size:9px;color:#333;padding:4px;">No assets loaded</div></div>
+
+    <div class="sec">Transform</div>
+    <div class="pbox">
+      <div class="phint" id="phint">Click an asset to select it</div>
+      <div id="pbody" style="display:none">
+        <div class="pgrid">
+          <div class="pf"><label>X</label><input type="number" id="px" oninput="fromPanel('x')"></div>
+          <div class="pf"><label>Y</label><input type="number" id="py" oninput="fromPanel('y')"></div>
+          <div class="pf"><label>WIDTH</label><input type="number" id="pw" oninput="fromPanel('w')"></div>
+          <div class="pf"><label>HEIGHT</label><input type="number" id="ph" oninput="fromPanel('h')"></div>
+        </div>
+        <div class="rot-wrap">
+          <label>ROTATE</label>
+          <input type="range" id="prot" min="-180" max="180" step="1" value="0" oninput="fromPanel('r')">
+          <span class="rot-val" id="rot-val">0°</span>
+        </div>
+        <div class="lock-row">
+          <input type="checkbox" id="lock" checked>
+          <label for="lock">Lock aspect ratio</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">Generated Code</div>
+    <div class="codebox"><pre id="cout">// Load assets to begin</pre></div>
+
+    <button class="btn save" onclick="saveToAppJs()">💾 Save — Update app.js</button>
+    <div id="saved"></div>
+    <button class="btn" onclick="copyCode()">📋 Copy Code Only</button>
+    <button class="btn dim" onclick="resetSel()">↺ Reset Selected</button>
+    <button class="btn dim" onclick="deleteSelected()">🗑 Delete Selected</button>
+
+    <div class="tip">
+      <span>DRAG</span> to move &nbsp;·&nbsp; <span>CORNER ◢</span> to scale<br>
+      <span>🔄 HANDLE</span> above asset to rotate<br>
+      <span>X/Y/W/H</span> for precision &nbsp;·&nbsp; <span>SLIDER</span> to rotate<br>
+      <span class="kb">Del</span> delete &nbsp; <span class="kb">Esc</span> deselect &nbsp; <span class="kb">←→↑↓</span> nudge
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W=800, H=600;
+
+// ── Background ────────────────────────────────────────────────────────────────
+function drawBG() {
+  ctx.fillStyle='#87ceeb'; ctx.fillRect(0,0,W,400);
+  ctx.fillStyle='#1a8b9e'; ctx.fillRect(0,500,W,100);
+  ctx.fillStyle='#156673'; ctx.fillRect(0,500,W,12);
+  ctx.fillStyle='#5a8c3a'; ctx.fillRect(0,365,W,135);
+  ctx.fillStyle='#3a3a3a'; ctx.fillRect(0,420,W,18);
+  ctx.fillStyle='#6a6a3a';
+  for(let x=0;x<W;x+=20) ctx.fillRect(x,428,10,2);
+
+  // Reference lines
+  ctx.setLineDash([3,3]); ctx.lineWidth=0.5;
+  const refs=[{y:365,c:'rgba(80,220,80,0.4)',l:'y=365'},{y:420,c:'rgba(200,200,80,0.4)',l:'y=420'},{y:500,c:'rgba(80,180,255,0.4)',l:'y=500'}];
+  ctx.font='8px Courier New';
+  for(const r of refs){
+    ctx.strokeStyle=r.c; ctx.beginPath(); ctx.moveTo(0,r.y); ctx.lineTo(W,r.y); ctx.stroke();
+    ctx.fillStyle=r.c; ctx.fillText(r.l, 3, r.y-2);
+  }
+  ctx.setLineDash([]);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=0.5;
+  for(let x=0;x<=W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+// ── Asset state ───────────────────────────────────────────────────────────────
+// Each asset: { img, filename, cx, cy, w, h, rot(rad), origW, origH, visible }
+const AM = {};   // stem → asset
+let sel = null;
+let appJsText = null;  // loaded app.js content
+
+// Interaction state
+let mode = null;  // 'drag' | 'scale' | 'rotate'
+let mStart = {x:0,y:0};
+let mPrev  = {x:0,y:0};
+let scaleStart = {w:0,h:0};
+let rotStart = 0;
+
+const META = {
+  'ground-vab':           {label:'VAB',              code:'vab'},
+  'ground-launchpad':     {label:'Launch Pad+Tower', code:'launchTower'},
+  'ground-countdownclock':{label:'Countdown Clock',  code:'countdownClock'},
+  'rocket-falcon9':       {label:'Falcon 9',         code:'rocket_falcon9'},
+  'rocket-electron':      {label:'Electron',         code:'rocket_electron'},
+  'rocket-atlas':         {label:'Atlas V',          code:'rocket_atlas'},
+  'rocket-vulcan':        {label:'Vulcan',           code:'rocket_vulcan'},
+  'rocket-kairos':        {label:'KAIROS',           code:'rocket_kairos'},
+  'rocket-longmarch':     {label:'Long March',       code:'rocket_longmarch'},
+  'rocket-ng':            {label:'New Glenn',        code:'rocket_ng'},
+};
+function stemOf(fn){ return fn.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9-]/g,'-'); }
+function metaFor(stem){ for(const[k,v]of Object.entries(META))if(stem.includes(k))return v; return{label:stem,code:stem.replace(/-/g,'_')}; }
+
+// ── File loading ──────────────────────────────────────────────────────────────
+document.getElementById('fi').addEventListener('change', e=>{
+  Array.from(e.target.files).forEach(f=>loadImg(f));
+  e.target.value='';
+});
+document.getElementById('fjs').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    appJsText=ev.target.result;
+    showSaved('✓ app.js loaded — Save button ready');
+  };
+  r.readAsText(f);
+  e.target.value='';
+});
+
+function loadImg(file){
+  const stem=stemOf(file.name);
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    const isR=stem.startsWith('rocket');
+    const tH=isR?200:280;
+    const sc=tH/img.naturalHeight;
+    const dw=Math.round(img.naturalWidth*sc);
+    // cx/cy = center of asset
+    let cx=isR?620:(stem.includes('launch')?500:(stem.includes('countdown')?630:160));
+    let cy=stem.includes('countdown')?320:Math.max(tH/2, 365-tH/2);
+    if(AM[stem]){ AM[stem].img=img; AM[stem].origW=img.naturalWidth; AM[stem].origH=img.naturalHeight; }
+    else AM[stem]={img,filename:file.name,cx,cy,w:dw,h:tH,rot:0,origW:img.naturalWidth,origH:img.naturalHeight,visible:true};
+    refreshList(); redraw();
+  };
+  img.src=url;
+}
+
+// ── Canvas rendering ──────────────────────────────────────────────────────────
+const HANDLE_R = 6;   // resize handle radius
+const ROT_DIST = 24;  // rotate handle distance above asset
+
+function redraw(){
+  ctx.clearRect(0,0,W,H);
+  drawBG();
+  for(const [stem,a] of Object.entries(AM)){
+    if(!a.visible) continue;
+    ctx.save();
+    ctx.translate(a.cx, a.cy);
+    ctx.rotate(a.rot);
+    ctx.globalAlpha = (stem===sel) ? 1 : 0.9;
+    ctx.drawImage(a.img, -a.w/2, -a.h/2, a.w, a.h);
+    ctx.globalAlpha=1;
+
+    if(stem===sel){
+      // Selection box
+      ctx.strokeStyle='#f5c400'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.strokeRect(-a.w/2-2, -a.h/2-2, a.w+4, a.h+4);
+      ctx.setLineDash([]);
+
+      // Scale handle (bottom-right)
+      ctx.fillStyle='#f5c400';
+      ctx.beginPath(); ctx.arc(a.w/2+2, a.h/2+2, HANDLE_R, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000';
+      ctx.font='bold 8px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('◢', a.w/2+2, a.h/2+3);
+
+      // Rotate handle (top-center)
+      ctx.strokeStyle='#00ccff'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(0,-a.h/2-2); ctx.lineTo(0,-a.h/2-ROT_DIST); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#00ccff';
+      ctx.beginPath(); ctx.arc(0, -a.h/2-ROT_DIST, HANDLE_R, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000';
+      ctx.fillText('↻', 0, -a.h/2-ROT_DIST+1);
+    }
+    ctx.restore();
+  }
+}
+
+// ── Hit testing ───────────────────────────────────────────────────────────────
+function canvasPos(e){
+  const r=canvas.getBoundingClientRect();
+  return {x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height)};
+}
+
+function localPos(a, gx, gy){
+  // transform global point into asset-local coords
+  const dx=gx-a.cx, dy=gy-a.cy;
+  const cos=Math.cos(-a.rot), sin=Math.sin(-a.rot);
+  return {x:cos*dx-sin*dy, y:sin*dx+cos*dy};
+}
+
+function hitTest(gx, gy){
+  // returns {stem, part:'body'|'scale'|'rotate'} or null
+  const stems=Object.keys(AM).reverse(); // top-drawn last = checked first
+  for(const stem of stems){
+    const a=AM[stem]; if(!a.visible) continue;
+    const lp=localPos(a,gx,gy);
+
+    // Rotate handle
+    const rhgx=a.cx + Math.cos(a.rot-Math.PI/2)*(a.h/2+ROT_DIST);
+    const rhgy=a.cy + Math.sin(a.rot-Math.PI/2)*(a.h/2+ROT_DIST);
+    if(Math.hypot(gx-rhgx,gy-rhgy)<HANDLE_R+4) return {stem,part:'rotate'};
+
+    // Scale handle
+    if(Math.hypot(lp.x-(a.w/2+2), lp.y-(a.h/2+2))<HANDLE_R+4) return {stem,part:'scale'};
+
+    // Body
+    if(lp.x>=-a.w/2 && lp.x<=a.w/2 && lp.y>=-a.h/2 && lp.y<=a.h/2) return {stem,part:'body'};
+  }
+  return null;
+}
+
+// ── Mouse events ──────────────────────────────────────────────────────────────
+canvas.addEventListener('mousedown', e=>{
+  const p=canvasPos(e);
+  const hit=hitTest(p.x,p.y);
+  if(!hit){ desel(); return; }
+
+  pick(hit.stem);
+  const a=AM[hit.stem];
+  mStart={x:p.x,y:p.y}; mPrev={x:p.x,y:p.y};
+
+  if(hit.part==='scale'){
+    mode='scale'; scaleStart={w:a.w,h:a.h};
+    canvas.style.cursor='nwse-resize';
+  } else if(hit.part==='rotate'){
+    mode='rotate';
+    rotStart=Math.atan2(p.y-a.cy, p.x-a.cx)-a.rot;
+    canvas.style.cursor='crosshair';
+  } else {
+    mode='drag'; canvas.style.cursor='grabbing';
+  }
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e=>{
+  if(!mode||!sel) return;
+  const p=canvasPos(e);
+  const a=AM[sel];
+
+  if(mode==='drag'){
+    a.cx += p.x-mPrev.x; a.cy += p.y-mPrev.y;
+  } else if(mode==='scale'){
+    // distance from center to current mouse, relative to scale-start distance
+    const lp=localPos(a,p.x,p.y);
+    const lstart=localPos(a,mStart.x,mStart.y);
+    const dx=lp.x-lstart.x, dy=lp.y-lstart.y;
+    const locked=document.getElementById('lock').checked;
+    let nw=Math.max(10, scaleStart.w+dx*2);
+    let nh=Math.max(10, scaleStart.h+dy*2);
+    if(locked){
+      const asp=a.origW/a.origH;
+      if(Math.abs(dx)>=Math.abs(dy)) nh=nw/asp; else nw=nh*asp;
+    }
+    a.w=Math.round(nw); a.h=Math.round(nh);
+  } else if(mode==='rotate'){
+    a.rot = Math.atan2(p.y-a.cy, p.x-a.cx)-rotStart;
+  }
+
+  mPrev={x:p.x,y:p.y};
+  fillPanel(); redraw();
+});
+
+document.addEventListener('mouseup', ()=>{ mode=null; canvas.style.cursor='crosshair'; });
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if(!sel) return;
+  const a=AM[sel];
+  if(e.key==='Escape'){ desel(); return; }
+  if(e.key==='Delete'||e.key==='Backspace'){ deleteSelected(); return; }
+  const step=e.shiftKey?10:1;
+  if(e.key==='ArrowLeft')  { a.cx-=step; e.preventDefault(); }
+  if(e.key==='ArrowRight') { a.cx+=step; e.preventDefault(); }
+  if(e.key==='ArrowUp')    { a.cy-=step; e.preventDefault(); }
+  if(e.key==='ArrowDown')  { a.cy+=step; e.preventDefault(); }
+  fillPanel(); redraw();
+});
+
+// ── Selection ─────────────────────────────────────────────────────────────────
+function pick(stem){
+  sel=stem;
+  document.getElementById('phint').style.display='none';
+  document.getElementById('pbody').style.display='block';
+  fillPanel(); refreshList(); redraw();
+}
+function desel(){
+  sel=null;
+  document.getElementById('phint').style.display='block';
+  document.getElementById('pbody').style.display='none';
+  refreshList(); redraw();
+}
+function deleteSelected(){
+  if(!sel)return;
+  delete AM[sel]; sel=null;
+  document.getElementById('phint').style.display='block';
+  document.getElementById('pbody').style.display='none';
+  refreshList(); refreshCode(); redraw();
+}
+
+// ── Panel sync ────────────────────────────────────────────────────────────────
+function fillPanel(){
+  if(!sel)return;
+  const a=AM[sel];
+  // x/y shown as top-left corner for familiarity
+  document.getElementById('px').value=Math.round(a.cx-a.w/2);
+  document.getElementById('py').value=Math.round(a.cy-a.h/2);
+  document.getElementById('pw').value=a.w;
+  document.getElementById('ph').value=a.h;
+  const deg=Math.round(a.rot*180/Math.PI);
+  document.getElementById('prot').value=deg;
+  document.getElementById('rot-val').textContent=deg+'°';
+  refreshCode();
+}
+
+function fromPanel(changed){
+  if(!sel)return;
+  const a=AM[sel];
+  const x=parseInt(document.getElementById('px').value)||0;
+  const y=parseInt(document.getElementById('py').value)||0;
+  let w=parseInt(document.getElementById('pw').value)||10;
+  let h=parseInt(document.getElementById('ph').value)||10;
+  const deg=parseFloat(document.getElementById('prot').value)||0;
+  document.getElementById('rot-val').textContent=Math.round(deg)+'°';
+
+  if(document.getElementById('lock').checked && (changed==='w'||changed==='h')){
+    const asp=a.origW/a.origH;
+    if(changed==='w') h=Math.round(w/asp);
+    if(changed==='h') w=Math.round(h*asp);
+    document.getElementById('pw').value=w;
+    document.getElementById('ph').value=h;
+  }
+  a.cx=x+w/2; a.cy=y+h/2; a.w=w; a.h=h; a.rot=deg*Math.PI/180;
+  refreshCode(); redraw();
+}
+
+// ── Asset list ────────────────────────────────────────────────────────────────
+function refreshList(){
+  const el=document.getElementById('alist');
+  const keys=Object.keys(AM);
+  if(!keys.length){ el.innerHTML='<div style="font-size:9px;color:#333;padding:4px;">No assets loaded</div>'; return; }
+  el.innerHTML='';
+  for(const stem of keys){
+    const a=AM[stem]; const meta=metaFor(stem);
+    const row=document.createElement('div');
+    row.className='arow'+(sel===stem?' active':'');
+    row.innerHTML=`<span class="nm">${meta.label}</span><span class="sz">${a.w}×${a.h}</span><button class="vbtn">${a.visible?'👁':'🚫'}</button>`;
+    row.addEventListener('click',()=>pick(stem));
+    row.querySelector('.vbtn').addEventListener('click',e=>{
+      e.stopPropagation(); a.visible=!a.visible; refreshList(); redraw();
+    });
+    el.appendChild(row);
+  }
+}
+
+// ── Code generation ───────────────────────────────────────────────────────────
+function refreshCode(){
+  const lines=['// ── Asset positions (Asset Positioner v2) ──',''];
+  for(const [stem,a] of Object.entries(AM)){
+    const meta=metaFor(stem);
+    const isR=stem.startsWith('rocket');
+    // top-left x/y for ctx.drawImage
+    const tlx=Math.round(a.cx-a.w/2);
+    const tly=Math.round(a.cy-a.h/2);
+    const deg=parseFloat((a.rot*180/Math.PI).toFixed(1));
+
+    lines.push(`// ${meta.label}`);
+    lines.push(`{`);
+    if(deg!==0){
+      lines.push(`  ctx.save();`);
+      lines.push(`  ctx.translate(${Math.round(a.cx)}, ${Math.round(a.cy)});`);
+      lines.push(`  ctx.rotate(${(a.rot).toFixed(4)});`);
+      lines.push(`  const scale_${meta.code} = ${a.h} / IMG.${meta.code}.height;`);
+      lines.push(`  const w_${meta.code} = Math.round(IMG.${meta.code}.width * scale_${meta.code});`);
+      lines.push(`  ctx.drawImage(IMG.${meta.code}, -w_${meta.code}/2, ${-Math.round(a.h/2)}, w_${meta.code}, ${a.h});`);
+      lines.push(`  ctx.restore();`);
+    } else {
+      lines.push(`  const scale_${meta.code} = ${a.h} / IMG.${meta.code}.height;`);
+      lines.push(`  const w_${meta.code} = Math.round(IMG.${meta.code}.width * scale_${meta.code});`);
+      lines.push(`  ctx.drawImage(IMG.${meta.code}, ${tlx}, ${tly}, w_${meta.code}, ${a.h});`);
+    }
+    lines.push(`}`);
+    lines.push('');
+  }
+  document.getElementById('cout').textContent=lines.join('\n');
+  return lines.join('\n');
+}
+
+// ── Save to app.js ────────────────────────────────────────────────────────────
+function saveToAppJs(){
+  if(!appJsText){
+    showSaved('⚠ Load your app.js first using the button above');
+    return;
+  }
+
+  let updated = appJsText;
+  let changeCount = 0;
+
+  for(const [stem, a] of Object.entries(AM)){
+    const meta = metaFor(stem);
+    const isR = stem.startsWith('rocket');
+    const deg = parseFloat((a.rot*180/Math.PI).toFixed(1));
+    const tlx = Math.round(a.cx - a.w/2);
+    const tly = Math.round(a.cy - a.h/2);
+
+    if(isR){
+      // Update PAD_X, PAD_Y_BASE, ROCKET_TARGET_HEIGHT
+      const centerX = Math.round(a.cx);
+      const bottomY = Math.round(a.cy + a.h/2);
+      updated = updated.replace(
+        /const PAD_X\s*=\s*[\d.]+,\s*PAD_Y_BASE\s*=\s*[\d.]+;/,
+        `const PAD_X = ${centerX}, PAD_Y_BASE = ${bottomY};`
+      );
+      updated = updated.replace(
+        /const ROCKET_TARGET_HEIGHT\s*=\s*[\d]+;/,
+        `const ROCKET_TARGET_HEIGHT = ${a.h};`
+      );
+      changeCount++;
+    } else if(stem.includes('launchpad') || stem.includes('launch')){
+      // Update drawLaunchTower
+      updated = updated.replace(
+        /function drawLaunchTower\(\)\s*\{[\s\S]*?(?=\n\})\n\}/,
+        `function drawLaunchTower() {\n  if (IMG.launchTower) {\n    const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / IMG.launchTower.height;\n    const scaledW = Math.round(IMG.launchTower.width * scale);\n    ctx.drawImage(IMG.launchTower, ${tlx}, ${tly}, scaledW, TARGET_HEIGHT);\n  }\n}`
+      );
+      changeCount++;
+    } else if(stem.includes('vab')){
+      updated = updated.replace(
+        /const TARGET_HEIGHT = \d+;\s*\/\/.*?\n\s*const scale = TARGET_HEIGHT \/ vh;/,
+        `const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / vh;`
+      );
+      // Also update vabX/vabY
+      updated = updated.replace(
+        /const vabX\s*=\s*[\d.]+;\s*\n\s*const vabY\s*=\s*[\d.]+;/,
+        `const vabX = ${tlx};\n    const vabY = ${tly};`
+      );
+      changeCount++;
+    } else if(stem.includes('countdown')){
+      updated = updated.replace(
+        /const clockX\s*=\s*[\d.]+;\s*\n\s*const clockY\s*=\s*[\d.]+;/,
+        `const clockX = ${tlx};\n    const clockY = ${tly};`
+      );
+      updated = updated.replace(
+        /const TARGET_HEIGHT\s*=\s*\d+;\s*\n\s*const scale\s*=\s*TARGET_HEIGHT \/ IMG\.countdownClock\.height;/,
+        `const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / IMG.countdownClock.height;`
+      );
+      changeCount++;
+    }
+  }
+
+  // Download updated file
+  const blob = new Blob([updated], {type:'text/javascript'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='app.js'; a.click();
+  URL.revokeObjectURL(url);
+  showSaved(`✓ app.js downloaded with ${changeCount} update(s)!`);
+}
+
+function copyCode(){
+  const text=refreshCode();
+  const done=()=>{ showSaved('✓ Code copied to clipboard'); };
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(done);
+  else{ const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);done(); }
+}
+
+function showSaved(msg){
+  const el=document.getElementById('saved');
+  el.textContent=msg;
+  setTimeout(()=>el.textContent='',3500);
+}
+
+function resetSel(){
+  if(!sel)return;
+  const a=AM[sel];
+  const isR=sel.startsWith('rocket');
+  const tH=isR?200:280, sc=tH/a.origH;
+  a.w=Math.round(a.origW*sc); a.h=tH; a.rot=0;
+  a.cx=isR?620:(sel.includes('launch')?500:160);
+  a.cy=sel.includes('countdown')?320:Math.max(tH/2,365-tH/2);
+  fillPanel(); redraw();
+}
+
+// Initial draw
+redraw();
+</script>
+</body>
+</html>

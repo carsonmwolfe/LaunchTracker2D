@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=800" />
+  <title>Launch Countdown</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+    }
+
+    #wrapper {
+      position: relative;
+      width: 800px;
+      height: 600px;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    /* TEST LAUNCH button — top-left, same position as tkinter version */
+    #btn-test {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: #ff6600;
+      color: #fff;
+      border: none;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 6px 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    #btn-test:hover { background: #ff8833; }
+    #btn-test:active { background: #cc5500; }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <canvas id="c" width="800" height="600"></canvas>
+    <button id="btn-test">TEST LAUNCH</button>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
