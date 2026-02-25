@@ -23,16 +23,16 @@ const ASSETS = {
   launchTower:     'ground-LaunchPad.png',  // This file contains both tower AND pad
   launchPad:       'ground-LaunchPad.png',
   countdownClock:  'ground-countdownclock.png',  // New countdown clock display
-  hif:             'ground-HIF.png',             // Horizontal Integration Facility
-
-  // Rockets  (keyed by vehicle name fragment, lowercase)
-  rocket_falcon9:  'rocket-falcon9.png',
-  rocket_starship: 'rocket_starship.png',
-  rocket_electron: 'rocket_electron.png',
-  rocket_atlas:    'rocket_atlas.png',
-  rocket_vulcan:   'rocket-vulcan.png',
-  rocket_sls:      'rocket_sls.png',
-  rocket_generic:  'rocket_generic.png',
+  hif:             'ground-HIF.png',
+  te:              'ground-TE.png',
+  rocket_falcon9:   'rocket-falcon9.png',
+  rocket_atlas:     'rocket-atlasV.png',
+  rocket_vulcan:    'rocket-vulcan.png',
+  rocket_electron:  'rocket-electron.png',
+  rocket_ng:        'rocket-NG.png',
+  rocket_kairos:    'rocket-KAIROS.png',
+  rocket_longmarch: 'rocket-longmarch.png',
+  rocket_generic:   'rocket-falcon9.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
@@ -70,6 +70,7 @@ let state = {
   launchFrame:     0,
   rocketY:         340,       // current rocket base Y during launch
   rocketOffscreen: false,
+  launchComplete:  false,
 
   // Rocket flame particles
   flameParticles: [],
@@ -415,33 +416,34 @@ function drawPond() {
 //  SPOTLIGHTS
 // ─────────────────────────────────────────────────────────────────────────────
 function drawSpotlights() {
-  const rx=620, rby=340, rmy=rby-90, gy=385;
-  const lx=rx-80, rsx=rx+68;
-
-  drawRect(lx,   gy,   12, 8, '#505050');
-  drawRect(lx+2, gy+8, 8,  4, '#404040');
-  drawRect(rsx,   gy,   12, 8, '#505050');
-  drawRect(rsx+2, gy+8, 8,  4, '#404040');
-
-  if(isNight()){
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#ffffaa';
-    ctx.beginPath();
-    ctx.moveTo(lx+6,gy);
-    ctx.lineTo(rx-18,rmy); ctx.lineTo(rx-8,rmy);
-    ctx.lineTo(lx+8,gy); ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(rsx+6,gy);
-    ctx.lineTo(rx+8,rmy); ctx.lineTo(rx+18,rmy);
-    ctx.lineTo(rsx+8,gy); ctx.fill();
-    ctx.globalAlpha = 1;
-
-    drawRect(lx+3,  gy+1, 6, 6, '#ffffcc');
-    drawRect(rsx+3, gy+1, 6, 6, '#ffffcc');
+  const groundY = 370;
+  const poleH   = 30;
+  const lx      = NOZZLE_X - 90;
+  const rx      = NOZZLE_X + 75;
+  const targetX = NOZZLE_X;
+  const targetY = NOZZLE_Y - 80;
+  drawRect(lx + 4, groundY - poleH, 3, poleH, '#505050');
+  drawRect(rx + 4, groundY - poleH, 3, poleH, '#505050');
+  drawRect(lx,     groundY - poleH - 5, 12, 6, '#404040');
+  drawRect(rx,     groundY - poleH - 5, 12, 6, '#404040');
+  if (isNight()) {
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    const g1 = ctx.createLinearGradient(lx+6, groundY-poleH, targetX, targetY);
+    g1.addColorStop(0, '#ffffcc'); g1.addColorStop(1, 'rgba(255,255,180,0)');
+    ctx.fillStyle = g1;
+    ctx.beginPath(); ctx.moveTo(lx+6, groundY-poleH); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(lx+8, groundY-poleH); ctx.fill();
+    ctx.globalAlpha = 0.28;
+    const g2 = ctx.createLinearGradient(rx+6, groundY-poleH, targetX, targetY);
+    g2.addColorStop(0, '#ffffcc'); g2.addColorStop(1, 'rgba(255,255,180,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.moveTo(rx+6, groundY-poleH); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(rx+8, groundY-poleH); ctx.fill();
+    ctx.globalAlpha = 1; ctx.restore();
+    drawRect(lx+3, groundY-poleH-4, 6, 4, '#ffffcc');
+    drawRect(rx+3, groundY-poleH-4, 6, 4, '#ffffcc');
   } else {
-    drawRect(lx+3,  gy+1, 6, 6, '#2a2a2a');
-    drawRect(rsx+3, gy+1, 6, 6, '#2a2a2a');
+    drawRect(lx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
+    drawRect(rx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
   }
 }
 
@@ -527,52 +529,74 @@ function drawCars() {
 // Positioner output: ctx.drawImage(IMG.rocket_falcon9, 264, 97, rw, 267)
 // top-left x=264, top y=97, height=267 → bottom y=364
 // rw at that scale ≈ 80px → center x ≈ 264 + 40 = 304
-const PAD_X = 560, PAD_Y_BASE = 366; // center-x, bottom y
 
-const ROCKET_TARGET_HEIGHT = 200; // px — from positioner
 
 function getRocketAssetKey(vehicle) {
   if (!vehicle) return 'rocket_generic';
   const v = vehicle.toLowerCase();
-  if (v.includes('falcon'))    return 'rocket_falcon9';
-  if (v.includes('starship'))  return 'rocket_starship';
-  if (v.includes('electron'))  return 'rocket_electron';
-  if (v.includes('atlas'))     return 'rocket_atlas';
-  if (v.includes('vulcan'))    return 'rocket_vulcan';
-  if (v.includes('sls') || v.includes('space launch system')) return 'rocket_sls';
+  if (v.includes('falcon') || v.includes('starship')) return 'rocket_falcon9';
+  if (v.includes('atlas'))                             return 'rocket_atlas';
+  if (v.includes('vulcan'))                            return 'rocket_vulcan';
+  if (v.includes('electron'))                          return 'rocket_electron';
+  if (v.includes('new glenn') || v.includes(' ng'))    return 'rocket_ng';
+  if (v.includes('kairos'))                            return 'rocket_kairos';
+  if (v.includes('long march') || v.includes('longmarch') || v.includes('chang zheng')) return 'rocket_longmarch';
   return 'rocket_generic';
+}
+
+const ROCKET_CONFIG = {
+  rocket_falcon9:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_atlas:     { pad: { x: 433, y: 130, h: 250 }, te: { tx: 280, ty: 332, h: 200, offsetY: -100 } },
+  rocket_vulcan:    { pad: { x: 315, y: 160, h: 209 }, te: { tx: 264, ty: 374, h: 211, offsetY: -106 } },
+  rocket_electron:  { pad: { x: 466, y: 219, h: 158 }, te: { tx: 287, ty: 335, h: 200, offsetY: -100 } },
+  rocket_ng:        { pad: { x: 428, y: 114, h: 268 }, te: { tx: 267, ty: 334, h: 229, offsetY: -115 } },
+  rocket_kairos:    { pad: { x: 450, y: 173, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
+  rocket_longmarch: { pad: { x: 440, y: 136, h: 234 }, te: { tx: 269, ty: 334, h: 200, offsetY: -100 } },
+  rocket_generic:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+};
+const PAD_Y_BASE = 366;
+const NOZZLE_X   = 517;
+const NOZZLE_Y   = 340;
+
+function drawTE() {
+  if (!IMG.te) return;
+  const TARGET_HEIGHT = 135;
+  const teScale = TARGET_HEIGHT / IMG.te.height;
+  const scaledW = Math.round(IMG.te.width * teScale);
+  ctx.drawImage(IMG.te, 167, 288, scaledW, TARGET_HEIGHT);
+  const nextLaunch = state.launches[state.currentIdx + 1] || null;
+  const vehicle2   = nextLaunch?.vehicle || currentLaunch()?.vehicle || '';
+  const assetKey2  = getRocketAssetKey(vehicle2);
+  const rocketImg  = IMG[assetKey2];
+  if (!rocketImg) return;
+  const cfg    = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
+  const rScale = cfg.h / rocketImg.height;
+  const rw2    = Math.round(rocketImg.width * rScale);
+  ctx.save();
+  ctx.translate(cfg.tx, cfg.ty);
+  ctx.rotate(-1.5708);
+  ctx.drawImage(rocketImg, -rw2 / 2, cfg.offsetY, rw2, cfg.h);
+  ctx.restore();
 }
 
 function drawRocket() {
   if (state.rocketOffscreen) return;
-
-  const vehicle = currentLaunch()?.vehicle || '';
+  if (state.launchComplete) return;
+  const vehicle  = currentLaunch()?.vehicle || '';
   const assetKey = getRocketAssetKey(vehicle);
-  const rocketY  = state.isLaunching ? state.rocketY : PAD_Y_BASE;
-
+  const launchOffset = state.isLaunching ? state.rocketY - PAD_Y_BASE : 0;
   if (IMG[assetKey]) {
     const img = IMG[assetKey];
-    // Draw PNG centred on PAD_X, base at rocketY — height from Asset Positioner
-    const scale = ROCKET_TARGET_HEIGHT / img.height;
-    const rw = Math.round(img.width  * scale);
-    const rh = ROCKET_TARGET_HEIGHT;
-    ctx.drawImage(img, PAD_X - rw/2, rocketY - rh, rw, rh);
+    const cfg = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
+    const scale = cfg.h / img.height;
+    const rw = Math.round(img.width * scale);
+    ctx.drawImage(img, cfg.x, cfg.y + launchOffset, rw, cfg.h);
     return;
   }
-
-  // ── Procedural fallback ────────────────────────────────────────────────────
-  const x = PAD_X, y = rocketY;
   const v = vehicle.toLowerCase();
-
-  if (v.includes('falcon')) {
-    drawFalcon9(x, y);
-  } else if (v.includes('starship')) {
-    drawStarship(x, y);
-  } else if (v.includes('electron')) {
-    drawElectron(x, y);
-  } else {
-    drawGenericRocket(x, y);
-  }
+  if (v.includes('falcon')) drawFalcon9(NOZZLE_X, PAD_Y_BASE + launchOffset);
+  else if (v.includes('electron')) drawElectron(NOZZLE_X, PAD_Y_BASE + launchOffset);
+  else drawGenericRocket(NOZZLE_X, PAD_Y_BASE + launchOffset);
 }
 
 function drawGenericRocket(x, y) {
@@ -624,10 +648,13 @@ function drawElectron(x, y) {
 function drawSmoke() {
   if (state.isLaunching) return;
   if (!currentLaunch()) return;
-
-  const ventY = PAD_Y_BASE - 90;
-  const ventX = PAD_X - 40;
-  const f     = state.smokeFrame;
+  if (state.launchComplete) return;
+  const vehicle  = currentLaunch()?.vehicle || '';
+  const assetKey = getRocketAssetKey(vehicle);
+  const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
+  const ventX    = NOZZLE_X;
+  const ventY    = cfg.y + cfg.h * 0.5;
+  const f        = state.smokeFrame;
 
   for(let i=0;i<12;i++){
     const dist    = (f*0.5 + i*6) % 100;
@@ -993,18 +1020,20 @@ function updateLaunch() {
     if (state.rocketY < -200) {
       state.isLaunching    = false;
       state.rocketOffscreen = true;
+      state.launchComplete  = true;
       state.flameParticles  = [];
-      console.log(`[${ts()}] Launch complete — fetching next mission`);
-
-      // Invalidate server cache and fetch next launch
-      fetch('/api/launches/invalidate', { method: 'POST' })
-        .then(() => fetchLaunches(true));
+      if (!state.testMode) {
+        console.log(`[${ts()}] Launch complete — fetching next mission`);
+        fetch('/api/launches/invalidate', { method: 'POST' })
+          .then(() => fetchLaunches(true));
+      } else {
+        console.log(`[${ts()}] Test launch complete — awaiting reset`);
+      }
     }
   }
 
-  // Spawn flame particles at rocket base
-  const flameX = PAD_X;
-  const flameY = state.rocketY + 8;
+  const flameX = NOZZLE_X;
+  const flameY = NOZZLE_Y + (state.rocketY - PAD_Y_BASE) + 8;
   if (state.flameIntensity > 0) {
     spawnFlameParticles(flameX, flameY, state.flameIntensity);
   }
@@ -1029,9 +1058,10 @@ async function fetchLaunches(afterLaunch=false) {
       // Move to next different launch, reset all animation state
       const newLaunch = state.launches.find(l => l.id !== prev) || state.launches[0];
       state.currentIdx = newLaunch ? state.launches.indexOf(newLaunch) : 0;
-      state.launchTriggered = false;     // ← reset so next launch can trigger
+      state.launchTriggered = false;
       state.isLaunching     = false;
       state.rocketOffscreen = false;
+      state.launchComplete  = false;
       state.rocketY         = PAD_Y_BASE;
       state.flameParticles  = [];
       showNotification('NEXT MISSION');
@@ -1181,6 +1211,7 @@ function render(now) {
   drawBackground();
   drawClouds();
   // drawVAB();  // VAB removed for now
+  drawTE();
   drawHIF();
   // drawFences();
   drawRocket();         // ← Draw rocket FIRST (behind)
@@ -1217,23 +1248,30 @@ function startPolling() {
 //  TEST LAUNCH BUTTON
 // ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-test').addEventListener('click', () => {
-  if (!state.isLaunching) {
-    console.log(`[${ts()}] Test launch triggered`);
-    state.launchTriggered = true;
-    startLaunchAnimation();
-    // After animation ends, reset the rocket (handled in updateLaunch via
-    // rocketOffscreen flag — we hook into it with a one-shot timeout)
-    const checkReset = setInterval(() => {
-      if (state.rocketOffscreen) {
-        clearInterval(checkReset);
-        state.rocketOffscreen = false;
-        state.rocketY         = PAD_Y_BASE;
-        state.launchTriggered = false;
-        state.flameParticles  = [];
-        console.log(`[${ts()}] Rocket reset after test`);
-      }
-    }, 200);
-  }
+  if (state.isLaunching || state.testMode) return;
+  const launch = currentLaunch();
+  if (!launch) return;
+  console.log(`[${ts()}] TEST MODE — overriding t0 to T-3s`);
+  const originalT0        = launch.t0;
+  const originalTriggered = state.launchTriggered;
+  state.testMode          = true;
+  launch.t0               = new Date(Date.now() + 3000).toISOString();
+  state.launchTriggered   = false;
+  const checkReset = setInterval(() => {
+    if (state.rocketOffscreen) {
+      clearInterval(checkReset);
+      launch.t0             = originalT0;
+      state.launchTriggered = originalTriggered;
+      state.isLaunching     = false;
+      state.rocketOffscreen = false;
+      state.launchComplete  = false;
+      state.rocketY         = PAD_Y_BASE;
+      state.flameParticles  = [];
+      state.flameIntensity  = 0;
+      state.testMode        = false;
+      console.log(`[${ts()}] TEST MODE complete — restored original countdown`);
+    }
+  }, 200);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
