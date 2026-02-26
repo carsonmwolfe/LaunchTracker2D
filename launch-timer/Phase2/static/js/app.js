@@ -174,6 +174,7 @@ function drawOval(x, y, rx, ry, fill) {
   ctx.fill();
 }
 
+
 // Polyfill for ctx.roundRect (not available in older Chromium)
 function roundRectPath(x, y, w, h, r) {
   var tl, tr, br, bl;
@@ -193,7 +194,6 @@ function roundRectPath(x, y, w, h, r) {
   ctx.quadraticCurveTo(x, y, x + tl, y);
   ctx.closePath();
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 //  BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
@@ -585,7 +585,7 @@ function drawTE() {
   const scaledW = Math.round(IMG.te.width * teScale);
   ctx.drawImage(IMG.te, 167, 288, scaledW, TARGET_HEIGHT);
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
-  const vehicle2   = nextLaunch?.vehicle || currentLaunch()?.vehicle || '';
+  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey2  = getRocketAssetKey(vehicle2);
   const rocketImg  = IMG[assetKey2];
   if (!rocketImg) return;
@@ -602,7 +602,7 @@ function drawTE() {
 function drawRocket() {
   if (state.rocketOffscreen) return;
   if (state.launchComplete) return;
-  const vehicle  = currentLaunch()?.vehicle || '';
+  const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey = getRocketAssetKey(vehicle);
   const launchOffset = state.isLaunching ? state.rocketY - PAD_Y_BASE : 0;
   if (IMG[assetKey]) {
@@ -669,7 +669,7 @@ function drawSmoke() {
   if (state.isLaunching) return;
   if (!currentLaunch()) return;
   if (state.launchComplete) return;
-  const vehicle  = currentLaunch()?.vehicle || '';
+  const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey = getRocketAssetKey(vehicle);
   const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
   const ventX    = NOZZLE_X;
@@ -1070,7 +1070,7 @@ async function fetchLaunches(afterLaunch=false) {
   try {
     const res  = await fetch('/api/launches');
     const data = await res.json();
-    const prev = currentLaunch()?.id;
+    const _cl = currentLaunch(); const prev = _cl ? _cl.id : undefined;
 
     state.launches = data.launches || [];
 
