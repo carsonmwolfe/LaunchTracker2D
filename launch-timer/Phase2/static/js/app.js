@@ -174,6 +174,26 @@ function drawOval(x, y, rx, ry, fill) {
   ctx.fill();
 }
 
+// Polyfill for ctx.roundRect (not available in older Chromium)
+function roundRectPath(x, y, w, h, r) {
+  var tl, tr, br, bl;
+  if (Array.isArray(r)) {
+    tl = r[0]||0; tr = r[1]||0; br = r[2]||0; bl = r[3]||0;
+  } else {
+    tl = tr = br = bl = r||0;
+  }
+  ctx.moveTo(x + tl, y);
+  ctx.lineTo(x + w - tr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+  ctx.lineTo(x + w, y + h - br);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+  ctx.lineTo(x + bl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+  ctx.lineTo(x, y + tl);
+  ctx.quadraticCurveTo(x, y, x + tl, y);
+  ctx.closePath();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
@@ -565,7 +585,7 @@ function drawTE() {
   const scaledW = Math.round(IMG.te.width * teScale);
   ctx.drawImage(IMG.te, 167, 288, scaledW, TARGET_HEIGHT);
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
-  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const vehicle2   = nextLaunch?.vehicle || currentLaunch()?.vehicle || '';
   const assetKey2  = getRocketAssetKey(vehicle2);
   const rocketImg  = IMG[assetKey2];
   if (!rocketImg) return;
@@ -582,7 +602,7 @@ function drawTE() {
 function drawRocket() {
   if (state.rocketOffscreen) return;
   if (state.launchComplete) return;
-  const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const vehicle  = currentLaunch()?.vehicle || '';
   const assetKey = getRocketAssetKey(vehicle);
   const launchOffset = state.isLaunching ? state.rocketY - PAD_Y_BASE : 0;
   if (IMG[assetKey]) {
@@ -649,7 +669,7 @@ function drawSmoke() {
   if (state.isLaunching) return;
   if (!currentLaunch()) return;
   if (state.launchComplete) return;
-  const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const vehicle  = currentLaunch()?.vehicle || '';
   const assetKey = getRocketAssetKey(vehicle);
   const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
   const ventX    = NOZZLE_X;
@@ -734,7 +754,7 @@ function drawCountdown() {
 
   // Dark bar background
   ctx.fillStyle = 'rgba(20,20,28,0.88)';
-  ctx.beginPath(); ctx.roundRect(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
+  ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
 
   // T-MINUS label
@@ -871,12 +891,12 @@ function drawInfoSign() {
   // Background
   ctx.save();
   ctx.fillStyle = 'rgba(5,5,10,0.96)';
-  ctx.beginPath(); ctx.roundRect(SX, SY, SW, PH, 5); ctx.fill();
+  ctx.beginPath(); roundRectPath(SX, SY, SW, PH, 5); ctx.fill();
   ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
 
   // Header
   ctx.fillStyle = statusCol;
-  ctx.beginPath(); ctx.roundRect(SX, SY, SW, 22, [5,5,0,0]); ctx.fill();
+  ctx.beginPath(); roundRectPath(SX, SY, SW, 22, [5,5,0,0]); ctx.fill();
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
   ctx.fillText('NEXT LAUNCH', SX+SW/2, SY+15);
@@ -920,7 +940,7 @@ function drawInfoSign() {
 
   // Status badge
   ctx.fillStyle=statusCol+'28';
-  ctx.beginPath(); ctx.roundRect(IX, oy, IW, 22, 3); ctx.fill();
+  ctx.beginPath(); roundRectPath(IX, oy, IW, 22, 3); ctx.fill();
   ctx.strokeStyle=statusCol; ctx.lineWidth=1.5; ctx.stroke();
   ctx.fillStyle=statusCol; ctx.font='bold 11px monospace'; ctx.textAlign='center';
   ctx.fillText((launch.status||'TBD').toUpperCase(), SX+SW/2, oy+15);
@@ -1050,7 +1070,7 @@ async function fetchLaunches(afterLaunch=false) {
   try {
     const res  = await fetch('/api/launches');
     const data = await res.json();
-    const _cl = currentLaunch(); const prev = _cl ? _cl.id : undefined;
+    const prev = currentLaunch()?.id;
 
     state.launches = data.launches || [];
 
