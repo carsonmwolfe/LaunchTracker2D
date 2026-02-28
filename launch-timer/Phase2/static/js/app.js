@@ -863,40 +863,37 @@ function drawInfoBar() {
   while (ctx.measureText(missionName).width > availW && missionName.length > 4) {
     missionName = missionName.slice(0, -1);
   }
-  ctx.fillText(missionName, IX, BY + 26);
+  ctx.fillText(missionName, IX, BY + 24);
 
-  // Date + time
-  ctx.fillStyle = '#ffd93d';
-  ctx.font = '13px monospace';
-  ctx.fillText(lt.date + (lt.time ? '  ·  ' + lt.time : ''), IX, BY + 46);
-
-  // Vehicle + provider
+  // Date + time + vehicle inline
   const shorten = s => (s||'')
     .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
     .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
 
-  ctx.fillStyle = '#4a9ede';
-  ctx.font = '13px monospace';
-  const vehStr = (launch.vehicle || 'Unknown') + '  ·  ' + (launch.provider || '') + '  ·  ' + shorten(launch.pad || launch.location || '');
-  ctx.fillText(vehStr, IX, BY + 63);
+  const dateStr = lt.date + (lt.time ? '  ·  ' + lt.time : '');
+  const vehStr  = (launch.vehicle || '') + '  ·  ' + (launch.provider || '') + '  ·  ' + shorten(launch.pad || launch.location || '');
 
-  // Attribution tiny
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.font = '7px Courier New';
-  ctx.fillText('Data: RocketLaunch.Live  |  Weather: Open-Meteo', IX, BY + 76);
+  // Draw yellow date portion
+  ctx.fillStyle = '#ffd93d';
+  ctx.font = '13px monospace';
+  ctx.fillText(dateStr, IX, BY + 50);
+  // Draw blue vehicle portion right after
+  const dateW = ctx.measureText(dateStr).width;
+  ctx.fillStyle = '#4a9ede';
+  ctx.fillText('  ·  ' + vehStr, IX + dateW, BY + 50);
 
   // ── STATUS BADGE ──
   const badgeW = 80, badgeH = 26;
   const badgeX = W - badgeW - 14;
-  const badgeY = BY + (BH - badgeH) / 2;
+  const badgeY = BY + 12;
   ctx.fillStyle = statusCol + '28';
   ctx.beginPath(); roundRectPath(badgeX, badgeY, badgeW, badgeH, 4); ctx.fill();
   ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
   ctx.fillStyle = statusCol;
   ctx.font = 'bold 12px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText((launch.status || 'TBD').toUpperCase(), badgeX + badgeW / 2, badgeY + 18);
+  ctx.fillText((launch.status || 'TBD').toUpperCase(), badgeX + badgeW / 2, badgeY + 17);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
