@@ -57,7 +57,7 @@ function loadAssets() {
 const canvas  = document.getElementById('c');
 const ctx     = canvas.getContext('2d');
 
-const W = 800, H = 600;
+const W = 800, H = 510;
 
 let state = {
   launches:    [],
@@ -215,12 +215,6 @@ function drawBackground() {
       ctx.fillRect(sx, sy, sz, sz);
     }
   }
-
-  // Ocean (sits behind bar area)
-  ctx.fillStyle = colors.ocean;
-  ctx.fillRect(0, 460, W, 60);
-  ctx.fillStyle = '#156673';
-  ctx.fillRect(0, 460, W, 10);
 
   // Grass — compressed, sits above the bottom bar
   ctx.fillStyle = '#5a8c3a';
