@@ -174,7 +174,6 @@ function drawOval(x, y, rx, ry, fill) {
   ctx.fill();
 }
 
-
 // Polyfill for ctx.roundRect (not available in older Chromium)
 function roundRectPath(x, y, w, h, r) {
   var tl, tr, br, bl;
@@ -194,6 +193,7 @@ function roundRectPath(x, y, w, h, r) {
   ctx.quadraticCurveTo(x, y, x + tl, y);
   ctx.closePath();
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,21 +216,28 @@ function drawBackground() {
     }
   }
 
-  // Ocean
+  // Ocean (sits behind bar area)
   ctx.fillStyle = colors.ocean;
-  ctx.fillRect(0, 500, W, 100);
+  ctx.fillRect(0, 460, W, 60);
   ctx.fillStyle = '#156673';
-  ctx.fillRect(0, 500, W, 15);
+  ctx.fillRect(0, 460, W, 10);
 
-  // Grass
+  // Grass — compressed, sits above the bottom bar
   ctx.fillStyle = '#5a8c3a';
-  ctx.fillRect(0, 365, W, 135);
+  ctx.fillRect(0, 340, W, BAR_Y - 340);
 
-  // Road
+  // Road (moved up to sit above bar)
   drawRoad();
 
-  // Pixel grass details (seeded so stable)
+  // Pixel grass details
   drawPixelGrass();
+
+  // Bottom info bar background
+  ctx.fillStyle = 'rgba(8,8,18,0.97)';
+  ctx.fillRect(0, BAR_Y, W, BAR_H);
+  ctx.strokeStyle = 'rgba(0,232,122,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, BAR_Y); ctx.lineTo(W, BAR_Y); ctx.stroke();
 }
 
 function mulberry32(seed) {
@@ -243,11 +250,11 @@ function mulberry32(seed) {
 }
 
 function drawRoad() {
-  drawRect(0, 420, W, 18, '#3a3a3a');
-  drawRect(0, 420, W, 2,  '#5a5a5a');
-  drawRect(0, 436, W, 2,  '#5a5a5a');
+  drawRect(0, ROAD_Y, W, 18, '#3a3a3a');
+  drawRect(0, ROAD_Y, W, 2,  '#5a5a5a');
+  drawRect(0, ROAD_Y + 16, W, 2,  '#5a5a5a');
   ctx.fillStyle = '#6a6a3a';
-  for (let x = 0; x < W; x += 20) ctx.fillRect(x, 428, 10, 2);
+  for (let x = 0; x < W; x += 20) ctx.fillRect(x, ROAD_Y + 8, 10, 2);
 }
 
 function drawPixelGrass() {
@@ -255,7 +262,7 @@ function drawPixelGrass() {
   const colors = ['#4a7c2a','#6a9c4a','#5a8c3a','#3a6c1a'];
   for (let i = 0; i < 400; i++) {
     const gx = rng() * W;
-    const gy = 368 + rng() * 127;
+    const gy = 342 + rng() * (BAR_Y - 342 - 20);
     ctx.fillStyle = colors[Math.floor(rng() * 4)];
     const style = Math.floor(rng() * 4);
     if (style === 0)      { ctx.fillRect(gx, gy-3, 1, 3); }
@@ -512,12 +519,14 @@ function drawBirds() {
 // ─────────────────────────────────────────────────────────────────────────────
 const CAR_COLORS = ['#3a7bc8','#d44444','#f5f5f5','#2a2a2a','#ffd93d','#4a9d5f'];
 const GATE_X = 490;
-const ROAD_Y = 429;
+const ROAD_Y = 392;          // moved up — road now sits above the bottom info bar
+const BAR_H  = 90;           // height of the bottom info bar
+const BAR_Y  = H - BAR_H;   // y = 510 (bar starts here)
 
 function spawnCars() {
   for(let i=0;i<6;i++){
     state.cars.push({
-      x: -50 - i*80, y: ROAD_Y,
+      x: -50 - i*80, y: ROAD_Y + 6,
       speed: 0.8 + Math.random()*0.4,
       baseSpeed: 0.8 + Math.random()*0.4,
       color: CAR_COLORS[i % CAR_COLORS.length],
@@ -747,35 +756,35 @@ function drawCountdown() {
   const vals = (cd && cd !== 'LAUNCHED') ? [cd.days, cd.hours, cd.minutes, cd.seconds] : [0,0,0,0];
   const LABELS = ['DAYS','HOURS','MINS','SECS'];
 
-  const BW = 58, BH = 58, GAP = 6;
+  const BW = 80, BH = 80, GAP = 7;
   const TOTAL_W = 4*BW + 3*GAP;
   const BX = Math.round((W - TOTAL_W) / 2);
   const BY = 8;
 
   // Dark bar background
   ctx.fillStyle = 'rgba(20,20,28,0.88)';
-  ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
+  ctx.beginPath(); roundRectPath(BX-18, BY-6, TOTAL_W+36, BH+30, 6); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
 
   // T-MINUS label
-  ctx.fillStyle='rgba(255,255,255,0.25)';
-  ctx.font='bold 7px Courier New'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.28)';
+  ctx.font='bold 8px Courier New'; ctx.textAlign='center';
   ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
 
   if (cd === 'LAUNCHED') {
     ctx.fillStyle='#ff4444'; ctx.shadowColor='#ff2200'; ctx.shadowBlur=8;
-    ctx.font='bold 20px Courier New'; ctx.textAlign='center';
-    ctx.fillText('🚀  LAUNCHED', BX+TOTAL_W/2, BY+BH/2+14);
+    ctx.font='bold 26px Courier New'; ctx.textAlign='center';
+    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+BH/2+14);
     ctx.shadowBlur=0; return;
   }
   if (!cd) {
-    ctx.fillStyle='#ffd93d'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
-    ctx.fillText('LAUNCH TIME TBD', BX+TOTAL_W/2, BY+BH/2+10); return;
+    ctx.fillStyle='#ffd93d'; ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    ctx.fillText('LAUNCH TIME TBD', BX+TOTAL_W/2, BY+BH/2+14); return;
   }
 
   LABELS.forEach((lbl, i) => {
     const bx = BX + i*(BW+GAP);
-    const by = BY + 8;
+    const by = BY + 10;
 
     // Plastic body
     ctx.fillStyle='#c8d4e0'; ctx.fillRect(bx, by, BW, BH);
@@ -785,7 +794,7 @@ function drawCountdown() {
     ctx.strokeStyle='#6080a0'; ctx.lineWidth=1; ctx.strokeRect(bx+0.5, by+0.5, BW-1, BH-1);
 
     // LCD screen
-    const px=6, py=5, sw=BW-12, sh=BH-py*2-14;
+    const px=7, py=6, sw=BW-14, sh=BH-py*2-16;
     const sx=bx+px, sy=by+py;
     ctx.fillStyle='#12202e'; ctx.fillRect(sx, sy, sw, sh);
     ctx.strokeStyle='#1e3048'; ctx.lineWidth=1; ctx.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
@@ -801,9 +810,9 @@ function drawCountdown() {
     ctx.stroke(); ctx.setLineDash([]);
 
     // Green digit — centred both axes inside the LCD screen
-    ctx.shadowColor='#00ff88'; ctx.shadowBlur=7;
+    ctx.shadowColor='#00ff88'; ctx.shadowBlur=9;
     ctx.fillStyle='#00e87a';
-    ctx.font='bold 20px Courier New';
+    ctx.font='bold 32px Courier New';
     ctx.textAlign='center';
     ctx.textBaseline='middle';
     ctx.fillText(String(vals[i]).padStart(2,'0'), sx + sw/2, sy + sh/2);
@@ -811,33 +820,24 @@ function drawCountdown() {
     ctx.shadowBlur=0;
 
     // Label
-    ctx.fillStyle='#4a7aaa'; ctx.font='bold 6px Courier New'; ctx.textAlign='center';
+    ctx.fillStyle='#4a7aaa'; ctx.font='bold 7px Courier New'; ctx.textAlign='center';
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 }
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  INFO SIGN  (right edge, matches Phase 1)
+//  BOTTOM INFO BAR  (full-width, replaces right-side panel + attribution)
 // ─────────────────────────────────────────────────────────────────────────────
-function drawInfoSign() {
+function drawInfoBar() {
   const launch = currentLaunch();
   if (!launch) return;
-
-  const SW = 170, SX = W - SW - 6, SY = 148;
-  const IX = SX + 14, IW = SW - 28;
 
   const statusColors = {
     'Go':'#00e87a','Go for Launch':'#00e87a',
     'TBD':'#ffd93d','To Be Determined':'#ffd93d','To Be Confirmed':'#ffd93d',
   };
   const statusCol = statusColors[launch.status] || '#4a9ede';
-
-  const shorten = s => (s||'Unknown')
-    .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
-    .replace('Space Force Station','SFS').replace('Air Force Base','AFB')
-    .replace('Kennedy Space Center','KSC').replace('Cape Canaveral','CCAFS')
-    .replace('Vandenberg Space Force Base','VSFB');
 
   const formatT0 = t0 => {
     if (!t0) return { date:'TBD', time:'' };
@@ -850,110 +850,59 @@ function drawInfoSign() {
     } catch(e) { return { date:t0, time:'' }; }
   };
 
-  const wrapText = (text, maxPx, font) => {
-    ctx.font = font;
-    const words = (text||'Unknown').split(' ');
-    const lines = []; let cur = '';
-    for (const w of words) {
-      const t = cur ? cur+' '+w : w;
-      if (ctx.measureText(t).width <= maxPx) cur = t;
-      else { if(cur) lines.push(cur); cur = w; }
-    }
-    if(cur) lines.push(cur);
-    return lines;
-  };
-
   const lt = formatT0(launch.t0 || launch.win_open);
-  const F_VAL  = '11px monospace';
-  const F_LBL  = 'bold 8px monospace';
-  const F_NAME = 'bold 12px monospace';
-  const LH = 13;
+  const BY = BAR_Y;
+  const BH = BAR_H;
 
-  const nameLines = wrapText(launch.name||'Unknown', IW, F_NAME).slice(0,2);
-  const padLines  = wrapText(shorten(launch.pad||launch.location||'Unknown'), IW, F_VAL).slice(0,2);
-  const vehLines  = wrapText(launch.vehicle||'Unknown', IW, F_VAL).slice(0,2);
-  const provLines = wrapText(launch.provider||'Unknown', IW, F_VAL).slice(0,2);
+  // Bar is already drawn in drawBackground — just draw content on top
 
-  // Dynamic height — capped so sign never overlaps the grass (ground starts y=365)
-  const MAX_SIGN_BOTTOM = 362;
-  const rawPH = 22 + 10
-    + nameLines.length * 15 + 10
-    + 1 + 10
-    + 9 + 14 + (lt.time ? 13 : 0) + 10
-    + 1 + 10
-    + 9 + padLines.length  * LH + 6
-    + 9 + vehLines.length  * LH + 6
-    + 9 + provLines.length * LH + 6
-    + 1 + 10
-    + 22 + 8;
-  const PH = Math.min(rawPH, MAX_SIGN_BOTTOM - SY);
-
-  // Background
-  ctx.save();
-  ctx.fillStyle = 'rgba(5,5,10,0.96)';
-  ctx.beginPath(); roundRectPath(SX, SY, SW, PH, 5); ctx.fill();
-  ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
-
-  // Header
-  ctx.fillStyle = statusCol;
-  ctx.beginPath(); roundRectPath(SX, SY, SW, 22, [5,5,0,0]); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.8)';
-  ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-  ctx.fillText('NEXT LAUNCH', SX+SW/2, SY+15);
-
-  let oy = SY + 32;
+  // ── MISSION INFO (left-aligned, full width minus badge) ──
+  const IX = 20;
+  const availW = W - IX - 100; // leave room for status badge
 
   // Mission name
-  ctx.fillStyle = '#ffffff'; ctx.font = F_NAME; ctx.textAlign = 'center';
-  nameLines.forEach(ln => { ctx.fillText(ln, SX+SW/2, oy); oy += 15; });
-  oy += 8;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 17px monospace';
+  ctx.textAlign = 'left';
+  // Truncate if needed
+  let missionName = launch.name || 'Unknown';
+  while (ctx.measureText(missionName).width > availW && missionName.length > 4) {
+    missionName = missionName.slice(0, -1);
+  }
+  ctx.fillText(missionName, IX, BY + 30);
 
-  const divider = () => {
-    ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fillRect(IX, oy, IW, 1); oy += 10;
-  };
-  const rowLbl = txt => {
-    ctx.font=F_LBL; ctx.textAlign='left'; ctx.fillStyle='rgba(255,255,255,0.4)';
-    ctx.fillText(txt, IX, oy); oy += 11;
-  };
-  const rowVal = (lines, col) => {
-    ctx.font=F_VAL; ctx.textAlign='left'; ctx.fillStyle=col||'#fff';
-    lines.forEach(ln => { ctx.fillText(ln, IX, oy); oy += LH; });
-    oy += 4;
-  };
+  // Date + time
+  ctx.fillStyle = '#ffd93d';
+  ctx.font = '11px monospace';
+  ctx.fillText(lt.date + (lt.time ? '  ·  ' + lt.time : ''), IX, BY + 48);
 
-  divider();
+  // Vehicle + provider
+  const shorten = s => (s||'')
+    .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
+    .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
+    .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
 
-  // Launch time
-  rowLbl('LAUNCH TIME');
-  ctx.font='bold 12px monospace'; ctx.textAlign='left'; ctx.fillStyle='#ffd93d';
-  ctx.fillText(lt.date, IX, oy); oy += 14;
-  if (lt.time) { ctx.font=F_VAL; ctx.fillStyle='#ffd93d'; ctx.fillText(lt.time, IX, oy); oy += LH; }
-  oy += 6;
+  ctx.fillStyle = '#4a9ede';
+  ctx.font = '11px monospace';
+  const vehStr = (launch.vehicle || 'Unknown') + '  ·  ' + (launch.provider || '') + '  ·  ' + shorten(launch.pad || launch.location || '');
+  ctx.fillText(vehStr, IX, BY + 63);
 
-  divider();
+  // Attribution tiny
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.font = '7px Courier New';
+  ctx.fillText('Data: RocketLaunch.Live  |  Weather: Open-Meteo', IX, BY + 80);
 
-  rowLbl('LAUNCH PAD');  rowVal(padLines,  '#ff9944');
-  rowLbl('VEHICLE');     rowVal(vehLines,  '#4a9ede');
-  rowLbl('PROVIDER');    rowVal(provLines, '#dddddd');
-
-  divider();
-
-  // Status badge
-  ctx.fillStyle=statusCol+'28';
-  ctx.beginPath(); roundRectPath(IX, oy, IW, 22, 3); ctx.fill();
-  ctx.strokeStyle=statusCol; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.fillStyle=statusCol; ctx.font='bold 11px monospace'; ctx.textAlign='center';
-  ctx.fillText((launch.status||'TBD').toUpperCase(), SX+SW/2, oy+15);
-
-  ctx.restore();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  ATTRIBUTION
-// ─────────────────────────────────────────────────────────────────────────────
-function drawAttribution() {
-  ctx.fillStyle='#666666'; ctx.font='7px Courier New'; ctx.textAlign='center';
-  ctx.fillText('Data: RocketLaunch.Live  |  Weather: Open-Meteo', 400, 580);
+  // ── STATUS BADGE ──
+  const badgeW = 80, badgeH = 28;
+  const badgeX = W - badgeW - 14;
+  const badgeY = BY + (BH - badgeH) / 2;
+  ctx.fillStyle = statusCol + '28';
+  ctx.beginPath(); roundRectPath(badgeX, badgeY, badgeW, badgeH, 4); ctx.fill();
+  ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = statusCol;
+  ctx.font = 'bold 12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText((launch.status || 'TBD').toUpperCase(), badgeX + badgeW / 2, badgeY + 18);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1243,9 +1192,8 @@ function render(now) {
   drawSpotlights();
   drawSmoke();
   drawFlameParticles();
-  drawInfoSign();
+  drawInfoBar();
   drawCountdown();
-  drawAttribution();
   if (state.notification) drawNotification();
 }
 
