@@ -216,9 +216,9 @@ function drawBackground() {
     }
   }
 
-  // Grass — compressed, sits above the bottom bar
+  // Grass — restored to original position
   ctx.fillStyle = '#5a8c3a';
-  ctx.fillRect(0, 340, W, BAR_Y - 340);
+  ctx.fillRect(0, 365, W, BAR_Y - 365);
 
   // Road (moved up to sit above bar)
   drawRoad();
@@ -256,7 +256,7 @@ function drawPixelGrass() {
   const colors = ['#4a7c2a','#6a9c4a','#5a8c3a','#3a6c1a'];
   for (let i = 0; i < 400; i++) {
     const gx = rng() * W;
-    const gy = 342 + rng() * (BAR_Y - 342 - 20);
+    const gy = 368 + rng() * (BAR_Y - 368 - 20);
     ctx.fillStyle = colors[Math.floor(rng() * 4)];
     const style = Math.floor(rng() * 4);
     if (style === 0)      { ctx.fillRect(gx, gy-3, 1, 3); }
@@ -513,9 +513,9 @@ function drawBirds() {
 // ─────────────────────────────────────────────────────────────────────────────
 const CAR_COLORS = ['#3a7bc8','#d44444','#f5f5f5','#2a2a2a','#ffd93d','#4a9d5f'];
 const GATE_X = 490;
-const ROAD_Y = 392;          // moved up — road now sits above the bottom info bar
-const BAR_H  = 90;           // height of the bottom info bar
-const BAR_Y  = H - BAR_H;   // y = 510 (bar starts here)
+const ROAD_Y = 408;          // road sits between grass and info bar
+const BAR_H  = 80;           // height of the bottom info bar
+const BAR_Y  = H - BAR_H;   // y = 430
 
 function spawnCars() {
   for(let i=0;i<6;i++){
@@ -856,19 +856,19 @@ function drawInfoBar() {
 
   // Mission name
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 17px monospace';
+  ctx.font = 'bold 22px monospace';
   ctx.textAlign = 'left';
   // Truncate if needed
   let missionName = launch.name || 'Unknown';
   while (ctx.measureText(missionName).width > availW && missionName.length > 4) {
     missionName = missionName.slice(0, -1);
   }
-  ctx.fillText(missionName, IX, BY + 30);
+  ctx.fillText(missionName, IX, BY + 26);
 
   // Date + time
   ctx.fillStyle = '#ffd93d';
-  ctx.font = '11px monospace';
-  ctx.fillText(lt.date + (lt.time ? '  ·  ' + lt.time : ''), IX, BY + 48);
+  ctx.font = '13px monospace';
+  ctx.fillText(lt.date + (lt.time ? '  ·  ' + lt.time : ''), IX, BY + 46);
 
   // Vehicle + provider
   const shorten = s => (s||'')
@@ -877,17 +877,17 @@ function drawInfoBar() {
     .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
 
   ctx.fillStyle = '#4a9ede';
-  ctx.font = '11px monospace';
+  ctx.font = '13px monospace';
   const vehStr = (launch.vehicle || 'Unknown') + '  ·  ' + (launch.provider || '') + '  ·  ' + shorten(launch.pad || launch.location || '');
   ctx.fillText(vehStr, IX, BY + 63);
 
   // Attribution tiny
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.font = '7px Courier New';
-  ctx.fillText('Data: RocketLaunch.Live  |  Weather: Open-Meteo', IX, BY + 80);
+  ctx.fillText('Data: RocketLaunch.Live  |  Weather: Open-Meteo', IX, BY + 76);
 
   // ── STATUS BADGE ──
-  const badgeW = 80, badgeH = 28;
+  const badgeW = 80, badgeH = 26;
   const badgeX = W - badgeW - 14;
   const badgeY = BY + (BH - badgeH) / 2;
   ctx.fillStyle = statusCol + '28';
