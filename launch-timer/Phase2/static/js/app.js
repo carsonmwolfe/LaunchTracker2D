@@ -33,6 +33,12 @@ const ASSETS = {
   rocket_kairos:    'rocket-KAIROS.png',
   rocket_longmarch: 'rocket-longmarch.png',
   rocket_generic:   'rocket-falcon9.png',
+  rocket_starship:  'rocket-starship.png',
+  rocket_soyuz:     'rocket-Soyuz.png',
+  rocket_ariane6:   'rocket-Ariane6.png',
+  rocket_sls:       'rocket-SLS.png',
+  rocket_kinetica:  'rocket-Kinetica2.png',
+  rocket_gslv:      'rocket-GSLV.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
@@ -103,8 +109,15 @@ let state = {
   lightOn: false,
   lightCounter: 0,
 
+  // Post-launch cooldown
+  postLaunchCooldown:   false,
+  cooldownEndsAt:       0,
+  launchedMissionName:  '',
+  nextMissionName:      '',
+  nextMissionT0:        null,
+
   // Notification banner
-  notification: null,   // { text, alpha, offset }
+  notification: null,
 
   now: Date.now(),
 };
@@ -174,24 +187,14 @@ function drawOval(x, y, rx, ry, fill) {
   ctx.fill();
 }
 
-// Polyfill for ctx.roundRect (not available in older Chromium)
 function roundRectPath(x, y, w, h, r) {
   var tl, tr, br, bl;
-  if (Array.isArray(r)) {
-    tl = r[0]||0; tr = r[1]||0; br = r[2]||0; bl = r[3]||0;
-  } else {
-    tl = tr = br = bl = r||0;
-  }
-  ctx.moveTo(x + tl, y);
-  ctx.lineTo(x + w - tr, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
-  ctx.lineTo(x + w, y + h - br);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
-  ctx.lineTo(x + bl, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
-  ctx.lineTo(x, y + tl);
-  ctx.quadraticCurveTo(x, y, x + tl, y);
-  ctx.closePath();
+  if (Array.isArray(r)) { tl=r[0]||0; tr=r[1]||0; br=r[2]||0; bl=r[3]||0; }
+  else { tl=tr=br=bl=r||0; }
+  ctx.moveTo(x+tl,y); ctx.lineTo(x+w-tr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+tr);
+  ctx.lineTo(x+w,y+h-br); ctx.quadraticCurveTo(x+w,y+h,x+w-br,y+h);
+  ctx.lineTo(x+bl,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-bl);
+  ctx.lineTo(x,y+tl); ctx.quadraticCurveTo(x,y,x+tl,y); ctx.closePath();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,11 +219,11 @@ function drawBackground() {
     }
   }
 
-  // Grass — restored to original position
+  // Grass
   ctx.fillStyle = '#5a8c3a';
   ctx.fillRect(0, 365, W, BAR_Y - 365);
 
-  // Road (moved up to sit above bar)
+  // Road
   drawRoad();
 
   // Pixel grass details
@@ -246,9 +249,9 @@ function mulberry32(seed) {
 function drawRoad() {
   drawRect(0, ROAD_Y, W, 18, '#3a3a3a');
   drawRect(0, ROAD_Y, W, 2,  '#5a5a5a');
-  drawRect(0, ROAD_Y + 16, W, 2,  '#5a5a5a');
+  drawRect(0, ROAD_Y+16, W, 2,  '#5a5a5a');
   ctx.fillStyle = '#6a6a3a';
-  for (let x = 0; x < W; x += 20) ctx.fillRect(x, ROAD_Y + 8, 10, 2);
+  for (let x = 0; x < W; x += 20) ctx.fillRect(x, ROAD_Y+8, 10, 2);
 }
 
 function drawPixelGrass() {
@@ -513,14 +516,14 @@ function drawBirds() {
 // ─────────────────────────────────────────────────────────────────────────────
 const CAR_COLORS = ['#3a7bc8','#d44444','#f5f5f5','#2a2a2a','#ffd93d','#4a9d5f'];
 const GATE_X = 490;
-const ROAD_Y = 408;          // road sits between grass and info bar
-const BAR_H  = 80;           // height of the bottom info bar
-const BAR_Y  = H - BAR_H;   // y = 430
+const ROAD_Y = 408;
+const BAR_H  = 80;
+const BAR_Y  = H - BAR_H;
 
 function spawnCars() {
   for(let i=0;i<6;i++){
     state.cars.push({
-      x: -50 - i*80, y: ROAD_Y + 6,
+      x: -50 - i*80, y: ROAD_Y+6,
       speed: 0.8 + Math.random()*0.4,
       baseSpeed: 0.8 + Math.random()*0.4,
       color: CAR_COLORS[i % CAR_COLORS.length],
@@ -557,7 +560,13 @@ function drawCars() {
 function getRocketAssetKey(vehicle) {
   if (!vehicle) return 'rocket_generic';
   const v = vehicle.toLowerCase();
-  if (v.includes('falcon') || v.includes('starship')) return 'rocket_falcon9';
+  if (v.includes('starship'))  return 'rocket_starship';
+  if (v.includes('soyuz'))     return 'rocket_soyuz';
+  if (v.includes('ariane'))    return 'rocket_ariane6';
+  if (v.includes('sls') || v.includes('space launch system')) return 'rocket_sls';
+  if (v.includes('kinetica'))  return 'rocket_kinetica';
+  if (v.includes('gslv') || v.includes('geosynchronous')) return 'rocket_gslv';
+  if (v.includes('falcon'))    return 'rocket_falcon9';
   if (v.includes('atlas'))                             return 'rocket_atlas';
   if (v.includes('vulcan'))                            return 'rocket_vulcan';
   if (v.includes('electron'))                          return 'rocket_electron';
@@ -576,6 +585,12 @@ const ROCKET_CONFIG = {
   rocket_kairos:    { pad: { x: 450, y: 173, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
   rocket_longmarch: { pad: { x: 440, y: 136, h: 234 }, te: { tx: 269, ty: 334, h: 200, offsetY: -100 } },
   rocket_generic:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_starship:  { pad: { x: 423, y:  92, h: 280 }, te: { tx: 261, ty: 331, h: 242, offsetY: -121 } },
+  rocket_soyuz:     { pad: { x: 459, y: 176, h: 177 }, te: { tx: 270, ty: 331, h: 177, offsetY:  -89 } },
+  rocket_ariane6:   { pad: { x: 430, y: 140, h: 230 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_sls:       { pad: { x: 433, y:  88, h: 294 }, te: { tx: 277, ty: 334, h: 193, offsetY:  -97 } },
+  rocket_kinetica:  { pad: { x: 450, y: 180, h: 190 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_gslv:      { pad: { x: 440, y: 150, h: 220 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
 };
 const PAD_Y_BASE = 366;
 const NOZZLE_X   = 517;
@@ -605,6 +620,7 @@ function drawTE() {
 function drawRocket() {
   if (state.rocketOffscreen) return;
   if (state.launchComplete) return;
+  if (state.postLaunchCooldown) return;
   const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey = getRocketAssetKey(vehicle);
   const launchOffset = state.isLaunching ? state.rocketY - PAD_Y_BASE : 0;
@@ -672,6 +688,7 @@ function drawSmoke() {
   if (state.isLaunching) return;
   if (!currentLaunch()) return;
   if (state.launchComplete) return;
+  if (state.postLaunchCooldown) return;
   const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey = getRocketAssetKey(vehicle);
   const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
@@ -757,23 +774,31 @@ function drawCountdown() {
 
   // Dark bar background
   ctx.fillStyle = 'rgba(20,20,28,0.88)';
-  ctx.beginPath(); roundRectPath(BX-18, BY-6, TOTAL_W+36, BH+30, 6); ctx.fill();
+  ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
 
   // T-MINUS label
-  ctx.fillStyle='rgba(255,255,255,0.28)';
-  ctx.font='bold 8px Courier New'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.font='bold 7px Courier New'; ctx.textAlign='center';
   ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
 
-  if (cd === 'LAUNCHED') {
-    ctx.fillStyle='#ff4444'; ctx.shadowColor='#ff2200'; ctx.shadowBlur=8;
-    ctx.font='bold 26px Courier New'; ctx.textAlign='center';
-    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+BH/2+14);
-    ctx.shadowBlur=0; return;
+  if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
+    ctx.fillStyle='#ff4444'; ctx.shadowColor='#ff2200'; ctx.shadowBlur=10;
+    ctx.font='bold 30px Courier New'; ctx.textAlign='center';
+    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+BH/2+4);
+    ctx.shadowBlur=0;
+    if (state.postLaunchCooldown) {
+      const remSec = Math.max(0, Math.floor((state.cooldownEndsAt - Date.now()) / 1000));
+      const remM = Math.floor(remSec / 60), remS = remSec % 60;
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText('NEXT ROCKET ON STAND IN  ' + remM + ':' + String(remS).padStart(2,'0'), BX+TOTAL_W/2, BY+BH-4);
+    }
+    return;
   }
   if (!cd) {
-    ctx.fillStyle='#ffd93d'; ctx.font='bold 11px Courier New'; ctx.textAlign='center';
-    ctx.fillText('LAUNCH TIME TBD', BX+TOTAL_W/2, BY+BH/2+14); return;
+    ctx.fillStyle='#ffd93d'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
+    ctx.fillText('LAUNCH TIME TBD', BX+TOTAL_W/2, BY+BH/2+10); return;
   }
 
   LABELS.forEach((lbl, i) => {
@@ -821,18 +846,45 @@ function drawCountdown() {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  BOTTOM INFO BAR  (full-width, replaces right-side panel + attribution)
+//  BOTTOM INFO BAR
 // ─────────────────────────────────────────────────────────────────────────────
 function drawInfoBar() {
+  const BY = BAR_Y, BH = BAR_H, IX = 20;
+
+  if (state.postLaunchCooldown) {
+    ctx.fillStyle = '#ff6644'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('LAUNCHED:', IX, BY + 24);
+    const lw = ctx.measureText('LAUNCHED:').width;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('  ' + state.launchedMissionName, IX + lw, BY + 24);
+    if (state.nextMissionName) {
+      let tStr = '';
+      if (state.nextMissionT0) {
+        const cd2 = computeCountdown(state.nextMissionT0);
+        if (cd2 && cd2 !== 'LAUNCHED') {
+          tStr = cd2.days > 0
+            ? 'T−' + cd2.days + 'd ' + String(cd2.hours).padStart(2,'0') + ':' + String(cd2.minutes).padStart(2,'0') + ':' + String(cd2.seconds).padStart(2,'0')
+            : 'T−' + String(cd2.hours).padStart(2,'0') + ':' + String(cd2.minutes).padStart(2,'0') + ':' + String(cd2.seconds).padStart(2,'0');
+        }
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '12px monospace';
+      ctx.fillText('UPCOMING:', IX, BY + 50);
+      const uw = ctx.measureText('UPCOMING:').width;
+      ctx.fillStyle = '#ffd93d';
+      ctx.fillText('  ' + state.nextMissionName, IX + uw, BY + 50);
+      if (tStr) {
+        ctx.fillStyle = '#00e87a'; ctx.font = 'bold 12px monospace';
+        const nw = ctx.measureText('  ' + state.nextMissionName).width;
+        ctx.fillText('  IN ' + tStr, IX + uw + nw, BY + 50);
+      }
+    }
+    return;
+  }
+
   const launch = currentLaunch();
   if (!launch) return;
-
-  const statusColors = {
-    'Go':'#00e87a','Go for Launch':'#00e87a',
-    'TBD':'#ffd93d','To Be Determined':'#ffd93d','To Be Confirmed':'#ffd93d',
-  };
+  const statusColors = { 'Go':'#00e87a','Go for Launch':'#00e87a','TBD':'#ffd93d','To Be Determined':'#ffd93d','To Be Confirmed':'#ffd93d' };
   const statusCol = statusColors[launch.status] || '#4a9ede';
-
   const formatT0 = t0 => {
     if (!t0) return { date:'TBD', time:'' };
     try {
@@ -843,57 +895,28 @@ function drawInfoBar() {
       };
     } catch(e) { return { date:t0, time:'' }; }
   };
-
-  const lt = formatT0(launch.t0 || launch.win_open);
-  const BY = BAR_Y;
-  const BH = BAR_H;
-
-  // Bar is already drawn in drawBackground — just draw content on top
-
-  // ── MISSION INFO (left-aligned, full width minus badge) ──
-  const IX = 20;
-  const availW = W - IX - 100; // leave room for status badge
-
-  // Mission name
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px monospace';
-  ctx.textAlign = 'left';
-  // Truncate if needed
-  let missionName = launch.name || 'Unknown';
-  while (ctx.measureText(missionName).width > availW && missionName.length > 4) {
-    missionName = missionName.slice(0, -1);
-  }
-  ctx.fillText(missionName, IX, BY + 24);
-
-  // Date + time + vehicle inline
-  const shorten = s => (s||'')
-    .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
+  const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
     .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
-
+  const lt = formatT0(launch.t0 || launch.win_open);
+  const availW = W - IX - 100;
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'left';
+  let missionName = launch.name || 'Unknown';
+  while (ctx.measureText(missionName).width > availW && missionName.length > 4) missionName = missionName.slice(0,-1);
+  ctx.fillText(missionName, IX, BY + 24);
   const dateStr = lt.date + (lt.time ? '  ·  ' + lt.time : '');
-  const vehStr  = (launch.vehicle || '') + '  ·  ' + (launch.provider || '') + '  ·  ' + shorten(launch.pad || launch.location || '');
-
-  // Draw yellow date portion
-  ctx.fillStyle = '#ffd93d';
-  ctx.font = '13px monospace';
+  const vehStr  = (launch.vehicle||'') + '  ·  ' + (launch.provider||'') + '  ·  ' + shorten(launch.pad||launch.location||'');
+  ctx.fillStyle = '#ffd93d'; ctx.font = '13px monospace';
   ctx.fillText(dateStr, IX, BY + 50);
-  // Draw blue vehicle portion right after
-  const dateW = ctx.measureText(dateStr).width;
+  const dw = ctx.measureText(dateStr).width;
   ctx.fillStyle = '#4a9ede';
-  ctx.fillText('  ·  ' + vehStr, IX + dateW, BY + 50);
-
-  // ── STATUS BADGE ──
-  const badgeW = 80, badgeH = 26;
-  const badgeX = W - badgeW - 14;
-  const badgeY = BY + 12;
+  ctx.fillText('  ·  ' + vehStr, IX + dw, BY + 50);
+  const badgeW = 80, badgeH = 26, badgeX = W - badgeW - 14, badgeY = BY + 12;
   ctx.fillStyle = statusCol + '28';
   ctx.beginPath(); roundRectPath(badgeX, badgeY, badgeW, badgeH, 4); ctx.fill();
   ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = statusCol;
-  ctx.font = 'bold 12px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText((launch.status || 'TBD').toUpperCase(), badgeX + badgeW / 2, badgeY + 17);
+  ctx.fillStyle = statusCol; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+  ctx.fillText((launch.status||'TBD').toUpperCase(), badgeX + badgeW/2, badgeY + 17);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -982,12 +1005,28 @@ function updateLaunch() {
       state.rocketOffscreen = true;
       state.launchComplete  = true;
       state.flameParticles  = [];
+      const _launched = currentLaunch();
+      state.launchedMissionName = _launched ? (_launched.name || '') : '';
+      state.postLaunchCooldown  = true;
+      state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
       if (!state.testMode) {
-        console.log(`[${ts()}] Launch complete — fetching next mission`);
         fetch('/api/launches/invalidate', { method: 'POST' })
-          .then(() => fetchLaunches(true));
+          .then(() => fetch('/api/launches')).then(r => r.json())
+          .then(data => {
+            const all = data.launches || [];
+            const prevId = _launched ? _launched.id : null;
+            const next = all.find(l => l.id !== prevId) || all[1] || all[0];
+            state.nextMissionName = next ? (next.name || '') : '';
+            state.nextMissionT0   = next ? (next.t0 || null) : null;
+          }).catch(() => {});
       } else {
-        console.log(`[${ts()}] Test launch complete — awaiting reset`);
+        fetch('/api/launches').then(r => r.json()).then(data => {
+          const all = data.launches || [];
+          const prevId = _launched ? _launched.id : null;
+          const next = all.find(l => l.id !== prevId) || all[1] || all[0];
+          state.nextMissionName = next ? (next.name || '') : '';
+          state.nextMissionT0   = next ? (next.t0 || null) : null;
+        }).catch(() => {});
       }
     }
   }
@@ -1164,6 +1203,7 @@ function render(now) {
   updateSmoke();
   checkLaunchTrigger();
   updateLaunch();
+  updateCooldown();
 
   // ── Draw (back to front) ──
   ctx.clearRect(0, 0, W, H);
@@ -1191,10 +1231,20 @@ function render(now) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  POLLING
 // ─────────────────────────────────────────────────────────────────────────────
+function updateCooldown() {
+  if (!state.postLaunchCooldown) return;
+  if (Date.now() >= state.cooldownEndsAt) {
+    state.postLaunchCooldown  = false;
+    state.launchedMissionName = '';
+    state.nextMissionName     = '';
+    state.nextMissionT0       = null;
+    fetchLaunches(true);
+  }
+}
+
 function startPolling() {
-  // Refresh launches every 5 minutes
   setInterval(() => {
-    if (!state.isLaunching) {
+    if (!state.isLaunching && !state.postLaunchCooldown) {
       fetchLaunches().then(() => showNotification('DATA UPDATED'));
     }
   }, 5 * 60 * 1000);
@@ -1216,20 +1266,39 @@ document.getElementById('btn-test').addEventListener('click', () => {
   state.testMode          = true;
   launch.t0               = new Date(Date.now() + 3000).toISOString();
   state.launchTriggered   = false;
+
   const checkReset = setInterval(() => {
-    if (state.rocketOffscreen) {
-      clearInterval(checkReset);
-      launch.t0             = originalT0;
-      state.launchTriggered = originalTriggered;
-      state.isLaunching     = false;
-      state.rocketOffscreen = false;
-      state.launchComplete  = false;
-      state.rocketY         = PAD_Y_BASE;
-      state.flameParticles  = [];
-      state.flameIntensity  = 0;
-      state.testMode        = false;
-      console.log(`[${ts()}] TEST MODE complete — restored original countdown`);
-    }
+    if (!state.rocketOffscreen) return;
+    clearInterval(checkReset);
+
+    // Show cooldown for 10s in test mode (not 10 min)
+    const launchedName = launch.name || '';
+    state.launchedMissionName = launchedName;
+    state.nextMissionName     = launchedName;  // same mission coming back
+    state.nextMissionT0       = originalT0;    // real t0 = the "next" launch
+    state.postLaunchCooldown  = true;
+    state.cooldownEndsAt      = Date.now() + 10 * 1000; // 10 seconds for testing
+
+    // When cooldown ends, restore everything back to normal
+    const cooldownEnd = setInterval(() => {
+      if (Date.now() < state.cooldownEndsAt) return;
+      clearInterval(cooldownEnd);
+      launch.t0                 = originalT0;
+      state.launchTriggered     = originalTriggered;
+      state.testMode            = false;
+      state.postLaunchCooldown  = false;
+      state.launchedMissionName = '';
+      state.nextMissionName     = '';
+      state.nextMissionT0       = null;
+      state.rocketOffscreen     = false;
+      state.launchComplete      = false;
+      state.rocketY             = PAD_Y_BASE;
+      state.flameParticles      = [];
+      state.flameIntensity      = 0;
+      console.log(`[${ts()}] TEST MODE complete — restored`);
+    }, 500);
+
+    console.log(`[${ts()}] TEST MODE rocket offscreen — cooldown demo started`);
   }, 200);
 });
 
