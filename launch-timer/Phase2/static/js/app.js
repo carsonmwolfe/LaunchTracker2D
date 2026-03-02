@@ -1052,16 +1052,9 @@ async function fetchLaunches(afterLaunch=false) {
   try {
     const res  = await fetch('/api/launches');
     const data = await res.json();
-    const newLaunches = data.launches || [];
-
-    // Don't wipe existing data if API returns empty — keep showing current mission
-    if (newLaunches.length === 0 && state.launches.length > 0) {
-      console.warn(`[${ts()}] fetchLaunches got empty result — keeping existing data`);
-      return;
-    }
-
     const _cl = currentLaunch(); const prev = _cl ? _cl.id : undefined;
-    state.launches = newLaunches;
+
+    state.launches = data.launches || [];
 
     if (afterLaunch) {
       // Move to next different launch, reset all animation state
@@ -1079,7 +1072,6 @@ async function fetchLaunches(afterLaunch=false) {
     }
   } catch(e) {
     console.error('Launch fetch error:', e);
-    // On network error, keep existing data — don't blank the display
   }
 }
 
