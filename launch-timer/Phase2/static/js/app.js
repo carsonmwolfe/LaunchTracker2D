@@ -39,6 +39,7 @@ const ASSETS = {
   rocket_sls:       'rocket-SLS.png',
   rocket_kinetica:  'rocket-Kinetica2.png',
   rocket_gslv:      'rocket-GSLV.png',
+  rocket_firefly:   'rocket-firefly.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
@@ -567,6 +568,7 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('kinetica'))  return 'rocket_kinetica';
   if (v.includes('gslv') || v.includes('geosynchronous')) return 'rocket_gslv';
   if (v.includes('falcon'))    return 'rocket_falcon9';
+  if (v.includes('firefly') || v.includes('alpha'))  return 'rocket_firefly';
   if (v.includes('atlas'))                             return 'rocket_atlas';
   if (v.includes('vulcan'))                            return 'rocket_vulcan';
   if (v.includes('electron'))                          return 'rocket_electron';
@@ -585,6 +587,7 @@ const ROCKET_CONFIG = {
   rocket_kairos:    { pad: { x: 450, y: 173, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
   rocket_longmarch: { pad: { x: 440, y: 136, h: 234 }, te: { tx: 269, ty: 334, h: 200, offsetY: -100 } },
   rocket_generic:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_firefly:   { pad: { x: 450, y: 193, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
   rocket_starship:  { pad: { x: 423, y:  92, h: 280 }, te: { tx: 261, ty: 331, h: 242, offsetY: -121 } },
   rocket_soyuz:     { pad: { x: 459, y: 176, h: 177 }, te: { tx: 270, ty: 331, h: 177, offsetY:  -89 } },
   rocket_ariane6:   { pad: { x: 430, y: 140, h: 230 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
