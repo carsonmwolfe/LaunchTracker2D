@@ -13,7 +13,11 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, send_from_directory
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import sys
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, 'static'))
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
