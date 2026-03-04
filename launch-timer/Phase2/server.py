@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, send_from_directory
 import os
 
-app = Flask(__name__, static_folder='static')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=os.path.join(BASE_DIR, 'static'))
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -184,12 +185,12 @@ def _get_weather():
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'index.html')
 
 
 @app.route('/static/<path:path>')
 def serve_static(path):
-    return send_from_directory('static', path)
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), path)
 
 
 @app.route('/api/launches')
