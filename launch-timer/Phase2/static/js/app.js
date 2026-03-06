@@ -970,7 +970,25 @@ function checkLaunchTrigger() {
   if (!launch || !launch.t0) return;
 
   const cd = computeCountdown(launch.t0);
-  if (!cd || cd === 'LAUNCHED') return;
+
+  if (cd === 'LAUNCHED') {
+    console.log(`[${ts()}] Missed launch detected — starting cooldown`);
+    state.launchTriggered     = true;
+    state.launchComplete      = true;
+    state.rocketOffscreen     = true;
+    state.launchedMissionName = launch.name || '';
+    state.postLaunchCooldown  = true;
+    state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
+    fetch('/api/launches').then(r => r.json()).then(data => {
+      const all = data.launches || [];
+      const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
+      state.nextMissionName = next ? (next.name || '') : '';
+      state.nextMissionT0   = next ? (next.t0 || null) : null;
+    }).catch(() => {});
+    return;
+  }
+
+  if (!cd) return;
 
   // Fire at T-0 (within a 3-second window)
   if (cd.total_seconds <= 3 && cd.total_seconds >= 0) {
