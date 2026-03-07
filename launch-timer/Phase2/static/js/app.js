@@ -271,73 +271,6 @@ function drawPixelGrass() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  VAB BUILDING
-// ─────────────────────────────────────────────────────────────────────────────
-function drawVAB() {
-  if (IMG.vab) {
-    // Draw the new VAB PNG - much bigger and sitting on grass
-    const vw = IMG.vab.width;
-    const vh = IMG.vab.height;
-    
-    // Make VAB much bigger (was 150, now 220)
-    const TARGET_HEIGHT = 350;
-    const scale = TARGET_HEIGHT / vh;
-    const scaledW = vw * scale;
-    const scaledH = TARGET_HEIGHT;
-    
-    // Position on grass: x=60, bottom at y=365 (top of grass)
-    const vabX = 40;
-    const vabY = 108;
-    
-    ctx.drawImage(IMG.vab, vabX, vabY, scaledW, scaledH);
-    return;
-  }
-
-  // Fallback: procedural draw (Phase 1 faithful)
-  const vx = 60, vy = 215, vw = 140, vh = 150;
-
-  // Depth panels
-  drawRect(vx+vw, vy+10, 25, vh-10, '#5a5e64');
-  drawRect(vx+vw+25, vy+20, 15, vh-20, '#4a4a4a');
-
-  // Main body
-  drawRect(vx, vy, vw, vh, '#e8dfd0', '#000000', 2);
-
-  // Roof strip
-  drawRect(vx, vy, vw, 10, '#4a4e54');
-
-  // Roof equipment
-  drawRect(vx+25, vy-8, 8, 8, '#3a3a3a', '#000000', 1);
-  drawRect(vx+90, vy-8, 8, 8, '#3a3a3a', '#000000', 1);
-
-  // Centre tower
-  const cx = vx+48, cw = 48, ct = vy+15;
-  drawRect(cx, ct, cw, vh-(15), '#5a5e64');
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(cx,ct); ctx.lineTo(cx+cw,ct); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx,ct); ctx.lineTo(cx,vy+vh); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx+cw,ct); ctx.lineTo(cx+cw,vy+vh); ctx.stroke();
-
-  // Door
-  const dx=cx+10, dy=ct+20, dw=28, dh=(vy+vh)-dy-2;
-  drawRect(dx-2,dy-2,dw+4,dh+4,'#000000');
-  drawRect(dx,dy,dw,dh,'#b0b0b0');
-  const stripes=Math.floor(dh/5.5);
-  for(let i=0;i<stripes;i++){
-    const sy=dy+2+i*5.5;
-    if(sy<dy+dh-2) drawRect(dx+2,sy,dw-4,2,'#707070');
-  }
-
-  // American flag
-  const fx=vx+10, fy=vy+30, fw=32, fh=55;
-  const sw=fw/13;
-  for(let i=0;i<13;i++){
-    drawRect(fx+i*sw, fy, sw, fh, i%2===0?'#b22234':'#ffffff');
-  }
-  drawRect(fx, fy, fw*(7/13), fh*0.54, '#3c3b6e');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 //  HIF BUILDING
 // ─────────────────────────────────────────────────────────────────────────────
 function drawHIF() {
@@ -367,44 +300,6 @@ function drawLaunchPad() {
   if (IMG.launchPad && !IMG.launchTower) {
     ctx.drawImage(IMG.launchPad, 550, 320, 140, 40);
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  FENCES
-// ─────────────────────────────────────────────────────────────────────────────
-function drawFences() {
-  const fc='#8a8a8a', pc='#6a6a6a';
-  // Back fence
-  for(let x=520;x<730;x+=20){
-    drawRect(x,347,3,18,pc);
-    if(x+20<730){
-      drawRect(x+3,351,17,2,fc);
-      drawRect(x+3,359,17,2,fc);
-    }
-  }
-  // Left fence
-  for(let y=340;y<450;y+=20){
-    drawRect(520,y,3,18,pc);
-    drawRect(520,y+4,3,2,fc);
-    drawRect(520,y+6,3,8,fc);
-  }
-  // Right fence
-  for(let y=340;y<440;y+=20){
-    drawRect(720,y,3,18,pc);
-    drawRect(720,y+4,3,2,fc);
-    drawRect(720,y+12,3,2,fc);
-  }
-  // Bottom fence
-  for(let x=520;x<=740;x+=20){
-    drawRect(x,440,3,18,pc);
-    if(x+30<720) drawRect(x+5,444,35,2,fc);
-  }
-  // Guard shack
-  drawRect(490,395,20,25,'#d8d8d8','#3a3a3a',2);
-  ctx.fillStyle='#8a4a4a';
-  ctx.beginPath(); ctx.moveTo(488,395); ctx.lineTo(500,387); ctx.lineTo(512,395); ctx.fill();
-  drawRect(494,400,6,7,'#5a7a9a','#3a3a3a',1);
-  drawRect(502,405,6,15,'#5a4a3a','#3a3a3a',1);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1256,6 +1151,7 @@ function updateCooldown() {
   if (!state.postLaunchCooldown) return;
   if (Date.now() >= state.cooldownEndsAt) {
     state.postLaunchCooldown  = false;
+    state.cooldownEndsAt      = 0;
     state.launchedMissionName = '';
     state.nextMissionName     = '';
     state.nextMissionT0       = null;
