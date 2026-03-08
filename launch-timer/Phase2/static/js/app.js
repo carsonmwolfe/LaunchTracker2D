@@ -779,9 +779,17 @@ function drawInfoBar() {
     }
     return;
   }
-
   const launch = currentLaunch();
-  if (!launch) return;
+  if (!launch) {
+    ctx.fillStyle = 'rgba(255,100,50,0.7)';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('NO LAUNCH DATA', 20, BAR_Y + 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '11px monospace';
+    ctx.fillText('Check network connection or API status', 20, BAR_Y + 46);
+    return;
+  }
   const statusColors = { 'Go':'#00e87a','Go for Launch':'#00e87a','TBD':'#ffd93d','To Be Determined':'#ffd93d','To Be Confirmed':'#ffd93d' };
   const statusCol = statusColors[launch.status] || '#4a9ede';
   const formatT0 = t0 => {
@@ -816,6 +824,11 @@ function drawInfoBar() {
   ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
   ctx.fillStyle = statusCol; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
   ctx.fillText((launch.status||'TBD').toUpperCase(), badgeX + badgeW/2, badgeY + 17);
+  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('v1.0.0  ·  data ' + minAgo + 'm ago', W - 14, BAR_Y + BAR_H - 6);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
