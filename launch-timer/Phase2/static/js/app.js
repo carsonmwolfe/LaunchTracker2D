@@ -111,6 +111,7 @@ let state = {
   lightCounter: 0,
 
   // Post-launch cooldown
+  lastFetchAt: Date.now(),
   postLaunchCooldown:   false,
   cooldownEndsAt:       0,
   launchedMissionName:  '',
@@ -954,6 +955,28 @@ function updateLaunch() {
   }
 }
 
+function drawNoSignal() {
+  if (Date.now() - state.lastFetchAt < 15 * 60 * 1000) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2 - 20;
+  ctx.strokeStyle = 'rgba(255,60,30,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); roundRectPath(cx - 140, cy - 50, 280, 110, 4); ctx.stroke();
+  ctx.fillStyle = '#ff4422';
+  ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 12;
+  ctx.font = 'bold 28px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('NO SIGNAL', cx, cy);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '11px Courier New';
+  ctx.fillText('LAUNCH DATA UNAVAILABLE', cx, cy + 28);
+  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
+  ctx.fillStyle = 'rgba(255,120,60,0.6)';
+  ctx.font = '10px Courier New';
+  ctx.fillText('Last update ' + minAgo + ' min ago', cx, cy + 50);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  DATA FETCHING
 // ─────────────────────────────────────────────────────────────────────────────
@@ -967,7 +990,10 @@ async function fetchLaunches(afterLaunch=false) {
     const data = await res.json();
     const _cl = currentLaunch(); const prev = _cl ? _cl.id : undefined;
 
-    state.launches = data.launches || [];
+    const newLaunches = data.launches || [];
+    if (newLaunches.length === 0 && state.launches.length > 0) return;
+    state.launches = newLaunches;
+    state.lastFetchAt = Date.now();
 
     if (afterLaunch) {
       // Move to next different launch, reset all animation state
@@ -1142,6 +1168,7 @@ function render(now) {
   drawInfoBar();
   drawCountdown();
   if (state.notification) drawNotification();
+  drawNoSignal();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
