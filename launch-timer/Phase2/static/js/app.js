@@ -814,10 +814,10 @@ function drawInfoBar() {
   const dateStr = lt.date + (lt.time ? '  ·  ' + lt.time : '');
   const vehStr  = (launch.vehicle||'') + '  ·  ' + (launch.provider||'') + '  ·  ' + shorten(launch.pad||launch.location||'');
   ctx.fillStyle = '#ffd93d'; ctx.font = '13px monospace';
-  ctx.fillText(dateStr, IX, BY + 50);
+  ctx.fillText(dateStr, IX, BY + 44);
   const dw = ctx.measureText(dateStr).width;
   ctx.fillStyle = '#4a9ede';
-  ctx.fillText('  ·  ' + vehStr, IX + dw, BY + 50);
+  ctx.fillText('  ·  ' + vehStr, IX + dw, BY + 44);
   const badgeW = 80, badgeH = 26, badgeX = W - badgeW - 14, badgeY = BY + 12;
   ctx.fillStyle = statusCol + '28';
   ctx.beginPath(); roundRectPath(badgeX, badgeY, badgeW, badgeH, 4); ctx.fill();
