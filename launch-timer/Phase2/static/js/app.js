@@ -828,7 +828,7 @@ function drawInfoBar() {
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = '9px monospace';
   ctx.textAlign = 'right';
-  ctx.fillText('v1.0.0  ·  data ' + minAgo + 'm ago', W - 130, BAR_Y + BAR_H - 45);
+  ctx.fillText('v1.0.0  ·  data ' + minAgo + 'm ago', W - 130, BAR_Y + BAR_H - 35);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
