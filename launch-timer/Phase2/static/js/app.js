@@ -64,7 +64,7 @@ function loadAssets() {
 const canvas  = document.getElementById('c');
 const ctx     = canvas.getContext('2d');
 
-const W = 800, H = 510;
+const W = 800, H = 490;
 
 let state = {
   launches:    [],
@@ -307,16 +307,16 @@ function drawLaunchPad() {
 //  POND + GATOR
 // ─────────────────────────────────────────────────────────────────────────────
 function drawPond() {
-  drawOval(765, 393, 30, 12, '#2a5a4a');
+  drawOval(765, 383, 22, 9, '#2a5a4a');
   ctx.strokeStyle='#1a4a3a'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.ellipse(765,393,30,12,0,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(765,383,22,9,0,0,Math.PI*2); ctx.stroke();
   // Lily pad
-  drawOval(755, 390, 4, 3, '#4a7a3a');
+  drawOval(755, 381, 3, 2, '#4a7a3a');
 
   // Gator
   const gp = state.gatorPhase;
   if(gp > 0){
-    const gx=790, gy=393;
+    const gx=790, gy=383;
     const sub = Math.round(8*(1-gp));
     if(gp>0.2){
       drawOval(gx-15, gy+5+Math.round(sub*0.5), 3, 2, '#3a5a3a');
@@ -413,7 +413,7 @@ function drawBirds() {
 // ─────────────────────────────────────────────────────────────────────────────
 const CAR_COLORS = ['#3a7bc8','#d44444','#f5f5f5','#2a2a2a','#ffd93d','#4a9d5f'];
 const GATE_X = 490;
-const ROAD_Y = 408;
+const ROAD_Y = 390;
 const BAR_H  = 80;
 const BAR_Y  = H - BAR_H;
 
