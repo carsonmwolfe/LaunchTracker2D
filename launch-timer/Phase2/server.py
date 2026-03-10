@@ -271,7 +271,7 @@ def wifi_connect():
         with open('/tmp/wpa_entry.txt', 'w') as f:
             f.write(config)
         subprocess.run(['sudo', 'bash', '-c', 'cat /tmp/wpa_entry.txt >> /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
-        subprocess.Popen(['sudo', 'bash', '-c', 'wpa_cli -i wlan0 reconfigure && sleep 2 && wpa_cli -i wlan0 reassociate'])
+        subprocess.Popen(['sudo', 'bash', '-c', 'ifconfig wlan0 down && sleep 1 && ifconfig wlan0 up && sleep 2 && wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf && dhclient wlan0'])
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
