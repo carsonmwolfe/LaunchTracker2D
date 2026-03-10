@@ -244,7 +244,7 @@ import subprocess
 
 @app.route('/wifi')
 def wifi_page():
-    return send_from_directory('static', 'wifi.html')
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'wifi.html')
 
 @app.route('/api/wifi/scan')
 def wifi_scan():
