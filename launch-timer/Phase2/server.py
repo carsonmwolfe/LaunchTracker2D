@@ -267,8 +267,10 @@ def wifi_connect():
     password = data.get('password', '')
     try:
         config = f'\nnetwork={{\n    ssid="{ssid}"\n    psk="{password}"\n}}\n'
-        with open('/etc/wpa_supplicant/wpa_supplicant.conf', 'a') as f:
+        # Write to temp file then append with sudo
+        with open('/tmp/wpa_entry.txt', 'w') as f:
             f.write(config)
+        subprocess.run(['sudo', 'bash', '-c', 'cat /tmp/wpa_entry.txt >> /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
         subprocess.Popen(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'])
         return jsonify({'ok': True})
     except Exception as e:
