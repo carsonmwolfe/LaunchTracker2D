@@ -243,7 +243,7 @@ def open_browser():
 @app.route('/api/open-wifi', methods=['POST'])
 def open_wifi():
     import subprocess
-    subprocess.Popen(['bash', '-c', 'DISPLAY=:0 nm-connection-editor &'])
+    subprocess.Popen(['bash', '-c', 'DISPLAY=:0 wpa_gui &'])
     return jsonify({'ok': True})
 
 if __name__ == '__main__':
