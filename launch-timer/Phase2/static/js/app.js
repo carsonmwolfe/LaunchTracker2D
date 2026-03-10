@@ -1297,7 +1297,7 @@ canvas.addEventListener('click', function(e) {
   
   // WiFi icon tap zone (top right)
   if (x > W - 52 && x < W && y > 0 && y < 40) {
-    fetch('/api/open-wifi', { method: 'POST' });
+    window.location = 'http://localhost:5001/wifi';
   }
 });
 

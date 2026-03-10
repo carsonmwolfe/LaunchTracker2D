@@ -240,11 +240,39 @@ def open_browser():
     time.sleep(1.2)
     webbrowser.open('http://localhost:5001')
 
-@app.route('/api/open-wifi', methods=['POST'])
-def open_wifi():
-    import subprocess
-    subprocess.Popen(['bash', '-c', 'DISPLAY=:0 wpa_gui &'])
-    return jsonify({'ok': True})
+import subprocess
+
+@app.route('/wifi')
+def wifi_page():
+    return send_from_directory('static', 'wifi.html')
+
+@app.route('/api/wifi/scan')
+def wifi_scan():
+    try:
+        result = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True)
+        networks = []
+        for line in result.split('\n'):
+            if 'ESSID:' in line:
+                ssid = line.split('ESSID:')[1].strip().strip('"')
+                if ssid and ssid not in networks:
+                    networks.append(ssid)
+        return jsonify({'networks': networks})
+    except Exception as e:
+        return jsonify({'networks': [], 'error': str(e)})
+
+@app.route('/api/wifi/connect', methods=['POST'])
+def wifi_connect():
+    data = request.get_json()
+    ssid = data.get('ssid', '')
+    password = data.get('password', '')
+    try:
+        config = f'\nnetwork={{\n    ssid="{ssid}"\n    psk="{password}"\n}}\n'
+        with open('/etc/wpa_supplicant/wpa_supplicant.conf', 'a') as f:
+            f.write(config)
+        subprocess.Popen(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'])
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
 if __name__ == '__main__':
     print(f"[{_ts()}] ══════════════════════════════════════")
