@@ -240,6 +240,11 @@ def open_browser():
     time.sleep(1.2)
     webbrowser.open('http://localhost:5001')
 
+@app.route('/api/open-wifi', methods=['POST'])
+def open_wifi():
+    import subprocess
+    subprocess.Popen(['bash', '-c', 'DISPLAY=:0 nm-connection-editor &'])
+    return jsonify({'ok': True})
 
 if __name__ == '__main__':
     print(f"[{_ts()}] ══════════════════════════════════════")
@@ -248,3 +253,4 @@ if __name__ == '__main__':
     print(f"[{_ts()}] ══════════════════════════════════════")
     threading.Thread(target=open_browser, daemon=True).start()
     app.run(host='0.0.0.0', port=5001, debug=False)
+    
