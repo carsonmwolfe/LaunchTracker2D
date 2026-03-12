@@ -266,13 +266,60 @@ def wifi_connect():
     ssid = data.get('ssid', '')
     password = data.get('password', '')
     try:
-        config = f'\nnetwork={{\n    ssid="{ssid}"\n    psk="{password}"\n}}\n'
-        # Write to temp file then append with sudo
-        with open('/tmp/wpa_entry.txt', 'w') as f:
-            f.write(config)
-        subprocess.run(['sudo', 'bash', '-c', 'cat /tmp/wpa_entry.txt >> /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
-        subprocess.Popen(['sudo', 'reboot'])
-        return jsonify({'ok': True})
+        # Save old config as backup
+        with open('/etc/wpa_supplicant/wpa_supplicant.conf', 'r') as f:
+            old_config = f.read()
+
+        # Write new config with new network at higher priority, old as fallback
+        new_config = (
+            'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
+            'update_config=1\n'
+            'country=US\n\n'
+            'network={\n'
+            f'    ssid="{ssid}"\n'
+            f'    psk="{password}"\n'
+            '    key_mgmt=WPA-PSK\n'
+            '    priority=10\n'
+            '}\n'
+        )
+        # Append old networks as fallback with lower priority
+        new_config += old_config.split('ctrl_interface')[1].split('country=US')[1]
+
+        with open('/tmp/wpa_supplicant.conf', 'w') as f:
+            f.write(new_config)
+        subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
+        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], check=True)
+
+        # Wait and check if we connected to the new network
+        import time
+        time.sleep(8)
+        result = subprocess.run(['iwgetid', '-r'], capture_output=True, text=True)
+        connected_ssid = result.stdout.strip()
+
+        if connected_ssid == ssid:
+            # Success — write clean config with only new network
+            clean_config = (
+                'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
+                'update_config=1\n'
+                'country=US\n\n'
+                'network={\n'
+                f'    ssid="{ssid}"\n'
+                f'    psk="{password}"\n'
+                '    key_mgmt=WPA-PSK\n'
+                '}\n'
+            )
+            with open('/tmp/wpa_supplicant.conf', 'w') as f:
+                f.write(clean_config)
+            subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
+            return jsonify({'ok': True})
+        else:
+            # Failed — restore old config
+            with open('/tmp/wpa_supplicant.conf', 'w') as f:
+                f.write(old_config)
+            subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], check=True)
+            return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
+
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
