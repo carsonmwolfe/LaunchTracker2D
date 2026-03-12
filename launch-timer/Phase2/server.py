@@ -9,8 +9,9 @@ import threading
 import webbrowser
 import time
 import requests
+import subprocess
 from datetime import datetime, timezone
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 import os
 
 import sys
@@ -157,7 +158,6 @@ def fetch_weather():
 
 
 # ── Simple in-memory cache ─────────────────────────────────────────────────────
-# Avoids hammering APIs on every browser refresh.
 
 _cache = {
     'launches':         [],
@@ -165,8 +165,8 @@ _cache = {
     'weather':          None,
     'weather_fetched':  0,
 }
-LAUNCH_TTL  = 300   # seconds — refresh launch list every 5 minutes
-WEATHER_TTL = 900   # seconds — refresh weather every 15 minutes
+LAUNCH_TTL  = 300
+WEATHER_TTL = 900
 
 
 def _get_launches():
@@ -234,13 +234,7 @@ def invalidate_launches():
     return jsonify({'ok': True})
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
-
-def open_browser():
-    time.sleep(1.2)
-    webbrowser.open('http://localhost:5001')
-
-import subprocess
+# ── WiFi routes ───────────────────────────────────────────────────────────────
 
 @app.route('/wifi')
 def wifi_page():
@@ -270,7 +264,7 @@ def wifi_connect():
         with open('/etc/wpa_supplicant/wpa_supplicant.conf', 'r') as f:
             old_config = f.read()
 
-        # Write new config with new network at higher priority, old as fallback
+        # Write new config with new network at higher priority
         new_config = (
             'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
             'update_config=1\n'
@@ -282,22 +276,22 @@ def wifi_connect():
             '    priority=10\n'
             '}\n'
         )
-        # Append old networks as fallback with lower priority
-        new_config += old_config.split('ctrl_interface')[1].split('country=US')[1]
 
         with open('/tmp/wpa_supplicant.conf', 'w') as f:
             f.write(new_config)
         subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
         subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], check=True)
 
-        # Wait and check if we connected to the new network
-        import time
+        # Wait for connection
         time.sleep(8)
-        result = subprocess.run(['iwgetid', '-r'], capture_output=True, text=True)
+
+        # Check connected SSID using full path
+        result = subprocess.run(['/sbin/iwgetid', '-r'], capture_output=True, text=True)
         connected_ssid = result.stdout.strip()
+        print(f"[{_ts()}] WiFi connect check: wanted='{ssid}' got='{connected_ssid}'")
 
         if connected_ssid == ssid:
-            # Success — write clean config with only new network
+            # Success — write clean final config
             clean_config = (
                 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
                 'update_config=1\n'
@@ -321,7 +315,15 @@ def wifi_connect():
             return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
 
     except Exception as e:
+        print(f"[{_ts()}] WiFi connect error: {e}")
         return jsonify({'ok': False, 'error': str(e)})
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def open_browser():
+    time.sleep(1.2)
+    webbrowser.open('http://localhost:5001')
 
 if __name__ == '__main__':
     print(f"[{_ts()}] ══════════════════════════════════════")
@@ -330,4 +332,3 @@ if __name__ == '__main__':
     print(f"[{_ts()}] ══════════════════════════════════════")
     threading.Thread(target=open_browser, daemon=True).start()
     app.run(host='0.0.0.0', port=5001, debug=False)
-    
