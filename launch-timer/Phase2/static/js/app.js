@@ -117,6 +117,7 @@ let state = {
   launchedMissionName:  '',
   nextMissionName:      '',
   nextMissionT0:        null,
+  buriedLaunchId: null,
 
   // Notification banner
   notification: null,
@@ -881,21 +882,33 @@ function checkLaunchTrigger() {
   const cd = computeCountdown(launch.t0);
 
   if (cd === 'LAUNCHED') {
-    console.log(`[${ts()}] Missed launch detected — starting cooldown`);
-    state.launchTriggered     = true;
-    state.launchComplete      = true;
-    state.rocketOffscreen     = true;
-    state.launchedMissionName = launch.name || '';
-    state.postLaunchCooldown  = true;
-    state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
-    fetch('/api/launches').then(r => r.json()).then(data => {
-      const all = data.launches || [];
-      const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
-      state.nextMissionName = next ? (next.name || '') : '';
-      state.nextMissionT0   = next ? (next.t0 || null) : null;
-    }).catch(() => {});
+  const launchTime = new Date(launch.t0).getTime();
+  const minsAgo = (Date.now() - launchTime) / 60000;
+
+  if (minsAgo > 30) {
+    console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
+    state.launchTriggered = true;
+    state.buriedLaunchId  = launch.id;
+    fetchLaunches(true);
     return;
   }
+
+  console.log(`[${ts()}] Missed launch detected — starting cooldown`);
+  state.launchTriggered     = true;
+  state.launchComplete      = true;
+  state.rocketOffscreen     = true;
+  state.buriedLaunchId      = launch.id;
+  state.launchedMissionName = launch.name || '';
+  state.postLaunchCooldown  = true;
+  state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
+  fetch('/api/launches').then(r => r.json()).then(data => {
+    const all = data.launches || [];
+    const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
+    state.nextMissionName = next ? (next.name || '') : '';
+    state.nextMissionT0   = next ? (next.t0 || null) : null;
+  }).catch(() => {});
+  return;
+}
 
   if (!cd) return;
 
@@ -935,7 +948,8 @@ function updateLaunch() {
       state.rocketOffscreen = true;
       state.launchComplete  = true;
       state.flameParticles  = [];
-      const _launched = currentLaunch();
+      const _launched           = currentLaunch();
+      state.buriedLaunchId      = _launched ? _launched.id : null;  
       state.launchedMissionName = _launched ? (_launched.name || '') : '';
       state.postLaunchCooldown  = true;
       state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
@@ -1009,9 +1023,8 @@ async function fetchLaunches(afterLaunch=false) {
     state.lastFetchAt = Date.now();
 
     if (afterLaunch) {
-      // Move to next different launch, reset all animation state
-      const newLaunch = state.launches.find(l => l.id !== prev) || state.launches[0];
-      state.currentIdx = newLaunch ? state.launches.indexOf(newLaunch) : 0;
+      const newLaunch = state.launches.find(l => l.id !== state.buriedLaunchId) || state.launches[0];
+      state.currentIdx      = newLaunch ? state.launches.indexOf(newLaunch) : 0;
       state.launchTriggered = false;
       state.isLaunching     = false;
       state.rocketOffscreen = false;
@@ -1020,7 +1033,9 @@ async function fetchLaunches(afterLaunch=false) {
       state.flameParticles  = [];
       showNotification('NEXT MISSION');
     } else {
-      state.currentIdx = 0;
+      // Skip buried launch on every regular poll
+      const firstValid = state.launches.findIndex(l => l.id !== state.buriedLaunchId);
+      state.currentIdx = firstValid >= 0 ? firstValid : 0;
     }
   } catch(e) {
     console.error('Launch fetch error:', e);
