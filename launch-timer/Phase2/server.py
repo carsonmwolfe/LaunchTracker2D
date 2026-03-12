@@ -240,6 +240,7 @@ def invalidate_launches():
 def wifi_page():
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'wifi.html')
 
+
 @app.route('/api/wifi/scan')
 def wifi_scan():
     try:
@@ -254,44 +255,36 @@ def wifi_scan():
     except Exception as e:
         return jsonify({'networks': [], 'error': str(e)})
 
+
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():
     data = request.get_json()
     ssid = data.get('ssid', '')
     password = data.get('password', '')
     try:
-        # Save old config as backup
-        with open('/etc/wpa_supplicant/wpa_supplicant.conf', 'r') as f:
-            old_config = f.read()
+        # Add new network slot in memory
+        result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
+                                capture_output=True, text=True)
+        net_id = result.stdout.strip()
+        print(f"[{_ts()}] WiFi: added network id={net_id}")
 
-        # Write new config with new network at higher priority
-        new_config = (
-            'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
-            'update_config=1\n'
-            'country=US\n\n'
-            'network={\n'
-            f'    ssid="{ssid}"\n'
-            f'    psk="{password}"\n'
-            '    key_mgmt=WPA-PSK\n'
-            '    priority=10\n'
-            '}\n'
-        )
-
-        with open('/tmp/wpa_supplicant.conf', 'w') as f:
-            f.write(new_config)
-        subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
-        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], check=True)
+        # Configure it
+        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True)
+        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True)
+        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'select_network', net_id], check=True)
 
         # Wait for connection
         time.sleep(8)
 
-        # Check connected SSID using full path
-        result = subprocess.run(['/sbin/iwgetid', '-r'], capture_output=True, text=True)
-        connected_ssid = result.stdout.strip()
-        print(f"[{_ts()}] WiFi connect check: wanted='{ssid}' got='{connected_ssid}'")
+        # Check status
+        status = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
+                                capture_output=True, text=True)
+        print(f"[{_ts()}] WiFi status:\n{status.stdout}")
 
-        if connected_ssid == ssid:
-            # Success — write clean final config
+        connected = f'ssid={ssid}' in status.stdout and 'wpa_state=COMPLETED' in status.stdout
+
+        if connected:
+            # Save to config permanently
             clean_config = (
                 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
                 'update_config=1\n'
@@ -307,10 +300,8 @@ def wifi_connect():
             subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
             return jsonify({'ok': True})
         else:
-            # Failed — restore old config
-            with open('/tmp/wpa_supplicant.conf', 'w') as f:
-                f.write(old_config)
-            subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
+            # Remove failed network and reconnect to old
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'remove_network', net_id], check=True)
             subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], check=True)
             return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
 
