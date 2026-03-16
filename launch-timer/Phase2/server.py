@@ -244,6 +244,10 @@ def wifi_page():
 @app.route('/api/wifi/scan')
 def wifi_scan():
     try:
+        # Bring interface up in case it's down
+        subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
+        import time
+        time.sleep(1)
         result = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True)
         networks = []
         for line in result.split('\n'):
@@ -298,6 +302,8 @@ def wifi_connect():
             with open('/tmp/wpa_supplicant.conf', 'w') as f:
                 f.write(clean_config)
             subprocess.run(['sudo', 'bash', '-c', 'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'], check=True)
+            _cache['launches_fetched'] = 0
+            _cache['weather_fetched'] = 0
             return jsonify({'ok': True})
         else:
             # Remove failed network and reconnect to old
