@@ -189,23 +189,31 @@
     setActive('password');
     buildKeyboard();
 
-    fetch('/api/wifi/scan').then(r => r.json()).then(data => {
+    function scanNetworks() {
       const container = document.getElementById('networks');
-      container.innerHTML = '';
-      if (!data.networks.length) { container.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-size:11px">No networks found</span>'; return; }
-      data.networks.forEach(ssid => {
-        const div = document.createElement('div');
-        div.className = 'network';
-        div.textContent = ssid;
-        div.addEventListener('click', () => {
-          document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
-          div.classList.add('selected');
-          document.getElementById('ssid').value = ssid;
-          setActive('password');
+      container.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-size:11px">Scanning...</span>';
+      fetch('/api/wifi/scan').then(r => r.json()).then(data => {
+        container.innerHTML = '';
+        if (!data.networks.length) {
+          container.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-size:11px">No networks found —</span> <button onclick="scanNetworks()" style="background:none;border:none;color:#4a9ede;font-family:\'Courier New\',monospace;font-size:11px;cursor:pointer;padding:0 4px;">Retry</button>';
+          return;
+        }
+        data.networks.forEach(ssid => {
+          const div = document.createElement('div');
+          div.className = 'network';
+          div.textContent = ssid;
+          div.addEventListener('click', () => {
+            document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+            div.classList.add('selected');
+            document.getElementById('ssid').value = ssid;
+            setActive('password');
+          });
+          container.appendChild(div);
         });
-        container.appendChild(div);
       });
-    });
+    }
+
+    scanNetworks();
   </script>
 </body>
 </html>
