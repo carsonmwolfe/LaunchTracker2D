@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>Mission Details</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px;
+      height: 510px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 36px; flex-shrink: 0;
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 4px 8px; cursor: pointer;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .top-cd {
+      font-size: 8px; color: #00e87a;
+      background: #0a1a10; border: 2px solid #00e87a;
+      padding: 4px 8px; white-space: nowrap;
+    }
+
+    .body { flex: 1; display: flex; overflow: hidden; }
+
+    /* PANEL HEADER */
+    .phdr {
+      font-size: 6px; color: #00e87a;
+      background: #0d1620; padding: 5px 8px;
+      border-bottom: 2px solid #1a2030;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+
+    /* LEFT PANEL */
+    .left {
+      width: 195px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .radar-wrap {
+      flex: 1; display: flex;
+      align-items: center; justify-content: center;
+      background: #060a0e; position: relative; overflow: hidden;
+    }
+    .orbit-pill {
+      position: absolute; bottom: 5px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 5px; color: #00e87a;
+      border: 2px solid #00e87a; padding: 3px 6px;
+      background: #060a0e; white-space: nowrap;
+    }
+    .win-section {
+      border-top: 2px solid #1a2030;
+      padding: 7px 10px 6px; background: #080c12; flex-shrink: 0;
+    }
+    .win-hdr { font-size: 5px; color: #4a9ede; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+    .win-outer { position: relative; padding-bottom: 20px; margin: 0 8px; }
+    .win-track { height: 6px; background: #0d1620; border: 2px solid #1a2030; position: relative; }
+    .win-fill { position: absolute; inset: 0; background: #00e87a15; }
+    .win-dot { position: absolute; top: -5px; width: 12px; height: 12px; border: 2px solid #060a0e; transform: translateX(-50%); }
+    .win-label-open { position: absolute; bottom: 0; left: -8px; font-size: 5px; color: rgba(255,255,255,0.3); }
+    .win-label-close { position: absolute; bottom: 0; right: -8px; font-size: 5px; color: rgba(255,255,255,0.3); }
+    .win-t0 { 
+      font-size: 5px; color: #00e87a; 
+      text-align: center; margin-top: 6px;
+      line-height: 2.2;
+    }
+    .win-t0.tbd { color: #ffd93d; }
+
+    /* CENTER PANEL */
+    .center {
+      flex: 1; display: flex; flex-direction: column;
+      border-right: 3px solid #1a2030;
+      background: #0a0e14; overflow: hidden;
+    }
+    .info-scroll { flex: 1; overflow-y: auto; }
+    .info-scroll::-webkit-scrollbar { width: 3px; }
+    .info-scroll::-webkit-scrollbar-thumb { background: #1a2030; }
+    .info-row {
+      display: flex; justify-content: space-between;
+      padding: 6px 10px; border-bottom: 1px solid #0d1620;
+      align-items: center;
+    }
+    .ikey { font-size: 5px; color: #4a9ede; flex-shrink: 0; letter-spacing: 0.06em; }
+    .ival { font-size: 6px; color: #fff; text-align: right; }
+    .ival.green { color: #00e87a; }
+    .ival.yellow { color: #ffd93d; }
+    .ival.blue { color: #4a9ede; }
+
+    /* Description block */
+    .desc-block { padding: 7px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
+    .block-hdr { font-size: 5px; margin-bottom: 5px; display: flex; align-items: center; gap: 4px; }
+    .desc-text { font-size: 5px; color: rgba(255,255,255,0.35); line-height: 2.2; }
+
+    /* Booster / site block */
+    .detail-block { padding: 7px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
+    .booster-id { font-size: 12px; color: #fff; margin-bottom: 5px; display: flex; align-items: baseline; gap: 8px; }
+    .booster-flight { font-size: 7px; color: #ffd93d; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .detail-stat { padding: 4px 0; border-bottom: 1px solid #0d1620; }
+    .detail-stat:nth-child(odd) { border-right: 1px solid #0d1620; padding-right: 8px; }
+    .detail-stat:nth-child(even) { padding-left: 8px; }
+    .detail-stat:nth-last-child(-n+2) { border-bottom: none; }
+    .ds-lbl { font-size: 5px; color: #4a9ede; margin-bottom: 2px; }
+    .ds-val { font-size: 6px; color: #fff; }
+    .ds-val.green { color: #00e87a; }
+    .ds-val.yellow { color: #ffd93d; }
+    .booster-status { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
+    .bs-badge { font-size: 5px; padding: 2px 5px; border: 1px solid; }
+    .bs-badge.go { border-color: #00e87a; color: #00e87a; background: #00e87a0a; }
+    .bs-badge.nominal { border-color: #4a9ede; color: #4a9ede; background: #4a9ede0a; }
+    .bs-status-txt { font-size: 5px; color: rgba(255,255,255,0.2); }
+
+    /* Stats row */
+    .stats-row { display: flex; border-top: 2px solid #1a2030; flex-shrink: 0; }
+    .stat-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 4px; border-right: 1px solid #1a2030; gap: 3px; position: relative; }
+    .stat-box:last-child { border-right: none; }
+    .stat-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-box:nth-child(1)::before { background: #00e87a; }
+    .stat-box:nth-child(2)::before { background: #4a9ede; }
+    .stat-box:nth-child(3)::before { background: #ffd93d; }
+    .stat-num { font-size: 14px; color: #ffd93d; line-height: 1; }
+    .stat-lbl { font-size: 5px; color: rgba(255,255,255,0.25); text-align: center; line-height: 1.8; }
+
+    /* Weather */
+    .wx-section { border-top: 2px solid #1a2030; padding: 5px 10px; background: #0a0e14; flex-shrink: 0; }
+    .wx-row { display: flex; margin-bottom: 4px; }
+    .wx-item { flex: 1; text-align: center; }
+    .wx-val { font-size: 10px; color: #fff; line-height: 1; }
+    .wx-lbl { font-size: 5px; color: #4a9ede; margin-top: 2px; }
+    .go-row { display: flex; align-items: center; gap: 6px; }
+    .go-px { font-size: 6px; padding: 3px 8px; background: #0a2014; border: 2px solid #00e87a; color: #00e87a; }
+    .go-px.monitor { border-color: #ffd93d; color: #ffd93d; background: #1a1400; }
+    .go-px.concern { border-color: #ff4422; color: #ff4422; background: #1a0800; }
+
+    /* RIGHT PANEL — milestones */
+    .right {
+      width: 185px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .ms-list { flex: 1; overflow-y: auto; padding: 2px 0; }
+    .ms-list::-webkit-scrollbar { width: 3px; }
+    .ms-list::-webkit-scrollbar-thumb { background: #1a2030; }
+    .ms-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 8px; border-bottom: 1px solid #0d1620;
+      position: relative;
+    }
+    .ms-line {
+      position: absolute; left: 14px; top: 0; bottom: 0;
+      width: 1px; background: #1a2030; z-index: 0;
+      
+    }
+    .ms-item:first-child .ms-line { top: 50%; }
+    .ms-item:last-child .ms-line  { bottom: 50%; }
+    .ms-dot {
+      width: 8px; height: 8px; flex-shrink: 0;
+      border: 2px solid; z-index: 1; position: relative;
+    }
+    .ms-dot.done { background: #00e87a; border-color: #00e87a; }
+    .ms-dot.next { background: transparent; border-color: #ffd93d; animation: blink 1s infinite; }
+    .ms-dot.pending { background: #0a0e14; border-color: #1a2030; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .ms-info { flex: 1; min-width: 0; }
+    .ms-label { font-size: 6px; color: rgba(255,255,255,0.35); line-height: 1; }
+    .ms-time { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 3px; }
+    .ms-item.done .ms-label { color: #00e87a; }
+    .ms-item.next .ms-label { color: #ffd93d; }
+
+    .rkt-section {
+      border-top: 3px solid #00e87a;
+      padding: 6px 8px; background: #0d1620; flex-shrink: 0;
+    }
+    .rkt-img-wrap { width: 28px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; }
+    .rkt-img-wrap img { max-height: 52px; width: auto; object-fit: contain; object-position: bottom; }
+    .rkt-details { flex: 1; }
+    .rkt-name { font-size: 8px; color: #fff; margin-bottom: 3px; }
+    .rkt-sub { font-size: 5px; color: rgba(255,255,255,0.25); margin-bottom: 4px; }
+    .rkt-tags { display: flex; gap: 3px; flex-wrap: wrap; }
+    .rkt-tag { font-size: 5px; padding: 2px 4px; border: 1px solid #1a2030; color: rgba(255,255,255,0.25); }
+
+    /* STATUS STRIP */
+    .status-strip {
+      height: 28px; flex-shrink: 0;
+      background: #0d1620; border-top: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 10px; gap: 0;
+    }
+    .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
+    .ss-item:first-child { padding-left: 0; }
+    .ss-lbl { font-size: 5px; color: #4a9ede; }
+    .ss-val { font-size: 6px; color: #fff; }
+    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; }
+
+    .loading { display: flex; align-items: center; justify-content: center; padding: 20px; font-size: 6px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" onclick="window.location='http://localhost:5001'">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="top-title-wrap">
+      <div class="top-title" id="page-title">MISSION DETAILS</div>
+      <div class="top-sub">// MISSION DETAILS · UPLINK ESTABLISHED //</div>
+    </div>
+    <div class="top-cd" id="status-badge">T- --:--:--</div>
+  </div>
+
+  <div class="body">
+    <!-- LEFT: globe + window -->
+    <div class="left">
+      <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> EST. ORBIT</div>
+      <div class="radar-wrap">
+        <canvas id="earthCanvas" width="170" height="196"></canvas>
+        <div class="orbit-pill" id="orbit-pill">ORBIT TBD</div>
+      </div>
+      <div class="win-section">
+        <div class="win-hdr"><div class="phdr-dot" style="background:#4a9ede;width:5px;height:5px;"></div>> LAUNCH WINDOW</div>
+        <div class="win-outer">
+          <div class="win-track">
+            <div class="win-fill"></div>
+            <div class="win-dot" id="dot-open"  style="left:0%;background:#ffd93d;"></div>
+            <div class="win-dot" id="dot-t0"    style="left:33%;background:#00e87a;"></div>
+            <div class="win-dot" id="dot-close" style="left:100%;background:#ffd93d;"></div>
+          </div>
+          <div class="win-label-open" id="win-open-str">— OPEN</div>
+          <div class="win-label-close" id="win-close-str">CLOSE —</div>
+        </div>
+        <div class="win-t0" id="win-t0-str">T-0 · —</div>
+      </div>
+    </div>
+
+    <!-- CENTER: data + desc + booster/site + stats + wx -->
+    <div class="center">
+      <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> MISSION DATA FEED</div>
+      <div class="info-scroll" id="info-scroll">
+        <div class="loading">FETCHING MISSION DATA...</div>
+      </div>
+      <div id="desc-block" class="desc-block" style="display:none;">
+        <div class="block-hdr"><div class="phdr-dot" style="background:#4a9ede;width:5px;height:5px;"></div><span style="font-size:5px;color:#4a9ede;">> MISSION DESCRIPTION</span></div>
+        <div class="desc-text" id="desc-text"></div>
+      </div>
+      <div id="detail-block" class="detail-block" style="display:none;"></div>
+      <div class="stats-row" id="stats-row" style="display:none;">
+        <div class="stat-box"><div class="stat-num" id="stat-orbital">—</div><div class="stat-lbl">ORBITAL<br>THIS YEAR</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-agency">—</div><div class="stat-lbl">PROVIDER<br>THIS YEAR</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-pad">—</div><div class="stat-lbl">FROM<br>THIS PAD</div></div>
+      </div>
+      <div class="wx-section" id="wx-wrap" style="display:none;">
+        <div class="wx-row">
+          <div class="wx-item"><div class="wx-val" id="wx-temp">—</div><div class="wx-lbl">TEMP</div></div>
+          <div class="wx-item"><div class="wx-val" id="wx-wind">—</div><div class="wx-lbl">WIND</div></div>
+          <div class="wx-item"><div class="wx-val" id="wx-cloud">—</div><div class="wx-lbl">CLOUD</div></div>
+          <div class="wx-item"><div class="wx-val" id="wx-precip">—</div><div class="wx-lbl">PRECIP</div></div>
+        </div>
+        <div class="go-row">
+          <div class="go-px" id="go-pill">GO</div>
+          <div style="font-size:5px;color:rgba(255,255,255,0.25);" id="go-text">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: milestones + rocket -->
+    <div class="right">
+      <div class="phdr"><div class="phdr-dot" style="background:#ffd93d;"></div>> FLIGHT PLAN</div>
+      <div class="ms-list" id="ms-list">
+        <div class="loading">LOADING...</div>
+      </div>
+      <div class="rkt-section">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="rkt-img-wrap">
+            <img id="rocket-img" src="" alt="" style="display:none;">
+          </div>
+          <div class="rkt-details">
+            <div class="rkt-name" id="rocket-name">—</div>
+            <div class="rkt-sub" id="rocket-sub">—</div>
+            <div class="rkt-tags" id="rocket-tags"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-strip" id="status-strip">
+    <div class="ss-item"><div class="ss-dot" id="ss-dot" style="background:#ffd93d;"></div><div class="ss-lbl">STATUS</div><div class="ss-val" id="ss-status">TBD</div></div>
+    <div class="ss-item" id="ss-prob-item" style="display:none;"><div class="ss-dot" style="background:#ffd93d;"></div><div class="ss-lbl">PROB</div><div class="ss-val" id="ss-prob">—</div></div>
+    <div class="ss-item" id="ss-booster-item" style="display:none;"><div class="ss-lbl">BOOSTER</div><div class="ss-val" id="ss-booster">—</div></div>
+    <div class="ss-item" id="ss-recovery-item" style="display:none;"><div class="ss-lbl">RECOVERY</div><div class="ss-val" id="ss-recovery">—</div></div>
+    <div class="ss-item" style="margin-left:auto;border-right:none;"><div class="ss-lbl">DATA AGE</div><div class="ss-val" id="ss-age">—</div></div>
+  </div>
+
+  <script>
+    // ── Flight milestone sequences ────────────────────────────────────────────
+    const MILESTONES = {
+      'falcon': [
+        {label:'PROP LOAD',     t:-2280}, {label:'ENGINE CHILL',  t:-420},
+        {label:'STRONGBACK RET',t:-270},  {label:'STARTUP',       t:-60},
+        {label:'IGNITION',      t:-3},    {label:'LIFTOFF',       t:0},
+        {label:'MAX-Q',         t:72},    {label:'MECO',          t:145},
+        {label:'STAGE SEP',     t:149},   {label:'SES-1',         t:156},
+        {label:'FAIRING SEP',   t:178},   {label:'ENTRY BURN',    t:361},
+        {label:'LANDING BURN',  t:478},   {label:'STAGE 1 LAND',  t:500},
+        {label:'SECO-1',        t:532},   {label:'SES-2',         t:3130},
+        {label:'SECO-2',        t:3131},  {label:'DEPLOY',        t:3691},
+      ],
+      'electron': [
+        {label:'AUTO SEQUENCE', t:-120},  {label:'IGNITION',      t:-2},
+        {label:'LIFTOFF',       t:0},     {label:'SUPERSONIC',    t:60},
+        {label:'MAX-Q',         t:71},    {label:'MECO',          t:149},
+        {label:'STAGE SEP',     t:152},   {label:'SES-1',         t:156},
+        {label:'FAIRING SEP',   t:191},   {label:'BATT HOT-SWAP', t:415},
+        {label:'SECO',          t:570},   {label:'KICK STAGE SEP',t:574},
+        {label:'DEPLOY',        t:3180},
+      ],
+      'starship': [
+        {label:'PROPELLANT LOAD',t:-3600},{label:'ENGINE CHILL',  t:-600},
+        {label:'IGNITION',       t:-3},   {label:'LIFTOFF',       t:0},
+        {label:'MAX-Q',          t:58},   {label:'MECO',          t:169},
+        {label:'STAGE SEP',      t:175},  {label:'BOOSTER FLIP',  t:220},
+        {label:'BOOSTER CATCH',  t:420},  {label:'SECO',          t:540},
+        {label:'DEPLOY',         t:3600},
+      ],
+      'new_glenn': [
+        {label:'PROP LOAD',      t:-3600},{label:'IGNITION',      t:-3},
+        {label:'LIFTOFF',        t:0},    {label:'MAX-Q',         t:65},
+        {label:'MECO',           t:185},  {label:'STAGE SEP',     t:188},
+        {label:'SES-1',          t:192},  {label:'FAIRING SEP',   t:210},
+        {label:'BOOSTER LAND',   t:480},  {label:'SECO',          t:540},
+        {label:'DEPLOY',         t:3900},
+      ],
+      'generic': [
+        {label:'IGNITION',       t:-3},   {label:'LIFTOFF',       t:0},
+        {label:'MAX-Q',          t:75},   {label:'MECO',          t:160},
+        {label:'STAGE SEP',      t:163},  {label:'FAIRING SEP',   t:200},
+        {label:'SECO',           t:520},  {label:'DEPLOY',        t:3600},
+      ],
+    };
+
+    function getMilestones(vehicle) {
+      const v = (vehicle||'').toLowerCase();
+      if (v.includes('falcon'))   return MILESTONES.falcon;
+      if (v.includes('electron')) return MILESTONES.electron;
+      if (v.includes('starship')) return MILESTONES.starship;
+      if (v.includes('new glenn')||v.includes('ng')) return MILESTONES.new_glenn;
+      return MILESTONES.generic;
+    }
+
+    function getPhase(elapsed, milestones) {
+      if (elapsed === null) return { label:'FLIGHT PLAN', color:'#ffd93d' };
+      if (elapsed < -3600)  return { label:'FLIGHT PLAN', color:'#4a9ede' };
+      if (elapsed < -60)    return { label:'TERMINAL COUNT', color:'#ffd93d' };
+      if (elapsed < 0)      return { label:'IGNITION SEQ', color:'#ff4422' };
+      if (elapsed < 180)    return { label:'ASCENT', color:'#00e87a' };
+      if (elapsed < 540)    return { label:'STAGE SEP', color:'#ffd93d' };
+      return { label:'ORBITAL OPS', color:'#4a9ede' };
+    }
+
+    function renderMilestones(vehicle, t0) {
+      const milestones = getMilestones(vehicle);
+      const now = new Date();
+      const t0ms = t0 ? new Date(t0).getTime() : null;
+      const elapsed = t0ms ? (now.getTime() - t0ms) / 1000 : null;
+      let nextFound = false;
+
+      const label = (vehicle||'').toLowerCase().includes('falcon') ? 'F9' :
+                    (vehicle||'').toLowerCase().includes('electron') ? 'ELECTRON' :
+                    (vehicle||'').toLowerCase().includes('starship') ? 'STARSHIP' :
+                    (vehicle||'').toLowerCase().includes('new glenn') ? 'NEW GLENN' : 'GENERIC';
+
+      const phase = getPhase(elapsed, milestones);
+      document.querySelector('.right .phdr').innerHTML =
+        `<div class="phdr-dot" style="background:#ffd93d;width:6px;height:6px;flex-shrink:0;"></div> FLIGHT PLAN · ${label}`;
+
+      const preLaunchState = elapsed !== null && elapsed > milestones[0].t ? 'done' : 'pending';
+      document.getElementById('ms-list').innerHTML = 
+        `<div class="ms-item ${preLaunchState}">
+          <div class="ms-line"></div>
+          <div class="ms-dot ${preLaunchState}"></div>
+          <div class="ms-info">
+            <div class="ms-label">PRE-LAUNCH</div>
+            <div class="ms-time">AWAITING T-0</div>
+          </div>
+        </div>` + milestones.map(m => {
+        let state = 'pending';
+        if (elapsed !== null) {
+          if (elapsed > m.t) state = 'done';
+          else if (!nextFound) { state = 'next'; nextFound = true; }
+        }
+        const tStr = m.t < 0
+          ? `T-${Math.abs(Math.floor(m.t/60))}:${String(Math.abs(m.t%60)).padStart(2,'0')}`
+          : `T+${Math.floor(m.t/60)}:${String(m.t%60).padStart(2,'0')}`;
+        return `<div class="ms-item ${state}">
+          <div class="ms-line"></div>
+          <div class="ms-dot ${state}"></div>
+          <div class="ms-info">
+            <div class="ms-label">${m.label}</div>
+            <div class="ms-time">${tStr}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+        // Tick milestones every second
+      if (t0ms) {
+        setInterval(() => {
+          const el2 = (new Date().getTime() - t0ms) / 1000;
+
+          const phase = getPhase(el2, milestones);
+          document.querySelector('.right .phdr').innerHTML =
+            `<div class="phdr-dot" style="background:#ffd93d;width:6px;height:6px;flex-shrink:0;"></div>> FLIGHT PLAN · ${label}`;
+
+          let nextFound = false;
+          document.querySelectorAll('.ms-item').forEach((el, i) => {
+            if (i === 0) {
+              // PRE-LAUNCH — done if we're past first milestone
+              const state = el2 > milestones[0].t ? 'done' : 'pending';
+              el.className = 'ms-item ' + state;
+              el.querySelector('.ms-dot').className = 'ms-dot ' + state;
+              return;
+            }
+            const m = milestones[i - 1]; // offset by 1 for the rest
+            if (!m) return;
+            let state;
+            if (el2 > m.t) { state = 'done'; }
+            else if (!nextFound) { state = 'next'; nextFound = true; }
+            else { state = 'pending'; }
+            el.className = 'ms-item ' + state;
+            el.querySelector('.ms-dot').className = 'ms-dot ' + state;
+          });
+        }, 1000);
+      }
+    }
+
+    // ── Earth canvas (top-down polar view) ────────────────────────────────────
+    const ec = document.getElementById('earthCanvas');
+    const ectx = ec.getContext('2d');
+    const CX=85, CY=95, R=68;
+    let angle=0, orbitType='LEO';
+
+    const ORBIT_STYLES = {
+      'LEO': { r: R+16, color:'#00e87a', dash:[4,4] },
+      'MEO': { r: R+28, color:'#4a9ede', dash:[4,4] },
+      'GEO': { r: R+42, color:'#ffd93d', dash:[3,3] },
+      'SSO': { r: R+16, color:'#ff9933', dash:[2,2], inclined: true },
+      'TLI': { r: R+48, color:'#ff4422', dash:[4,4] },
+      'SUB': { r: R+10, color:'#aaaaaa', dash:[2,4] },
+    };
+
+    function proj(lat,lon){
+      const d=(90-lat)/90;
+      const lonr=lon*Math.PI/180;
+      return [CX+R*d*Math.sin(lonr), CY-R*d*Math.cos(lonr)];
+    }
+
+    function drawTopDown(){
+      ectx.clearRect(0,0,170,196);
+      ectx.fillStyle='#060a0e'; ectx.fillRect(0,0,170,196);
+
+      // Stars
+      ectx.fillStyle='rgba(255,255,255,0.5)';
+      [[5,8],[162,12],[8,85],[165,80],[10,155],[160,148],[85,5],[88,188],[3,125],[167,118],[155,30],[15,160]].forEach(([sx,sy])=>ectx.fillRect(sx,sy,1,1));
+
+      // Atmosphere
+      for(let r=R+2;r<=R+10;r+=3){
+        ectx.strokeStyle=`rgba(30,80,160,${0.08-(r-R)*0.005})`;
+        ectx.lineWidth=3;
+        ectx.beginPath();ectx.arc(CX,CY,r,0,Math.PI*2);ectx.stroke();
+      }
+
+      // Ocean
+      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);
+      ectx.fillStyle='#0a2040';ectx.fill();
+
+      // Clip
+      ectx.save();
+      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);ectx.clip();
+
+      // Grid
+      ectx.setLineDash([2,3]);
+      [30,60].forEach(lat=>{
+        const d=(90-lat)/90;
+        ectx.strokeStyle='rgba(30,80,140,0.2)';ectx.lineWidth=0.8;
+        ectx.beginPath();ectx.arc(CX,CY,R*d,0,Math.PI*2);ectx.stroke();
+      });
+      for(let lo=0;lo<360;lo+=30){
+        const loR=lo*Math.PI/180;
+        ectx.strokeStyle='rgba(30,80,140,0.15)';ectx.lineWidth=0.8;
+        ectx.beginPath();ectx.moveTo(CX,CY);
+        ectx.lineTo(CX+R*Math.sin(loR),CY-R*Math.cos(loR));ectx.stroke();
+      }
+      ectx.setLineDash([]);
+
+      // Continents
+      ectx.fillStyle='#1e5020';
+      const continents = [
+        [[72,-140],[76,-95],[72,-75],[62,-62],[50,-62],[38,-72],[28,-90],[32,-118],[44,-126],[58,-132],[68,-140]],
+        [[84,-30],[80,-18],[74,-18],[70,-28],[72,-42],[78,-48],[82,-44]],
+        [[72,14],[68,28],[58,24],[46,10],[44,2],[50,-4],[56,4],[62,8],[68,16]],
+        [[72,40],[68,80],[64,110],[68,140],[72,165],[80,145],[82,100],[80,60],[76,44]],
+        [[65,50],[60,60],[50,68],[40,60],[35,44],[42,36],[55,40]],
+        [[55,100],[48,120],[38,130],[28,118],[25,100],[30,85],[42,82],[52,92]],
+        [[38,10],[34,36],[22,44],[8,42],[0,32],[4,14],[14,-2],[26,-4],[36,2]],
+      ];
+      continents.forEach(pts=>{
+        ectx.beginPath();
+        pts.forEach(([la,lo],i)=>{const[x,y]=proj(la,lo);i===0?ectx.moveTo(x,y):ectx.lineTo(x,y);});
+        ectx.closePath();ectx.fill();
+      });
+      // Small islands/features
+      [[36,138,4,8,-0.4],[65,-20,5,4,0],[56,38,3,3,0]].forEach(([la,lo,rx,ry,rot])=>{
+        const[x,y]=proj(la,lo);
+        ectx.beginPath();ectx.ellipse(x,y,rx,ry,rot,0,Math.PI*2);ectx.fill();
+      });
+
+      // North pole ice
+      ectx.fillStyle='rgba(180,220,255,0.55)';
+      ectx.beginPath();ectx.arc(CX,CY,R*0.1,0,Math.PI*2);ectx.fill();
+
+      ectx.restore();
+
+      // Earth border
+      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);
+      ectx.strokeStyle='rgba(74,158,222,0.35)';ectx.lineWidth=2;ectx.stroke();
+
+      // Orbit
+      const orb = ORBIT_STYLES[orbitType] || ORBIT_STYLES['LEO'];
+      ectx.strokeStyle=orb.color+'88';ectx.lineWidth=1.5;
+      ectx.setLineDash(orb.dash);
+      if (orb.inclined) {
+        ectx.save();
+        ectx.beginPath();ectx.arc(CX,CY,R+50,0,Math.PI*2);ectx.clip();
+        ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
+        ectx.beginPath();ectx.ellipse(0,0,orb.r*0.5,orb.r,0,0,Math.PI*2);ectx.stroke();
+        ectx.restore();
+        ectx.restore();
+      } else {
+        ectx.beginPath();ectx.arc(CX,CY,orb.r,0,Math.PI*2);ectx.stroke();
+      }
+      ectx.setLineDash([]);
+
+      // Satellite
+      const sx=CX+orb.r*Math.cos(angle);
+      const sy=CY+orb.r*Math.sin(angle);
+      for(let t=5;t>=1;t--){
+        const ta=angle-t*0.08;
+        const tx=CX+orb.r*Math.cos(ta),ty=CY+orb.r*Math.sin(ta);
+        ectx.fillStyle=`rgba(0,232,122,${0.07*t})`;
+        ectx.fillRect(tx-2,ty-2,4,4);
+      }
+      ectx.fillStyle=orb.color;
+      ectx.fillRect(sx-3,sy-3,6,6);
+    }
+    function loop(){angle+=0.013;drawTopDown();requestAnimationFrame(loop);}
+    loop();
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function inferOrbit(name,desc,vehicle){
+      const t=((name||'')+' '+(desc||'')+' '+(vehicle||'')).toLowerCase();
+      if(t.includes('geostationary')||t.includes(' geo ')||t.includes('gto'))return{abbrev:'GEO',name:'Geostationary Orbit'};
+      if(t.includes('medium earth')||t.includes(' meo ')||t.includes('gps'))return{abbrev:'MEO',name:'Medium Earth Orbit'};
+      if(t.includes('sun-sync')||t.includes('sso')||t.includes('polar'))return{abbrev:'SSO',name:'Sun-Synchronous Orbit'};
+      if(t.includes('lunar')||t.includes('moon')||t.includes('tli'))return{abbrev:'TLI',name:'Trans-Lunar Injection'};
+      if(t.includes('suborbital'))return{abbrev:'SUB',name:'Suborbital'};
+      return{abbrev:'LEO',name:'Low Earth Orbit'};
+    }
+    function fmtUTC(iso, useLocal){
+      if(!iso)return'—';
+      try{
+        const tz=useLocal?undefined:'UTC';
+        return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+(useLocal?' LOCAL':' UTC');
+      }catch(e){return'—';}
+    }
+    function fmtDate(iso){if(!iso)return'—';try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}catch(e){return'—';}}
+    function shorten(s){return(s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC').replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC').replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB').replace("People's Republic of China",'China');}
+    function getRocketImageUrl(vehicle){
+      const v=(vehicle||'').toLowerCase();
+      const base='http://localhost:5001/static/assets/';
+      if(v.includes('starship'))return base+'rocket-starship.png';
+      if(v.includes('soyuz'))return base+'rocket-Soyuz.png';
+      if(v.includes('ariane'))return base+'rocket-Ariane6.png';
+      if(v.includes('sls'))return base+'rocket-SLS.png';
+      if(v.includes('falcon'))return base+'rocket-falcon9.png';
+      if(v.includes('electron'))return base+'rocket-electron.png';
+      if(v.includes('new glenn')||v.includes(' ng'))return base+'rocket-NG.png';
+      if(v.includes('atlas'))return base+'rocket-atlasV.png';
+      if(v.includes('vulcan'))return base+'rocket-vulcan.png';
+      if(v.includes('long march')||v.includes('kuaizhou'))return base+'rocket-longmarch.png';
+      if(v.includes('kairos'))return base+'rocket-KAIROS.png';
+      if(v.includes('firefly'))return base+'rocket-firefly.png';
+      return base+'rocket-falcon9.png';
+    }
+
+    // ── Load ──────────────────────────────────────────────────────────────────
+    async function loadMission(){
+      // Settings
+      let settings={temp_unit:'f',time_format:'utc'};
+      try{const sr=await fetch('/api/settings');settings=await sr.json();}catch(e){}
+
+      const params=new URLSearchParams(window.location.search);
+      const launchName=params.get('name')||'';
+      const launchId=params.get('id')||'';
+
+      // Base data
+      let base=null;
+      try{const r=await fetch('/api/launches');const d=await r.json();const launches=d.launches||[];base=launches.find(l=>String(l.id)===String(launchId))||launches[0];}catch(e){}
+
+      // LL2 data
+      let ll2={};
+      try{const r=await fetch(`/api/ll2?name=${encodeURIComponent(launchName||(base?.name||''))}&id=${encodeURIComponent(launchId)}`);ll2=await r.json();}catch(e){}
+
+      // Extract fields
+      const name=(ll2?.name||base?.name||'Unknown').split('|').pop().trim();
+      const statusName=ll2?.status?.name||base?.status||'TBD';
+      const vehicle=ll2?.rocket?.configuration?.full_name||base?.vehicle||'—';
+      const provider=ll2?.launch_service_provider?.name||base?.provider||'—';
+      const padName=ll2?.pad?.name||base?.pad||'—';
+      const location=ll2?.pad?.location?.name||base?.location||'—';
+      const padLat=ll2?.pad?.latitude?parseFloat(ll2.pad.latitude):null;
+      const padLon=ll2?.pad?.longitude?parseFloat(ll2.pad.longitude):null;
+      const missionType=ll2?.mission?.type||'—';
+      const missionDesc=ll2?.mission?.description||'';
+      const program=ll2?.program?.[0]?.name||'—';
+      const t0=base?.t0||ll2?.net||null;
+      const winOpen=ll2?.window_start||base?.win_open||null;
+      const winClose=ll2?.window_end||null;
+      const probability=ll2?.probability??null;
+      const padCount=ll2?.pad_launch_attempt_count??null;
+      const orbitalYear=ll2?.orbital_launch_attempt_count_year??null;
+      const agencyYear=ll2?.agency_launch_attempt_count_year??null;
+      const lastUpdated=ll2?.last_updated||null;
+
+      // Booster data
+      const launcher=ll2?.rocket?.launcher_stage?.[0]||null;
+      const boosterSerial=launcher?.launcher?.serial_number||null;
+      const flightNum=launcher?.launcher_flight_number||null;
+      const lastFlight=launcher?.launcher?.last_launch_date||null;
+      const turnaroundDays=lastFlight&&t0?Math.round((new Date(t0)-new Date(lastFlight))/86400000):null;
+      const prevMission=launcher?.launcher?.previous_flights?.[0]?.name||null;
+      const recoveryVessel=launcher?.landing?.location?.name||null;
+      const recoveryType=launcher?.landing?.type?.name||null;
+
+      // Orbit
+      let orbitAbbrev,orbitFull,inferred=false;
+      if(ll2?.mission?.orbit){orbitAbbrev=ll2.mission.orbit.abbrev;orbitFull=ll2.mission.orbit.name;}
+      else{const inf=inferOrbit(name,missionDesc,vehicle);orbitAbbrev=inf.abbrev;orbitFull=inf.name;inferred=true;}
+      orbitType=orbitAbbrev;
+
+      // Page title
+      const shortName=name.length>28?name.slice(0,26)+'…':name;
+      document.getElementById('page-title').textContent=shortName.toUpperCase();
+
+      // Status badge / countdown
+      const badge=document.getElementById('status-badge');
+      const sl=statusName.toLowerCase();
+      if(sl.includes('hold')){badge.textContent='HOLD';badge.style.borderColor='#ff4422';badge.style.color='#ff4422';}
+      else if(t0){
+        function updateBadge(){
+          const diff=new Date(t0)-new Date();
+          if(diff<=0){badge.textContent='LAUNCHED';badge.style.color='#4a9ede';badge.style.borderColor='#4a9ede';return;}
+          const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000);
+          const m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+          badge.textContent=d>0?`T- ${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`T- ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+        updateBadge();setInterval(updateBadge,1000);
+      } else {
+        badge.textContent='TBD';badge.style.color='#ffd93d';badge.style.borderColor='#ffd93d';
+      }
+
+      // Orbit pill
+      document.getElementById('orbit-pill').textContent=`${orbitFull.toUpperCase()} · ${orbitAbbrev}${inferred?' *':''}`;
+
+      // Time format
+      const useLocal=settings.time_format==='local';
+      const tz=useLocal?undefined:'UTC';
+      const tzLabel=useLocal?'LOCAL':'UTC';
+      function fmt(iso){if(!iso)return'—';try{return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+' '+tzLabel;}catch(e){return'—';}}
+
+      // Window bar
+      if(winOpen&&winClose&&t0){
+        const openMs=new Date(winOpen).getTime(),closeMs=new Date(winClose).getTime(),t0Ms=new Date(t0).getTime();
+        const t0Pct=Math.round(Math.max(5,Math.min(95,((t0Ms-openMs)/(closeMs-openMs))*100)));
+        document.getElementById('dot-t0').style.left=t0Pct+'%';
+        document.getElementById('win-open-str').textContent=fmtUTC(winOpen, useLocal)+' OPEN';
+        document.getElementById('win-close-str').textContent='CLOSE '+fmtUTC(winClose, useLocal);
+      } else {
+        document.getElementById('dot-open').style.display=winOpen?'':'none';
+        document.getElementById('dot-close').style.display=winClose?'':'none';
+        document.getElementById('win-open-str').textContent=winOpen?fmtUTC(winOpen, useLocal)+' OPEN':'— OPEN';
+        document.getElementById('win-close-str').textContent=winClose?'CLOSE '+fmtUTC(winClose, useLocal):'CLOSE —';
+      }
+      const t0El=document.getElementById('win-t0-str');
+      if(t0){
+        t0El.textContent='T-0 · '+fmtDate(t0).toUpperCase()+'\n'+fmtUTC(t0, useLocal);
+        t0El.style.whiteSpace='pre';
+        t0El.className='win-t0';
+      }
+      else{t0El.textContent='T-0 · TBD';t0El.className='win-t0 tbd';}
+
+      // Info rows
+      function row(key,val,cls=''){if(!val||val==='—'||val==='Unknown')return'';return`<div class="info-row"><div class="ikey">${key}</div><div class="ival ${cls}">${val}</div></div>`;}
+      document.getElementById('info-scroll').innerHTML=[
+        row('MISSION',name,'blue'),
+        row('TYPE',missionType,''),
+        row('DESTINATION',orbitFull,'green'),
+        row('PROVIDER',provider,''),
+        row('VEHICLE',vehicle,''),
+        row('LAUNCH SITE',shorten(location),''),
+        row('PAD',shorten(padName),''),
+        program&&program!=='—'?row('PROGRAM',program,'yellow'):'',
+      ].join('');
+
+      // Description
+      if(missionDesc){
+        document.getElementById('desc-text').textContent=missionDesc.length>180?missionDesc.slice(0,178)+'…':missionDesc;
+        document.getElementById('desc-block').style.display='block';
+      }
+
+      // Booster or site card
+      const detailBlock=document.getElementById('detail-block');
+      if(boosterSerial){
+        // Show booster manifest
+        detailBlock.innerHTML=`
+          <div class="block-hdr"><div class="phdr-dot" style="background:#ffd93d;width:5px;height:5px;"></div><span style="font-size:5px;color:#ffd93d;">> BOOSTER MANIFEST</span></div>
+          <div class="booster-id">${boosterSerial}<span class="booster-flight">FLIGHT ${flightNum||'?'}</span></div>
+          <div class="detail-grid">
+            ${lastFlight?`<div class="detail-stat"><div class="ds-lbl">LAST FLOWN</div><div class="ds-val">${fmtDate(lastFlight).toUpperCase()}</div></div>`:''}
+            ${turnaroundDays?`<div class="detail-stat"><div class="ds-lbl">TURNAROUND</div><div class="ds-val yellow">${turnaroundDays} DAYS</div></div>`:''}
+            ${prevMission?`<div class="detail-stat"><div class="ds-lbl">LAST MISSION</div><div class="ds-val">${prevMission.split('|').pop().trim().slice(0,18)}</div></div>`:''}
+            ${recoveryVessel?`<div class="detail-stat"><div class="ds-lbl">RECOVERY</div><div class="ds-val green">${recoveryVessel.slice(0,14).toUpperCase()}</div></div>`:''}
+          </div>
+          <div class="booster-status">
+            <div class="bs-badge go">GO</div>
+            <div class="bs-badge nominal">NOMINAL</div>
+            <div class="bs-status-txt">Booster systems nominal · ready for flight</div>
+          </div>`;
+        detailBlock.style.display='block';
+      } else if(ll2?.pad){
+        // Show launch site intel
+        const totalPad=padCount||'—';
+        detailBlock.innerHTML=`
+          <div class="block-hdr"><div class="phdr-dot" style="background:#4a9ede;width:5px;height:5px;"></div><span style="font-size:5px;color:#4a9ede;">> LAUNCH SITE INTEL</span></div>
+          <div class="detail-grid">
+            <div class="detail-stat"><div class="ds-lbl">PAD</div><div class="ds-val">${shorten(padName)}</div></div>
+            <div class="detail-stat"><div class="ds-lbl">COMPLEX</div><div class="ds-val">${shorten(location).slice(0,16)}</div></div>
+            ${padLat?`<div class="detail-stat"><div class="ds-lbl">LATITUDE</div><div class="ds-val">${padLat.toFixed(2)}°N</div></div>`:''}
+            ${padLon?`<div class="detail-stat"><div class="ds-lbl">LONGITUDE</div><div class="ds-val">${padLon.toFixed(2)}°W</div></div>`:''}
+            <div class="detail-stat"><div class="ds-lbl">TOTAL LAUNCHES</div><div class="ds-val green">${totalPad}</div></div>
+            ${lastUpdated?`<div class="detail-stat"><div class="ds-lbl">DATA UPDATED</div><div class="ds-val">${fmtDate(lastUpdated).toUpperCase()}</div></div>`:''}
+          </div>`;
+        detailBlock.style.display='block';
+      }
+
+      // Stats
+      if(orbitalYear!==null||agencyYear!==null||padCount!==null){
+        document.getElementById('stat-orbital').textContent=orbitalYear??'—';
+        document.getElementById('stat-agency').textContent=agencyYear??'—';
+        document.getElementById('stat-pad').textContent=padCount??'—';
+        document.getElementById('stats-row').style.display='flex';
+      }
+
+      // Weather
+      try{
+        const wr=await fetch('/api/weather');const wx=await wr.json();
+        const useCelsius=settings.temp_unit==='c';
+        document.getElementById('wx-temp').textContent=useCelsius?Math.round(wx.temp_c)+'°C':Math.round(wx.temp_f)+'°F';
+        document.getElementById('wx-wind').textContent=Math.round(wx.wind_speed)+'mph';
+        document.getElementById('wx-cloud').textContent=(wx.cloud_cover||0)+'%';
+        document.getElementById('wx-precip').textContent=(wx.precip||0).toFixed(1)+'"';
+        document.getElementById('wx-wrap').style.display='block';
+        const goPill=document.getElementById('go-pill'),goText=document.getElementById('go-text');
+        if(ll2?.weather_concerns){goPill.textContent='CONCERN';goPill.className='go-px concern';goText.textContent=ll2.weather_concerns;}
+        else if(wx.cloud_cover>80||wx.wind_speed>25){goPill.textContent='MONITOR';goPill.className='go-px monitor';goText.textContent='Weather conditions marginal';}
+        else{goPill.textContent='GO';goPill.className='go-px';goText.textContent='No weather concerns reported';}
+      }catch(e){document.getElementById('wx-wrap').style.display='block';document.getElementById('go-text').textContent='Weather unavailable';}
+
+      // Rocket image
+      const imgEl=document.getElementById('rocket-img');
+      imgEl.src=getRocketImageUrl(vehicle);
+      imgEl.style.display='block';
+      imgEl.onerror=()=>{imgEl.style.display='none';};
+      document.getElementById('rocket-name').textContent=vehicle;
+      document.getElementById('rocket-sub').textContent=provider+' · Launch Vehicle';
+      const tags=[];const vl=vehicle.toLowerCase();
+      if(vl.includes('block 5')||vl.includes('reusable'))tags.push('REUSABLE');
+      if(vl.includes('falcon 9')||vl.includes('electron'))tags.push('2-STAGE');
+      if(vl.includes('starship')||vl.includes('sls'))tags.push('SUPER HEAVY');
+      if(vl.includes('heavy'))tags.push('HEAVY LIFT');
+      tags.push(orbitAbbrev);
+      document.getElementById('rocket-tags').innerHTML=tags.map(t=>`<span class="rkt-tag">${t}</span>`).join('');
+
+      // Milestones
+      renderMilestones(vehicle, t0);
+
+      // Status strip
+      const ssStatus=document.getElementById('ss-status');
+      const ssDot=document.getElementById('ss-dot');
+      if(sl.includes('go')){ssStatus.textContent='GO FOR LAUNCH';ssDot.style.background='#00e87a';}
+      else if(sl.includes('hold')){ssStatus.textContent='HOLD';ssDot.style.background='#ff4422';}
+      else{ssStatus.textContent=statusName.toUpperCase();ssDot.style.background='#ffd93d';}
+
+      if(probability!==null){document.getElementById('ss-prob').textContent=probability+'%';document.getElementById('ss-prob-item').style.display='flex';}
+      if(boosterSerial){document.getElementById('ss-booster').textContent=boosterSerial+(flightNum?` · FLT ${flightNum}`:'');document.getElementById('ss-booster-item').style.display='flex';}
+      if(recoveryVessel){document.getElementById('ss-recovery').textContent=recoveryVessel.toUpperCase();document.getElementById('ss-recovery-item').style.display='flex';}
+
+      // Data age
+      const minAgo=Math.floor((Date.now()-Date.now())/60000);
+      document.getElementById('ss-age').textContent='LIVE';
+
+      // Mission patch
+      const patchUrl=ll2?.mission_patches?.[0]?.image_url||null;
+      if(patchUrl){
+        const patchEl=document.createElement('img');
+        patchEl.src=patchUrl;
+        patchEl.style.cssText='width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid #1a2030;margin-left:8px;';
+        patchEl.onerror=()=>patchEl.remove();
+        document.querySelector('.top-title-wrap').appendChild(patchEl);
+      }
+    }
+
+    loadMission();
+  </script>
+</body>
+</html>

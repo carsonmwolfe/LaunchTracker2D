@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>Launches & Events</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px;
+      height: 510px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 36px; flex-shrink: 0;
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 4px 8px; cursor: pointer;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .top-date { font-size: 7px; color: #ffd93d; background: #0a1a10; border: 2px solid #ffd93d; padding: 4px 8px; white-space: nowrap; }
+
+    /* PANEL HEADER */
+    .phdr {
+      font-size: 6px; color: #00e87a;
+      background: #0d1620; padding: 5px 8px;
+      border-bottom: 2px solid #1a2030;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+
+    /* BODY */
+    .body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* UPCOMING */
+    .upcoming-section { flex-shrink: 0; }
+    .upcoming-row { display: flex; gap: 5px; padding: 6px 8px; }
+    .launch-card {
+      flex: 1; background: #080c12;
+      border: 2px solid #1a2030;
+      padding: 7px 8px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 4px;
+      position: relative; overflow: hidden;
+    }
+    .launch-card:hover { background: #0d1220; }
+    .launch-card.go   { border-color: rgba(0,232,122,0.4); }
+    .launch-card.hold { border-color: rgba(255,68,34,0.4); }
+    .launch-card.tbd  { border-color: rgba(255,211,61,0.2); }
+    .lc-accent { position: absolute; top: 0; left: 0; width: 100%; height: 2px; }
+    .lc-status { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+    .status-dot { width: 5px; height: 5px; flex-shrink: 0; }
+    .status-dot.go   { background: #00e87a; }
+    .status-dot.tbd  { background: #ffd93d; }
+    .status-dot.hold { background: #ff4422; }
+    .status-text { font-size: 6px; }
+    .lc-name { font-size: 7px; color: #fff; line-height: 1.8; }
+    .lc-vehicle { font-size: 5px; color: #4a9ede; margin-top: 1px; }
+    .lc-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3px; overflow: hidden; }
+    .lc-countdown { font-size: 7px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+    .lc-pad { font-size: 5px; color: rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cd-green  { color: #00e87a; }
+    .cd-yellow { color: #ffd93d; }
+    .cd-red    { color: #ff4422; }
+
+    .divider { height: 3px; background: #1a2030; flex-shrink: 0; }
+
+    /* BOTTOM HALF */
+    .bottom-half { flex: 1; display: flex; overflow: hidden; }
+
+    /* RECENT + LIVE PAD */
+    .recent-col {
+      width: 220px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .recent-list { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .recent-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 10px; border-bottom: 1px solid #0d1620; flex: 1;
+    }
+    .result-icon {
+      width: 14px; height: 14px;
+      border: 2px solid; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px;
+    }
+    .result-ok   { border-color: #00e87a; color: #00e87a; }
+    .result-neutral { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
+    .recent-info { flex: 1; min-width: 0; }
+    .recent-name { font-size: 6px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .recent-meta { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 3px; }
+    .recent-date { font-size: 5px; color: rgba(255,255,255,0.2); flex-shrink: 0; }
+
+    /* Live pad */
+    .pad-section { border-top: 2px solid #1a2030; flex-shrink: 0; background: #060a0e; }
+    #pad-snapshot {
+      width: 204px; height: 75px;
+      object-fit: cover; object-position: 20% 55%;
+      display: block; border-top: 1px solid #1a2030;
+    }
+    .pad-no-signal {
+      width: 204px; height: 75px;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 6px;
+      border-top: 1px solid #1a2030;
+    }
+    .pad-no-signal-txt { font-size: 5px; color: rgba(255,68,34,0.6); }
+    .pad-no-signal-sub { font-size: 4px; color: rgba(255,255,255,0.15); }
+
+    /* LEADERBOARD */
+    .lb-col {
+      width: 180px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #0a0e14;
+    }
+    .lb-total-block { padding: 8px 10px 6px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .lb-total-num { font-size: 28px; color: #ffd93d; line-height: 1; }
+    .lb-total-lbl { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 4px; line-height: 2.2; }
+    .lb-rows { flex: 1; display: flex; flex-direction: column; }
+    .lb-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 10px; border-bottom: 1px solid #0d1620; flex: 1;
+    }
+    .lb-rank { font-size: 9px; width: 12px; flex-shrink: 0; text-align: center; }
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .rank-n { color: rgba(255,255,255,0.2); }
+    .lb-name { font-size: 6px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-bar-wrap { width: 36px; height: 3px; background: #1a2030; flex-shrink: 0; }
+    .lb-bar { height: 100%; }
+    .lb-count { font-size: 8px; color: #ffd93d; width: 18px; text-align: right; flex-shrink: 0; }
+
+    /* EVENTS */
+    .events-col { flex: 1; display: flex; flex-direction: column; background: #080c12; }
+    .events-list { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .event-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 10px; border-bottom: 1px solid #0d1620; flex: 1;
+    }
+    .event-icon {
+      width: 24px; height: 24px; flex-shrink: 0;
+      border: 2px solid; display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+    }
+    .icon-eva     { border-color: rgba(255,153,51,0.5);  color: #ff9933; background: #ff99330a; }
+    .icon-dock    { border-color: rgba(74,158,222,0.5);  color: #4a9ede; background: #4a9ede0a; }
+    .icon-press   { border-color: rgba(255,255,255,0.15);color: rgba(255,255,255,0.4); }
+    .icon-land    { border-color: rgba(0,232,122,0.5);   color: #00e87a; background: #00e87a0a; }
+    .icon-default { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
+    .event-info { flex: 1; min-width: 0; }
+    .event-name { font-size: 6px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-type { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 3px; }
+    .event-loc  { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-date { text-align: right; flex-shrink: 0; }
+    .event-day  { font-size: 7px; color: #fff; }
+    .event-time { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 3px; }
+
+    /* STATUS STRIP */
+    .status-strip {
+      height: 28px; flex-shrink: 0;
+      background: #0d1620; border-top: 3px solid #00e87a;
+      display: flex; align-items: center; padding: 0 10px;
+    }
+    .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
+    .ss-item:first-child { padding-left: 0; }
+    .ss-lbl { font-size: 5px; color: #4a9ede; }
+    .ss-val { font-size: 6px; color: #fff; }
+    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .ss-right { margin-left: auto; border-right: none !important; }
+
+    .loading-msg { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; text-align: center; padding: 12px; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" onclick="window.location='http://localhost:5001'">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="top-title-wrap">
+      <div class="top-title">LAUNCHES & EVENTS</div>
+      <div class="top-sub">// LAUNCH MANIFEST · UPLINK ESTABLISHED //</div>
+    </div>
+    <div class="top-date" id="top-date">—</div>
+  </div>
+
+  <div class="body">
+    <div class="upcoming-section">
+      <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> UPCOMING LAUNCHES</div>
+      <div class="upcoming-row" id="upcoming-row">
+        <div class="loading-msg">FETCHING MANIFEST...</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="bottom-half">
+
+      <!-- RECENT + LIVE PAD -->
+      <div class="recent-col">
+        <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> RECENT LAUNCHES</div>
+        <div class="recent-list" id="recent-list">
+          <div class="loading-msg">LOADING...</div>
+        </div>
+        <div class="pad-section">
+          <div class="phdr" style="padding:4px 8px;"><div class="phdr-dot" style="background:#00e87a;width:5px;height:5px;"></div>> LIVE PAD VIEW</div>
+          <img id="pad-snapshot" src="" alt="">
+          <div id="pad-no-signal" class="pad-no-signal">
+            <div class="pad-no-signal-txt">NO SIGNAL</div>
+            <div class="pad-no-signal-sub">Open main screen to activate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD -->
+      <div class="lb-col">
+        <div class="phdr"><div class="phdr-dot" style="background:#ffd93d;"></div>> LEADERBOARD 2026</div>
+        <div class="lb-total-block">
+          <div class="lb-total-num" id="lb-total">—</div>
+          <div class="lb-total-lbl">ORBITAL LAUNCHES<br>THIS YEAR</div>
+        </div>
+        <div class="lb-rows" id="lb-rows">
+          <div class="loading-msg">LOADING...</div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="events-col">
+        <div class="phdr"><div class="phdr-dot" style="background:#ff9933;"></div>> SPACE EVENTS</div>
+        <div class="events-list" id="events-list">
+          <div class="loading-msg">LOADING...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="status-strip">
+    <div class="ss-item"><div class="ss-dot" style="background:#00e87a;"></div><div class="ss-lbl">UPLINK</div><div class="ss-val">ACTIVE</div></div>
+    <div class="ss-item"><div class="ss-lbl">UPCOMING</div><div class="ss-val" id="ss-upcoming">—</div></div>
+    <div class="ss-item"><div class="ss-lbl">NEXT LAUNCH</div><div class="ss-val" id="ss-next">—</div></div>
+    <div class="ss-item ss-right"><div class="ss-lbl">UPDATED</div><div class="ss-val" id="ss-updated">—</div></div>
+  </div>
+
+  <script>
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).toUpperCase(); }
+      catch(e) { return '—'; }
+    }
+    let settings = {};
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      try {
+        const useLocal = settings.time_format === 'local';
+        const tz = useLocal ? undefined : 'UTC';
+        return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+(useLocal?' LOCAL':' UTC');
+      } catch(e) { return '—'; }
+    }
+    function shorten(s) {
+      return (s||'')
+        .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
+        .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
+        .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB')
+        .replace('Jiuquan Satellite Launch Center','Jiuquan')
+        .replace('Wenchang Space Launch Center','Wenchang');
+    }
+    function countdown(t0) {
+      if (!t0) return { str:'TBD', cls:'cd-yellow' };
+      const diff = new Date(t0) - new Date();
+      if (diff <= 0) return { str:'LAUNCHED', cls:'cd-red' };
+      const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      const str = d>0
+        ? `T-${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `T-${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return { str, cls: diff<3600000?'cd-red':diff<86400000?'cd-yellow':'cd-green' };
+    }
+    function eventIcon(type) {
+      const t=(type||'').toLowerCase();
+      if(t.includes('eva')||t.includes('spacewalk')) return {cls:'icon-eva',  char:'◈'};
+      if(t.includes('undock')||t.includes('docking')) return {cls:'icon-dock', char:'⊞'};
+      if(t.includes('press')||t.includes('brief'))    return {cls:'icon-press',char:'⊡'};
+      if(t.includes('land')||t.includes('splash'))    return {cls:'icon-land', char:'▽'};
+      return {cls:'icon-default',char:'◇'};
+    }
+
+    // ── Live pad snapshot via server ──────────────────────────────────────────
+    function updatePadSnapshot() {
+      const img   = document.getElementById('pad-snapshot');
+      const noSig = document.getElementById('pad-no-signal');
+      const test  = new Image();
+      test.onload = () => {
+        img.src = test.src;
+        img.style.display = 'block';
+        noSig.style.display = 'none';
+      };
+      test.onerror = () => {
+        img.style.display = 'none';
+        noSig.style.display = 'flex';
+      };
+      test.src = '/api/snapshot?' + Date.now();
+    }
+    updatePadSnapshot();
+    setInterval(updatePadSnapshot, 500);
+
+    // ── Countdown tickers ─────────────────────────────────────────────────────
+    const cdEls = {};
+    function startTicker() {
+      setInterval(() => {
+        Object.entries(cdEls).forEach(([t0, el]) => {
+          const cd = countdown(t0);
+          el.textContent = cd.str;
+          el.className = 'lc-countdown ' + cd.cls;
+        });
+        const firstT0 = Object.keys(cdEls)[0];
+        if (firstT0) document.getElementById('ss-next').textContent = countdown(firstT0).str;
+      }, 1000);
+    }
+
+    // ── Render upcoming ───────────────────────────────────────────────────────
+    function renderUpcoming(launches) {
+      const row = document.getElementById('upcoming-row');
+      if (!launches.length) { row.innerHTML='<div class="loading-msg">NO DATA</div>'; return; }
+      row.innerHTML = launches.slice(0,5).map(l => {
+        const sl  = (l.status||'').toLowerCase();
+        const cls = sl.includes('go')?'go':sl.includes('hold')?'hold':'tbd';
+        const ac  = sl.includes('go')?'#00e87a':sl.includes('hold')?'#ff4422':'#ffd93d';
+        const sc  = cls;
+        const st  = sl.includes('go')?'GO':sl.includes('hold')?'HOLD':'TBD';
+        const cd  = countdown(l.t0);
+        const veh = (l.vehicle||'').replace('Block 5','').replace('Falcon ','F').trim();
+        const nm  = l.name||'TBD';
+        return `<div class="launch-card ${cls}" onclick="goMission(${l.id},'${nm.replace(/'/g,"\\'")}')">
+          <div class="lc-accent" style="background:${ac};"></div>
+          <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div></div>
+          <div class="lc-name">${nm.length>18?nm.slice(0,16)+'…':nm}</div>
+          <div class="lc-vehicle">${veh}</div>
+          <div class="lc-bottom">
+            <div class="lc-pad">${shorten(l.pad||l.location||'').slice(0,14)}</div>
+            <div class="lc-countdown ${cd.cls}" data-t0="${l.t0||''}">${cd.str}</div>
+          </div>
+        </div>`;
+      }).join('');
+      row.querySelectorAll('[data-t0]').forEach(el => { const t0=el.getAttribute('data-t0'); if(t0) cdEls[t0]=el; });
+      document.getElementById('ss-upcoming').textContent = launches.length;
+      if (launches[0]?.t0) document.getElementById('ss-next').textContent = countdown(launches[0].t0).str;
+    }
+
+    // ── Render recent ─────────────────────────────────────────────────────────
+    function renderRecent(launches) {
+      const list = document.getElementById('recent-list');
+      const past = launches.filter(l => l.result!==null||(l.t0&&new Date(l.t0)<new Date()));
+      if (!past.length) { list.innerHTML='<div class="loading-msg" style="flex:1;">NO RECENT DATA</div>'; return; }
+      list.innerHTML = past.slice(0,4).map(l => {
+        const ok = l.result===1||l.result===null;
+        return `<div class="recent-row">
+          <div class="result-icon ${ok?'result-ok':'result-neutral'}">${ok?'✓':'—'}</div>
+          <div class="recent-info">
+            <div class="recent-name">${l.name||'Unknown'}</div>
+            <div class="recent-meta">${(l.vehicle||'').split(' ').slice(0,2).join(' ')} · ${shorten(l.pad||l.location||'').slice(0,12)}</div>
+          </div>
+          <div class="recent-date">${fmtDate(l.t0)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Render leaderboard ────────────────────────────────────────────────────
+    function renderLeaderboard(launches) {
+      const counts = {};
+      const now = new Date();
+      // Only count launches that have already happened
+      const past = launches.filter(l => {
+        const t0 = l.window_start || l.net || l.t0;
+        return t0 && new Date(t0) < now;
+      });
+      past.forEach(l => {
+        let p = l.launch_service_provider?.name||l.provider||'Unknown';
+        p = p.replace('Space Exploration Technologies Corp.','SpaceX')
+             .replace('United Launch Alliance','ULA')
+             .replace('China Aerospace Science and Technology Corporation','CASC')
+             .replace('China Aerospace Science & Industry Corporation','CASIC');
+        counts[p] = (counts[p]||0)+1;
+      });
+      const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const max = sorted[0]?.[1]||1;
+      document.getElementById('lb-total').textContent = past.length;
+      const rCls  = ['rank-1','rank-2','rank-3','rank-n','rank-n'];
+      const rCol  = ['#00e87a','#4a9ede','#4a9ede','#4a9ede','#4a9ede'];
+      document.getElementById('lb-rows').innerHTML = sorted.map(([name,count],i)=>`
+        <div class="lb-row">
+          <div class="lb-rank ${rCls[i]}">${i+1}</div>
+          <div class="lb-name">${name}</div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(count/max*100)}%;background:${rCol[i]};"></div></div>
+          <div class="lb-count">${count}</div>
+        </div>`).join('');
+    }
+
+    // ── Render events ─────────────────────────────────────────────────────────
+    function renderEvents(events) {
+      const list = document.getElementById('events-list');
+      if (!events.length) { list.innerHTML='<div class="loading-msg">NO EVENTS</div>'; return; }
+      list.innerHTML = events.slice(0,5).map(e => {
+        const ic  = eventIcon(e.type?.name||'');
+        const loc = (e.location||'').replace('International Space Station','ISS').slice(0,22);
+        return `<div class="event-row">
+          <div class="event-icon ${ic.cls}">${ic.char}</div>
+          <div class="event-info">
+            <div class="event-name">${e.name||'Unknown Event'}</div>
+            <div class="event-type">${(e.type?.name||'EVENT').toUpperCase()}</div>
+            <div class="event-loc">${loc}</div>
+          </div>
+          <div class="event-date">
+            <div class="event-day">${fmtDate(e.date)}</div>
+            <div class="event-time">${fmtTime(e.date)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function goMission(id, name) {
+      window.location = `http://localhost:5001/mission?id=${id}&name=${encodeURIComponent(name)}`;
+    }
+
+    // ── Load ──────────────────────────────────────────────────────────────────
+    async function loadAll() {
+      try { settings = await (await fetch('/api/settings')).json(); } catch(e) {}
+      document.getElementById('top-date').textContent =
+        new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
+      const useLocal = settings.time_format === 'local';
+      const tz = useLocal ? undefined : 'UTC';
+      const tzLabel = useLocal ? 'LOCAL' : 'UTC';
+      document.getElementById('ss-updated').textContent =
+        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+' '+tzLabel;
+      let upcoming = [];
+      try { upcoming = (await (await fetch('/api/launches')).json()).launches||[]; } catch(e) {}
+      renderUpcoming(upcoming);
+      renderRecent(upcoming);
+
+      try {
+        const yr = await (await fetch('/api/launches/year')).json();
+        renderLeaderboard(yr.length ? yr : upcoming);
+      } catch(e) { renderLeaderboard(upcoming); }
+
+      try {
+        renderEvents(await (await fetch('/api/events')).json());
+      } catch(e) {
+        document.getElementById('events-list').innerHTML='<div class="loading-msg">EVENTS UNAVAILABLE</div>';
+      }
+    }
+
+    startTicker();
+    loadAll();
+  </script>
+</body>
+</html>

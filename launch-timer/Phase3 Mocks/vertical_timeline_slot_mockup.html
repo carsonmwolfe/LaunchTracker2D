@@ -1,0 +1,243 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080810; }
+</style>
+
+<canvas id="c" width="800" height="510"></canvas>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const MILESTONES = [
+  {label:'PROP LOAD',    t:-2280},
+  {label:'ENGINE CHILL', t:-420},
+  {label:'STRONGBACK',   t:-270},
+  {label:'STARTUP',      t:-60},
+  {label:'IGNITION',     t:-3},
+  {label:'LIFTOFF',      t:0},
+  {label:'MAX-Q',        t:72},
+  {label:'MECO',         t:145},
+  {label:'STAGE SEP',    t:149},
+  {label:'SES-1',        t:156},
+  {label:'FAIRING SEP',  t:178},
+  {label:'ENTRY BURN',   t:361},
+  {label:'LANDING BURN', t:478},
+  {label:'LANDING',      t:500},
+  {label:'SECO-1',       t:532},
+  {label:'DEPLOY',       t:3691},
+];
+
+let simElapsed = -253;
+let lastTick = Date.now();
+let smoothOffset = 0;
+let targetOffset = 0;
+
+function getCurrentIdx(elapsed) {
+  let idx = 0;
+  for (let i = 0; i < MILESTONES.length; i++) {
+    if (elapsed >= MILESTONES[i].t) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function tStr(t) {
+  const abs = Math.abs(t);
+  const m = Math.floor(abs/60);
+  const s = abs%60;
+  return (t<0?'T-':'T+')+m+':'+String(s).padStart(2,'0');
+}
+
+function draw() {
+  const W=800, H=510;
+  const panelX = 688; // right side panel start
+  const panelW = 112;
+  const centerY = H/2 - 40; // center of timeline vertically
+  const itemSpacing = 38; // spacing between items
+
+  ctx.clearRect(0,0,W,H);
+
+  // Background scene
+  ctx.fillStyle = '#080810';
+  ctx.fillRect(0,0,W,H);
+
+  // Sky
+  ctx.fillStyle = '#0a0a1e';
+  ctx.fillRect(0,0,W,420);
+
+  // Stars
+  ctx.fillStyle='rgba(255,255,255,0.4)';
+  [[50,20],[150,45],[280,18],[420,38],[560,22],[680,40],[100,80],[350,70],[600,55],[750,25]].forEach(([x,y])=>ctx.fillRect(x,y,1,1));
+
+  // Grass
+  ctx.fillStyle='#3a6020';
+  ctx.fillRect(0,380,W,50);
+
+  // Road
+  ctx.fillStyle='#2a2a2a';
+  ctx.fillRect(0,420,W,18);
+
+  // Info bar
+  ctx.fillStyle='rgba(8,8,18,0.97)';
+  ctx.fillRect(0,430,W,80);
+  ctx.strokeStyle='rgba(0,232,122,0.35)';
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,430);ctx.lineTo(W,430);ctx.stroke();
+
+  // Simple info bar content
+  ctx.fillStyle='#fff';
+  ctx.font='bold 18px Courier New';
+  ctx.textAlign='left';
+  ctx.fillText('Starlink Group 17-15', 20, 458);
+  ctx.fillStyle='#ffd93d';
+  ctx.font='11px Courier New';
+  ctx.fillText('Mar 20, 2026  ·  21:45 UTC  ·  Falcon 9  ·  SpaceX  ·  SLC-4E', 20, 478);
+
+  // ── TIMELINE PANEL ────────────────────────────────────────────────────────
+
+  const currentIdx = getCurrentIdx(simElapsed);
+  targetOffset = currentIdx * itemSpacing;
+  // Smooth scroll
+  smoothOffset += (targetOffset - smoothOffset) * 0.08;
+
+  // Panel background
+  ctx.fillStyle = 'rgba(6,8,16,0.96)';
+  ctx.fillRect(panelX, 0, panelW, 430);
+
+  // Left border
+  ctx.strokeStyle = 'rgba(0,232,122,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();ctx.moveTo(panelX,0);ctx.lineTo(panelX,430);ctx.stroke();
+
+  // Panel header
+  ctx.fillStyle = 'rgba(0,232,122,0.08)';
+  ctx.fillRect(panelX,0,panelW,18);
+  ctx.fillStyle = 'rgba(0,232,122,0.6)';
+  ctx.font = 'bold 5px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('> FLIGHT PLAN', panelX+panelW/2, 12);
+
+  // Center line (vertical)
+  ctx.strokeStyle = 'rgba(0,232,122,0.08)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2,3]);
+  ctx.beginPath();ctx.moveTo(panelX+18,20);ctx.lineTo(panelX+18,420);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fade top/bottom
+  const fadeH = 80;
+
+  // Draw milestones
+  MILESTONES.forEach((m, i) => {
+    // Position relative to center, offset by scroll
+    const y = centerY + (i - currentIdx) * itemSpacing - (smoothOffset - currentIdx*itemSpacing);
+
+    // Skip if way offscreen
+    if (y < -30 || y > 460) return;
+
+    const isDone    = simElapsed > m.t;
+    const isCurrent = getCurrentIdx(simElapsed) === i && !isDone;
+
+    // Distance from center — controls size and opacity
+    const dist = Math.abs(y - centerY);
+    const maxDist = itemSpacing * 3.5;
+    const norm = Math.min(dist / maxDist, 1); // 0=center, 1=far
+
+    // Size: center=1.0, far=0.4
+    const scale = 1.0 - norm * 0.6;
+    // Opacity: center=1.0, far=0.15
+    const opacity = Math.max(0.12, 1.0 - norm * 0.88);
+
+    const dotX = panelX + 18;
+    const dotSize = Math.round((isCurrent ? 9 : 7) * scale);
+    const fontSize = Math.max(4, Math.round(7 * scale));
+
+    // Connecting line segment
+    if (i < MILESTONES.length - 1) {
+      const ny = centerY + (i+1 - currentIdx) * itemSpacing - (smoothOffset - currentIdx*itemSpacing);
+      ctx.strokeStyle = isDone ? `rgba(0,232,122,${opacity*0.4})` : `rgba(255,255,255,${opacity*0.15})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();ctx.moveTo(dotX, y+dotSize/2);ctx.lineTo(dotX, Math.min(ny-dotSize/2, 420));ctx.stroke();
+    }
+
+    // Dot
+    const dx = dotX - dotSize/2;
+    const dy = y - dotSize/2;
+
+    if (isDone) {
+      ctx.fillStyle = `rgba(0,232,122,${opacity})`;
+      ctx.fillRect(dx,dy,dotSize,dotSize);
+    } else if (isCurrent) {
+      const pulse = 0.5+0.5*Math.sin(Date.now()/280);
+      ctx.fillStyle='#080810';
+      ctx.fillRect(dx-1,dy-1,dotSize+2,dotSize+2);
+      ctx.strokeStyle=`rgba(255,211,61,${0.6+0.4*pulse})`;
+      ctx.lineWidth=2;
+      ctx.strokeRect(dx,dy,dotSize,dotSize);
+      // Glow
+      ctx.strokeStyle=`rgba(255,211,61,${0.12*pulse})`;
+      ctx.lineWidth=5;
+      ctx.strokeRect(dx-2,dy-2,dotSize+4,dotSize+4);
+    } else {
+      ctx.fillStyle='#080810';
+      ctx.fillRect(dx,dy,dotSize,dotSize);
+      ctx.strokeStyle=`rgba(255,255,255,${opacity*0.3})`;
+      ctx.lineWidth=1;
+      ctx.strokeRect(dx,dy,dotSize,dotSize);
+    }
+
+    // Label — right of dot
+    ctx.font = `bold ${fontSize}px Courier New`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = isCurrent
+      ? `rgba(255,211,61,${opacity})`
+      : isDone
+        ? `rgba(0,232,122,${opacity})`
+        : `rgba(255,255,255,${opacity})`;
+    ctx.fillText(m.label, dotX+10, y+2);
+
+    // Time — smaller, below label
+    const timeSize = Math.max(4, Math.round(5*scale));
+    ctx.font = `${timeSize}px Courier New`;
+    ctx.fillStyle = `rgba(255,255,255,${opacity*0.4})`;
+    ctx.fillText(tStr(m.t), dotX+10, y+fontSize+3);
+  });
+
+  // Fade top of panel
+  const gTop = ctx.createLinearGradient(0,20,0,20+fadeH);
+  gTop.addColorStop(0,'rgba(6,8,16,1)'); gTop.addColorStop(1,'rgba(6,8,16,0)');
+  ctx.fillStyle=gTop; ctx.fillRect(panelX,20,panelW,fadeH);
+
+  // Fade bottom of panel
+  const gBot = ctx.createLinearGradient(0,430-fadeH,0,430);
+  gBot.addColorStop(0,'rgba(6,8,16,0)'); gBot.addColorStop(1,'rgba(6,8,16,1)');
+  ctx.fillStyle=gBot; ctx.fillRect(panelX,430-fadeH,panelW,fadeH);
+
+  // Center highlight line
+  ctx.strokeStyle='rgba(255,211,61,0.08)';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(panelX,centerY-1);ctx.lineTo(panelX+panelW,centerY-1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(panelX,centerY+16);ctx.lineTo(panelX+panelW,centerY+16);ctx.stroke();
+
+  // Scanlines on panel
+  ctx.fillStyle='rgba(0,0,0,0.07)';
+  for(let y=0;y<430;y+=4) ctx.fillRect(panelX,y,panelW,2);
+
+  // Countdown
+  const abs=Math.abs(simElapsed);
+  const mm=Math.floor(abs/60), ss=abs%60;
+  ctx.font='bold 30px Courier New';
+  ctx.textAlign='center';
+  ctx.fillStyle='#00e87a';
+  ctx.fillText((simElapsed<0?'T- ':'T+ ')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'), 340, 100);
+}
+
+function loop() {
+  draw();
+  if(Date.now()-lastTick>80){ simElapsed++; lastTick=Date.now(); }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>LaunchTracker2D — Mission Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .scanlines {
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+      pointer-events: none; z-index: 1000;
+    }
+
+    /* HEADER */
+    .header {
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      padding: 0 20px;
+      height: 50px;
+      display: flex; align-items: center; gap: 14px;
+      flex-shrink: 0;
+    }
+    .logo-sqs { display: flex; gap: 5px; }
+    .logo-sq { width: 10px; height: 10px; }
+    .header-title { flex: 1; }
+    .header-title-main { font-size: 10px; color: #fff; }
+    .header-title-sub { font-size: 6px; color: rgba(0,232,122,0.5); margin-top: 3px; }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+    .hbtn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; padding: 5px 10px;
+      border: 2px solid; cursor: pointer;
+      background: transparent;
+    }
+    .hbtn-green { border-color: #00e87a; color: #00e87a; }
+    .hbtn-green:hover { background: rgba(0,232,122,0.1); }
+    .hbtn-blue { border-color: #4a9ede; color: #4a9ede; }
+    .hbtn-blue:hover { background: rgba(74,158,222,0.1); }
+    .hbtn-red { border-color: #ff4422; color: #ff4422; }
+    .hbtn-red:hover { background: rgba(255,68,34,0.1); }
+    .sync-time { font-size: 6px; color: rgba(255,255,255,0.2); }
+
+    /* BODY */
+    .body { flex: 1; display: flex; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 200px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .sidebar-section { padding: 10px 0; border-bottom: 1px solid #1a2030; }
+    .sidebar-label { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; padding: 0 12px 6px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; cursor: pointer;
+      font-size: 7px; color: rgba(255,255,255,0.4);
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.03); }
+    .nav-item.active { color: #00e87a; border-left-color: #00e87a; background: rgba(0,232,122,0.05); }
+    .nav-dot { width: 6px; height: 6px; flex-shrink: 0; }
+    .nav-count { margin-left: auto; font-size: 6px; color: rgba(255,255,255,0.2); }
+    .sidebar-stat { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; }
+    .sidebar-stat-label { font-size: 6px; color: rgba(255,255,255,0.25); }
+    .sidebar-stat-val { font-size: 9px; }
+
+    /* MAIN */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* STATS ROW */
+    .stats-row { display: flex; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .stat-card { flex: 1; padding: 12px 16px; border-right: 1px solid #1a2030; position: relative; }
+    .stat-card:last-child { border-right: none; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card:nth-child(1)::before { background: #fff; }
+    .stat-card:nth-child(2)::before { background: #00e87a; }
+    .stat-card:nth-child(3)::before { background: #ff4422; }
+    .stat-card:nth-child(4)::before { background: #ffd93d; }
+    .stat-card:nth-child(5)::before { background: #4a9ede; }
+    .stat-num { font-size: 24px; color: #fff; line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 6px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; }
+
+    /* FILTER BAR */
+    .filter-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-bottom: 2px solid #1a2030;
+      flex-shrink: 0; background: #080c12;
+    }
+    .fbtn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px; padding: 4px 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: rgba(255,255,255,0.3);
+      cursor: pointer; letter-spacing: 0.06em;
+    }
+    .fbtn.active { border-color: #00e87a; color: #00e87a; background: rgba(0,232,122,0.08); }
+    .fbtn:hover:not(.active) { background: rgba(255,255,255,0.04); }
+    .search-input {
+      margin-left: auto;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5);
+      padding: 4px 10px; width: 180px;
+    }
+
+    /* UNIT LIST */
+    .unit-list { flex: 1; overflow-y: auto; }
+    .unit-list::-webkit-scrollbar { width: 3px; }
+    .unit-list::-webkit-scrollbar-thumb { background: #1a2030; }
+
+    .unit-row {
+      display: flex; align-items: center;
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      cursor: pointer; gap: 0;
+    }
+    .unit-row:hover { background: rgba(255,255,255,0.02); }
+    .unit-row.expanded { background: rgba(0,232,122,0.03); border-bottom-color: rgba(0,232,122,0.1); }
+    .unit-row.offline { opacity: 0.5; }
+
+    .status-dot { width: 8px; height: 8px; flex-shrink: 0; margin-right: 12px; }
+    .dot-online  { background: #00e87a; box-shadow: 0 0 5px #00e87a66; animation: pulse-dot 2s infinite; }
+    .dot-offline { background: #ff4422; }
+    .dot-warn    { background: #ffd93d; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .unit-id { font-size: 10px; color: #fff; width: 70px; flex-shrink: 0; }
+    .unit-loc { flex: 2; font-size: 7px; color: rgba(255,255,255,0.4); }
+    .unit-wifi { flex: 1.5; font-size: 7px; color: rgba(255,255,255,0.3); }
+    .unit-launch { flex: 2; font-size: 7px; color: rgba(255,211,61,0.7); text-align: right; padding-right: 10px; }
+    .unit-version { width: 80px; flex-shrink: 0; }
+    .ver-badge { font-size: 6px; padding: 2px 6px; border: 1px solid; }
+    .ver-ok  { border-color: rgba(0,232,122,0.3);  color: #00e87a;  background: rgba(0,232,122,0.08); }
+    .ver-old { border-color: rgba(255,211,61,0.3); color: #ffd93d; background: rgba(255,211,61,0.08); }
+    .unit-seen { width: 80px; font-size: 7px; color: rgba(255,255,255,0.2); text-align: right; flex-shrink: 0; }
+
+    /* EXPANDED DETAIL */
+    .unit-detail {
+      padding: 12px 40px 14px;
+      border-bottom: 2px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.2);
+    }
+    .detail-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 12px; }
+    .detail-field { }
+    .detail-label { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.08em; margin-bottom: 3px; }
+    .detail-val { font-size: 8px; color: rgba(255,255,255,0.6); }
+    .detail-val.green { color: #00e87a; }
+    .detail-val.yellow { color: #ffd93d; }
+    .detail-val.red { color: #ff4422; }
+    .detail-actions { display: flex; gap: 6px; }
+
+    /* LOG PANEL */
+    .log-panel {
+      height: 130px; flex-shrink: 0;
+      border-top: 2px solid #1a2030;
+      background: #05080d;
+      overflow-y: auto; padding: 8px 14px;
+    }
+    .log-panel::-webkit-scrollbar { width: 3px; }
+    .log-panel::-webkit-scrollbar-thumb { background: #1a2030; }
+    .log-header { font-size: 6px; color: rgba(0,232,122,0.4); margin-bottom: 6px; letter-spacing: 0.1em; }
+    .log-entry { font-size: 7px; color: rgba(255,255,255,0.3); line-height: 2; display: flex; gap: 8px; }
+    .log-ts   { color: rgba(0,232,122,0.5); flex-shrink: 0; }
+    .log-unit { color: #4a9ede; flex-shrink: 0; }
+    .log-msg  { }
+    .log-entry.warn .log-msg { color: #ffd93d; }
+    .log-entry.err  .log-msg { color: #ff4422; }
+    .log-entry.ok   .log-msg { color: rgba(0,232,122,0.6); }
+
+    /* LIVE SNAPSHOT */
+    .snapshot-wrap {
+      width: 160px; height: 90px;
+      border: 1px solid #1a2030;
+      overflow: hidden; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #05080d;
+    }
+    .snapshot-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: 20% center; }
+    .no-signal-txt { font-size: 5px; color: rgba(255,68,34,0.4); text-align: center; line-height: 2; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="header">
+    <div class="logo-sqs">
+      <div class="logo-sq" style="background:#00e87a;"></div>
+      <div class="logo-sq" style="background:#4a9ede;"></div>
+      <div class="logo-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="header-title">
+      <div class="header-title-main">MISSION CONTROL</div>
+      <div class="header-title-sub">// LAUNCHTRACKER2D FLEET MANAGEMENT //</div>
+    </div>
+    <div class="header-right">
+      <div class="sync-time" id="sync-time">LAST SYNC: —</div>
+      <button class="hbtn hbtn-blue" onclick="pushUpdate()">↑ PUSH UPDATE</button>
+      <button class="hbtn hbtn-green" onclick="syncAll()">⟳ SYNC ALL</button>
+      <button class="hbtn hbtn-red" onclick="rebootAll()">⏻ REBOOT ALL</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">VIEWS</div>
+        <div class="nav-item active" onclick="setFilter('all')">
+          <div class="nav-dot" style="background:#fff;"></div>All units
+          <span class="nav-count" id="count-all">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('online')">
+          <div class="nav-dot" style="background:#00e87a;"></div>Online
+          <span class="nav-count" id="count-online">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('offline')">
+          <div class="nav-dot" style="background:#ff4422;"></div>Offline
+          <span class="nav-count" id="count-offline">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('outdated')">
+          <div class="nav-dot" style="background:#ffd93d;"></div>Outdated
+          <span class="nav-count" id="count-outdated">0</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">FLEET HEALTH</div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Avg uptime</div><div class="sidebar-stat-val" style="color:#00e87a;" id="avg-uptime">—</div></div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Current ver</div><div class="sidebar-stat-val" style="color:#fff;font-size:7px;" id="cur-version">v1.0.0</div></div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Alerts</div><div class="sidebar-stat-val" style="color:#ffd93d;" id="alert-count">0</div></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">QUICK ACTIONS</div>
+        <div class="nav-item" onclick="pushUpdate()">↑ Push update</div>
+        <div class="nav-item" onclick="syncAll()">⟳ Sync all</div>
+        <div class="nav-item" onclick="exportLogs()">⬇ Export logs</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">TOTAL UNITS</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-online" style="color:#00e87a;">0</div><div class="stat-label">ONLINE</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-offline" style="color:#ff4422;">0</div><div class="stat-label">OFFLINE</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-outdated" style="color:#ffd93d;">0</div><div class="stat-label">OUTDATED</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-ping" style="color:#4a9ede;">—</div><div class="stat-label">AVG PING</div></div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="fbtn active" id="fbtn-all"      onclick="setFilter('all')">ALL</button>
+        <button class="fbtn"        id="fbtn-online"   onclick="setFilter('online')">ONLINE</button>
+        <button class="fbtn"        id="fbtn-offline"  onclick="setFilter('offline')">OFFLINE</button>
+        <button class="fbtn"        id="fbtn-outdated" onclick="setFilter('outdated')">OUTDATED</button>
+        <input class="search-input" placeholder="Search unit ID or location..." id="search-input" oninput="renderUnits()">
+      </div>
+
+      <div class="unit-list" id="unit-list"></div>
+
+      <div class="log-panel">
+        <div class="log-header">> ACTIVITY LOG</div>
+        <div id="log-entries"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Config — point this at your Pi or VPS ─────────────────────────────────
+    const PI_HOST = 'http://localhost:5001'; // change to Pi IP or VPS when deployed
+
+    // ── Demo units — replace with real heartbeat data ─────────────────────────
+    let units = [
+      {
+        id:'LT-001', mac:'b8:27:eb:f0:f8:2a', ip:'192.168.1.93',
+        location:'Cape Canaveral, FL', wifi:'HomeNetwork',
+        uptime:'3d 4h 12m', version:'v1.0.0', brightness:40,
+        launch:'Starlink 17-15', status:'online', lastSeen: Date.now() - 12000,
+        ping: 28,
+      },
+    ];
+
+    let currentFilter = 'all';
+    let expandedId = null;
+
+    // ── Log ───────────────────────────────────────────────────────────────────
+    const logs = [
+      {ts:'18:42:01', unit:'LT-001', msg:'Heartbeat received · uptime 3d 4h · v1.0.0', type:'ok'},
+      {ts:'18:40:12', unit:'LT-001', msg:'Settings updated · brightness 40%', type:''},
+      {ts:'18:30:00', unit:'LT-001', msg:'Server started · v1.0.0', type:'ok'},
+    ];
+
+    function addLog(unit, msg, type='') {
+      const now = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      logs.unshift({ts:now, unit, msg, type});
+      if (logs.length > 50) logs.pop();
+      renderLogs();
+    }
+
+    function renderLogs() {
+      document.getElementById('log-entries').innerHTML = logs.map(l =>
+        `<div class="log-entry ${l.type}">
+          <span class="log-ts">${l.ts}</span>
+          <span class="log-unit">${l.unit}</span>
+          <span class="log-msg">${l.msg}</span>
+        </div>`
+      ).join('');
+    }
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('fbtn-'+f)?.classList.add('active');
+      renderUnits();
+    }
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
+    function updateStats() {
+      const online   = units.filter(u=>u.status==='online').length;
+      const offline  = units.filter(u=>u.status==='offline').length;
+      const outdated = units.filter(u=>u.version!=='v1.0.0').length;
+      const avgPing  = units.filter(u=>u.ping).reduce((a,b)=>a+b.ping,0) / (units.filter(u=>u.ping).length||1);
+
+      document.getElementById('stat-total').textContent    = units.length;
+      document.getElementById('stat-online').textContent   = online;
+      document.getElementById('stat-offline').textContent  = offline;
+      document.getElementById('stat-outdated').textContent = outdated;
+      document.getElementById('stat-ping').textContent     = Math.round(avgPing)+'ms';
+
+      document.getElementById('count-all').textContent      = units.length;
+      document.getElementById('count-online').textContent   = online;
+      document.getElementById('count-offline').textContent  = offline;
+      document.getElementById('count-outdated').textContent = outdated;
+      document.getElementById('alert-count').textContent    = offline + outdated;
+    }
+
+    // ── Render units ──────────────────────────────────────────────────────────
+    function renderUnits() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      let filtered = units.filter(u => {
+        if (currentFilter === 'online'   && u.status !== 'online') return false;
+        if (currentFilter === 'offline'  && u.status !== 'offline') return false;
+        if (currentFilter === 'outdated' && u.version === 'v1.0.0') return false;
+        if (search && !u.id.toLowerCase().includes(search) && !u.location.toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      document.getElementById('unit-list').innerHTML = filtered.map(u => {
+        const isOnline  = u.status === 'online';
+        const isExpanded = expandedId === u.id;
+        const dotCls    = isOnline ? 'dot-online' : 'dot-offline';
+        const verCls    = u.version === 'v1.0.0' ? 'ver-ok' : 'ver-old';
+        const seenStr   = isOnline ? Math.round((Date.now()-u.lastSeen)/1000)+'s ago' : 'offline';
+
+        let html = `<div class="unit-row ${isExpanded?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${u.id}')">
+          <div class="status-dot ${dotCls}"></div>
+          <div class="unit-id">${u.id}</div>
+          <div class="unit-loc">${u.location}</div>
+          <div class="unit-wifi">${u.wifi}</div>
+          <div class="unit-launch">${isOnline?(u.launch||'—'):'—'}</div>
+          <div class="unit-version"><span class="ver-badge ${verCls}">${u.version}</span></div>
+          <div class="unit-seen">${seenStr}</div>
+        </div>`;
+
+        if (isExpanded) {
+          html += `<div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC ADDRESS</div><div class="detail-val">${u.mac}</div></div>
+              <div class="detail-field"><div class="detail-label">IP ADDRESS</div><div class="detail-val">${u.ip}</div></div>
+              <div class="detail-field"><div class="detail-label">UPTIME</div><div class="detail-val green">${u.uptime}</div></div>
+              <div class="detail-field"><div class="detail-label">BRIGHTNESS</div><div class="detail-val">${u.brightness}%</div></div>
+              <div class="detail-field"><div class="detail-label">CURRENT LAUNCH</div><div class="detail-val yellow">${u.launch||'—'}</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div class="detail-actions">
+                <button class="hbtn hbtn-blue" onclick="sshUnit('${u.id}','${u.ip}');event.stopPropagation()">SSH</button>
+                <button class="hbtn hbtn-green" onclick="updateUnit('${u.id}');event.stopPropagation()">UPDATE</button>
+                <button class="hbtn hbtn-red" onclick="rebootUnit('${u.id}','${u.ip}');event.stopPropagation()">REBOOT</button>
+                <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="viewLogs('${u.id}');event.stopPropagation()">VIEW LOGS</button>
+                <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="openUnit('${u.ip}');event.stopPropagation()">OPEN UI</button>
+              </div>
+              <div class="snapshot-wrap" id="snap-${u.id}">
+                <div class="no-signal-txt">NO SIGNAL<br>Open main screen<br>to activate</div>
+              </div>
+            </div>
+          </div>`;
+        }
+        return html;
+      }).join('');
+
+      // Load snapshot for expanded unit
+      if (expandedId) {
+        const u = units.find(u=>u.id===expandedId);
+        if (u && u.status==='online') loadSnapshot(u);
+      }
+    }
+
+    function toggleExpand(id) {
+      expandedId = expandedId === id ? null : id;
+      renderUnits();
+    }
+
+    // ── Snapshot ──────────────────────────────────────────────────────────────
+    let snapInterval = null;
+    function loadSnapshot(u) {
+      clearInterval(snapInterval);
+      const wrap = document.getElementById('snap-'+u.id);
+      if (!wrap) return;
+      function refresh() {
+        const img = new Image();
+        img.onload = () => {
+          wrap.innerHTML = `<img src="${img.src}" alt="Live pad view">`;
+        };
+        img.onerror = () => {};
+        img.src = `http://${u.ip}:5001/api/snapshot?${Date.now()}`;
+      }
+      refresh();
+      snapInterval = setInterval(refresh, 500);
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────────
+    function sshUnit(id, ip) {
+      addLog(id, `SSH session requested → ${ip}`, '');
+      alert(`SSH into Pi:\nssh pi@${ip}\n\nOr use Tailscale if on different network.`);
+    }
+
+    function rebootUnit(id, ip) {
+      if (!confirm(`Reboot ${id}?`)) return;
+      fetch(`http://${ip}:5001/api/reboot`, {method:'POST'})
+        .then(() => addLog(id, 'Reboot command sent', 'warn'))
+        .catch(() => addLog(id, 'Reboot failed — unit may be offline', 'err'));
+    }
+
+    function updateUnit(id) {
+      addLog(id, 'Update push requested — not yet implemented', 'warn');
+    }
+
+    function viewLogs(id) {
+      addLog(id, 'Log view requested', '');
+    }
+
+    function openUnit(ip) {
+      window.open(`http://${ip}:5001`, '_blank');
+    }
+
+    function pushUpdate() {
+      if (!confirm('Push update to all online units?')) return;
+      units.filter(u=>u.status==='online').forEach(u => {
+        addLog(u.id, 'Update push initiated', 'ok');
+      });
+    }
+
+    function syncAll() {
+      units.filter(u=>u.status==='online').forEach(u => {
+        fetch(`http://${u.ip}:5001/api/launches/invalidate`, {method:'POST'}).catch(()=>{});
+        addLog(u.id, 'Force sync sent', 'ok');
+      });
+    }
+
+    function rebootAll() {
+      if (!confirm('Reboot ALL online units?')) return;
+      units.filter(u=>u.status==='online').forEach(u => {
+        fetch(`http://${u.ip}:5001/api/reboot`, {method:'POST'}).catch(()=>{});
+        addLog(u.id, 'Reboot command sent', 'warn');
+      });
+    }
+
+    function exportLogs() {
+      const txt = logs.map(l=>`${l.ts} [${l.unit}] ${l.msg}`).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+      a.download = 'launchtracker_logs.txt';
+      a.click();
+    }
+
+    // ── Heartbeat polling — fetches from each Pi ──────────────────────────────
+    async function pollUnit(u) {
+      try {
+        const start = Date.now();
+        const r = await fetch(`http://${u.ip}:5001/api/launches`, {
+          signal: AbortSignal.timeout(3000)
+        });
+        const d = await r.json();
+        u.ping = Date.now() - start;
+        u.status = 'online';
+        u.lastSeen = Date.now();
+        u.launch = d.launches?.[0]?.name || '—';
+        // Get device info
+        const dr = await fetch(`http://${u.ip}:5001/api/device`);
+        const dd = await dr.json();
+        u.version = dd.version || u.version;
+        u.mac = dd.mac || u.mac;
+      } catch(e) {
+        u.status = 'offline';
+      }
+    }
+
+    async function pollAll() {
+      await Promise.all(units.map(pollUnit));
+      updateStats();
+      renderUnits();
+      document.getElementById('sync-time').textContent =
+        'LAST SYNC: ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) + ' UTC';
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    renderLogs();
+    updateStats();
+    renderUnits();
+    pollAll();
+    setInterval(pollAll, 30000); // poll every 30 seconds
+  </script>
+</body>
+</html>

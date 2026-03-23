@@ -69,8 +69,9 @@ const W = 800, H = 510;
 let state = {
   launches:    [],
   currentIdx:  0,
+  _ll2ProbFetched: false,
   weather:     { condition: 'clear', temp_f: 75, wind_speed: 10, wind_dir: 'E', cloud_cover: 0, label: 'Clear sky' },
-
+  settings:    { temp_unit: 'f', time_format: 'utc' },
   // Countdown / launch
   launchTriggered: false,     // ← THE FIX: set true at T-0, reset on new mission
   isLaunching:     false,
@@ -158,17 +159,15 @@ function lerpColor(c1, c2, t) {
 function getSkyColors() {
   const h = getHour();
   const cond = state.weather.condition;
-  if (h >= 10 && h < 16) {
-    if (['rain','thunderstorm'].includes(cond)) return { sky:'#5a6a7a', ocean:'#0d1a2e', cloud:'#606060' };
-    if (cond === 'cloudy')  return { sky:'#9ab8d3', ocean:'#1a5b6e', cloud:'#c8c8c8' };
-    return { sky:'#87ceeb', ocean:'#1a8b9e', cloud:'#ffffff' };
-  }
-  if (h >= 16 && h < 18)
-    return { sky:'#ff9933', ocean:'#1a5b6e', cloud:'#ffd9b3' };
-  if (h >= 6  && h < 10)
-    return { sky:'#ff9966', ocean:'#2a5b6e', cloud:'#ffe5cc' };
-  if (['rain','thunderstorm'].includes(cond))
-    return { sky:'#0a0a0a', ocean:'#050510', cloud:'#404040' };
+  const isRainy = ['rain','thunderstorm','light_rain'].includes(cond);
+
+  if (isRainy) return { sky:'#3a4a5a', ocean:'#0d1a2e', cloud:'#505050' };
+  if (cond === 'cloudy') return { sky:'#7a9ab8', ocean:'#1a5b6e', cloud:'#b0b0b0' };
+  if (cond === 'fog')    return { sky:'#8a9aaa', ocean:'#1a5b6e', cloud:'#c0c8d0' };
+
+  if (h >= 10 && h < 16) return { sky:'#87ceeb', ocean:'#1a8b9e', cloud:'#ffffff' };
+  if (h >= 16 && h < 18) return { sky:'#ff9933', ocean:'#1a5b6e', cloud:'#ffd9b3' };
+  if (h >= 6  && h < 10) return { sky:'#ff9966', ocean:'#2a5b6e', cloud:'#ffe5cc' };
   return { sky:'#0a0a1e', ocean:'#0d1a2e', cloud:'#d0d0d0' };
 }
 
@@ -729,8 +728,19 @@ function drawCountdown() {
     ctx.stroke(); ctx.setLineDash([]);
 
     // Green digit — centred both axes inside the LCD screen
-    ctx.shadowColor='#00ff88'; ctx.shadowBlur=9;
-    ctx.fillStyle='#00e87a';
+    // Gradually shift color based on time remaining
+    const secs = cd.total_seconds;
+    let digitColor;
+    if (secs > 3600) {
+      digitColor = '#00e87a';
+    } else if (secs > 1800) {
+      digitColor = '#ffd93d';
+    } else {
+      digitColor = '#ff4422';
+    }
+    ctx.shadowColor = digitColor;
+    ctx.shadowBlur = 9;
+    ctx.fillStyle = digitColor;
     ctx.font='bold 32px Courier New';
     ctx.textAlign='center';
     ctx.textBaseline='middle';
@@ -749,6 +759,8 @@ function drawCountdown() {
 //  BOTTOM INFO BAR
 // ─────────────────────────────────────────────────────────────────────────────
 function drawInfoBar() {
+
+  return;
   const BY = BAR_Y, BH = BAR_H, IX = 20;
 
   if (state.postLaunchCooldown) {
@@ -796,10 +808,13 @@ function drawInfoBar() {
   const formatT0 = t0 => {
     if (!t0) return { date:'TBD', time:'' };
     try {
+      const useLocal = localStorage.getItem('lt_time_format') === 'local';
+      const tz = useLocal ? undefined : 'UTC';
+      const tzLabel = useLocal ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
       const d = new Date(t0);
       return {
-        date: d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}),
-        time: d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC',
+        date: d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:tz}),
+        time: d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz}) + ' ' + (useLocal ? 'LOCAL' : 'UTC'),
       };
     } catch(e) { return { date:t0, time:'' }; }
   };
@@ -812,6 +827,13 @@ function drawInfoBar() {
   let missionName = launch.name || 'Unknown';
   while (ctx.measureText(missionName).width > availW && missionName.length > 4) missionName = missionName.slice(0,-1);
   ctx.fillText(missionName, IX, BY + 24);
+
+  // Tap hint inline next to mission name
+  const nameWidth = ctx.measureText(missionName).width;
+  ctx.fillStyle = 'rgba(0,232,122,0.5)';
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('  TAP FOR DETAILS →', IX + nameWidth, BY + 24);
   const dateStr = lt.date + (lt.time ? '  ·  ' + lt.time : '');
   const vehStr  = (launch.vehicle||'') + '  ·  ' + (launch.provider||'') + '  ·  ' + shorten(launch.pad||launch.location||'');
   ctx.fillStyle = '#ffd93d'; ctx.font = '13px monospace';
@@ -829,7 +851,95 @@ function drawInfoBar() {
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = '9px monospace';
   ctx.textAlign = 'right';
-  ctx.fillText('v1.0.0  ·  data ' + minAgo + 'm ago', W - 130, BAR_Y + BAR_H - 35);
+  ctx.fillText('v2.0.0  ·  data ' + minAgo + 'm ago', W - 130, BAR_Y + BAR_H - 35);
+}
+
+function updateInfoBar() {
+
+  // Post-launch cooldown state
+  if (state.postLaunchCooldown) {
+    document.getElementById('ib-name').textContent = 'LAUNCHED: ' + state.launchedMissionName;
+    document.getElementById('ib-badge').textContent = '✓';
+    document.getElementById('ib-badge').className = 'go';
+    document.getElementById('ib-sub').textContent = state.nextMissionName ? 'UPCOMING: ' + state.nextMissionName : '—';
+    document.getElementById('ib-cd').textContent = '—';
+    document.getElementById('ib-tap').onclick = null;
+    return;
+  }
+
+  const launch = currentLaunch();
+  if (!launch) {
+    document.getElementById('ib-name').textContent = 'NO LAUNCH DATA';
+    document.getElementById('ib-badge').textContent = '—';
+    document.getElementById('ib-sub').textContent = 'Check network connection or API status';
+    document.getElementById('ib-cd').textContent = '—';
+    return;
+  }
+
+  // Name
+  const fullName = launch.name || '—';
+  const nameEl = document.getElementById('ib-name');
+  nameEl.textContent = fullName;
+  nameEl.style.fontSize = fullName.length > 30 ? '16px' : fullName.length > 22 ? '18px' : '20px';
+
+  // Badge
+  const badge = document.getElementById('ib-badge');
+  const sl = (launch.status||'').toLowerCase();
+  if (sl.includes('go')) { badge.textContent='GO'; badge.className='go'; }
+  else if (sl.includes('hold')) { badge.textContent='HOLD'; badge.className='hold'; }
+  else { badge.textContent=(launch.status||'TBD').toUpperCase(); badge.className=''; }
+
+  // Sub line
+  const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
+    .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
+    .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
+  document.getElementById('ib-sub').textContent =
+    (launch.vehicle||'') + ' · ' + (launch.provider||'') + ' · ' + shorten(launch.pad||launch.location||'');
+
+  // Tap hint
+  document.getElementById('ib-tap').onclick = () => {
+    window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
+  };
+
+  // Date + countdown
+  const useLocal = state.settings?.time_format === 'local';
+  const tz = useLocal ? undefined : 'UTC';
+  const t0 = launch.t0 || launch.win_open;
+  if (t0) {
+    const d = new Date(t0);
+    document.getElementById('ib-date').textContent =
+      d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:tz}) + ' · ' +
+      d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) +
+      (useLocal ? ' LOCAL' : ' UTC');
+    const cd = computeCountdown(t0);
+    if (cd && cd !== 'LAUNCHED') {
+      const {days,hours,minutes,seconds} = cd;
+      const hh=String(hours).padStart(2,'0'), mm=String(minutes).padStart(2,'0'), ss=String(seconds).padStart(2,'0');
+      document.getElementById('ib-cd').textContent = days>0 ? `T− ${days}d ${hh}:${mm}:${ss}` : `T− ${hh}:${mm}:${ss}`;
+    } else if (cd === 'LAUNCHED') {
+      document.getElementById('ib-cd').textContent = 'LAUNCHED';
+      document.getElementById('ib-cd').style.color = '#4a9ede';
+    }
+    const winOpen = launch.win_open || t0;
+    if (winOpen) {
+      document.getElementById('ib-win-open').textContent =
+        new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) + ' OPEN';
+    }
+    document.getElementById('ib-win-close').textContent = 'CLOSE —';
+  }
+
+  // Weather
+  const wx = state.weather;
+  if (wx) {
+    const useCelsius = state.settings?.temp_unit === 'c';
+    document.getElementById('ib-temp').textContent   = useCelsius ? Math.round(wx.temp_c)+'°C' : Math.round(wx.temp_f)+'°F';
+    document.getElementById('ib-wind').textContent   = Math.round(wx.wind_speed)+'mph';
+    document.getElementById('ib-cloud').textContent  = (wx.cloud_cover||0)+'%';
+    document.getElementById('ib-precip').textContent = (wx.precip||0).toFixed(1)+'"';
+  }
+    // Version + data age
+  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
+  document.getElementById('ib-ver').textContent = `v1.0.0 · data ${minAgo}m ago`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -984,24 +1094,17 @@ function updateLaunch() {
 
 function drawNoSignal() {
   if (Date.now() - state.lastFetchAt < 15 * 60 * 1000) return;
-  ctx.fillStyle = 'rgba(0,0,0,0.72)';
-  ctx.fillRect(0, 0, W, H);
-  const cx = W / 2, cy = H / 2 - 20;
-  ctx.strokeStyle = 'rgba(255,60,30,0.4)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); roundRectPath(cx - 140, cy - 50, 280, 110, 4); ctx.stroke();
-  ctx.fillStyle = '#ff4422';
-  ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 12;
-  ctx.font = 'bold 28px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText('NO SIGNAL', cx, cy);
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.font = '11px Courier New';
-  ctx.fillText('LAUNCH DATA UNAVAILABLE', cx, cy + 28);
+  // Small L.O.S indicator under the countdown clock
+  const cx = W / 2;
+  const by = 108; // just below the countdown box
+  ctx.fillStyle = 'rgba(255,68,34,0.7)';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('L.O.S', cx, by);
   const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  ctx.fillStyle = 'rgba(255,120,60,0.6)';
-  ctx.font = '10px Courier New';
-  ctx.fillText('Last update ' + minAgo + ' min ago', cx, cy + 50);
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '8px Courier New';
+  ctx.fillText('signal lost · ' + minAgo + 'm ago', cx, by + 12);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1049,6 +1152,13 @@ async function fetchWeather() {
   } catch(e) {
     console.error('Weather fetch error:', e);
   }
+}
+
+async function fetchSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    state.settings = await r.json();
+  } catch(e) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1180,6 +1290,186 @@ function drawWifiIcon() {
   ctx.stroke();
 }
 
+function drawGearIcon() {
+  const x = W - 20, y = 16;
+  const col = 'rgba(255,255,255,0.4)';
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  // Outer circle
+  ctx.beginPath();
+  ctx.arc(x, y + 10, 5, 0, Math.PI * 2);
+  ctx.stroke();
+  // Teeth
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i;
+    const ix = x + Math.cos(a) * 5;
+    const iy = y + 10 + Math.sin(a) * 5;
+    const ox = x + Math.cos(a) * 8;
+    const oy = y + 10 + Math.sin(a) * 8;
+    ctx.beginPath();
+    ctx.moveTo(ix, iy);
+    ctx.lineTo(ox, oy);
+    ctx.stroke();
+  }
+  // Center dot
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.arc(x, y + 10, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── Weather Particles ─────────────────────────────────────────────────────────
+let rainParticles = [];
+let fogOffset = 0;
+
+function initWeatherParticles() {
+  rainParticles = [];
+  for (let i = 0; i < 120; i++) {
+    rainParticles.push({
+      x: Math.random() * W,
+      y: Math.random() * 400,
+      speed: 4 + Math.random() * 4,
+      length: 14 + Math.random() * 12,
+      opacity: 0.2 + Math.random() * 0.4,
+    });
+  }
+}
+
+function drawRain(heavy) {
+  const count = heavy ? 120 : 60;
+  ctx.strokeStyle = 'rgba(174,214,241,0.8)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < count; i++) {
+    const p = rainParticles[i];
+    ctx.globalAlpha = p.opacity;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x - 1, p.y + p.length);
+    ctx.stroke();
+    p.y += p.speed;
+    p.x -= 0.5;
+    if (p.y > 400) { p.y = -10; p.x = Math.random() * W; }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawLightning() {
+  if (Math.random() > 0.004) return;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(0, 0, W, 400);
+  const bx = 200 + Math.random() * 400;
+  ctx.strokeStyle = 'rgba(255,255,200,0.9)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(bx, 0);
+  ctx.lineTo(bx - 10, 60);
+  ctx.lineTo(bx + 8, 60);
+  ctx.lineTo(bx - 15, 140);
+  ctx.stroke();
+}
+
+function drawFog() {
+  fogOffset = (fogOffset + 0.3) % W;
+  for (let i = 0; i < 3; i++) {
+    const x = ((fogOffset + i * 280) % (W + 200)) - 100;
+    const grad = ctx.createRadialGradient(x, 340, 0, x, 340, 200);
+    grad.addColorStop(0, 'rgba(200,210,220,0.18)');
+    grad.addColorStop(1, 'rgba(200,210,220,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 260, W, 160);
+  }
+}
+
+function getMilestones(vehicle) {
+  const v = (vehicle||'').toLowerCase();
+  if (v.includes('falcon')) return [{label:'PROP LOAD',t:-2280},{label:'ENGINE CHILL',t:-420},{label:'STRONGBACK',t:-270},{label:'STARTUP',t:-60},{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:72},{label:'MECO',t:145},{label:'STAGE SEP',t:149},{label:'FAIRING SEP',t:178},{label:'ENTRY BURN',t:361},{label:'LANDING',t:500},{label:'SECO-1',t:532},{label:'DEPLOY',t:3691}];
+  if (v.includes('electron')) return [{label:'AUTO SEQ',t:-120},{label:'IGNITION',t:-2},{label:'LIFTOFF',t:0},{label:'SUPERSONIC',t:60},{label:'MAX-Q',t:71},{label:'MECO',t:149},{label:'STAGE SEP',t:152},{label:'FAIRING SEP',t:191},{label:'SECO',t:570},{label:'DEPLOY',t:3180}];
+  if (v.includes('starship')) return [{label:'PROP LOAD',t:-3600},{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:58},{label:'MECO',t:169},{label:'STAGE SEP',t:175},{label:'BOOSTER CATCH',t:420},{label:'SECO',t:540},{label:'DEPLOY',t:3600}];
+  return [{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:75},{label:'MECO',t:160},{label:'STAGE SEP',t:163},{label:'FAIRING SEP',t:200},{label:'SECO',t:520},{label:'DEPLOY',t:3600}];
+}
+
+let _tlSmooth = 0;
+
+function drawMilestoneTimeline() {
+  const launch = currentLaunch();
+  if (!launch || !launch.t0) return;
+  const cd = computeCountdown(launch.t0);
+  if (!cd || cd === 'LAUNCHED') return;
+  if (cd.total_seconds > 1800) return;
+
+  const elapsed = (Date.now() - new Date(launch.t0).getTime()) / 1000;
+  const milestones = getMilestones(launch.vehicle || '');
+  let currentIdx = 0;
+  for (let i = 0; i < milestones.length; i++) {
+    if (elapsed >= milestones[i].t) currentIdx = i;
+    else break;
+  }
+
+  _tlSmooth += (currentIdx * 62 - _tlSmooth) * 0.08;
+
+  const dotX = W - 38;
+  const centerY = 195;
+  const spacing = 62;
+  const opacities = {'-2':0.18,'-1':0.45,'0':1.0,'1':0.45,'2':0.18};
+  const scales    = {'-2':0.6, '-1':0.75,'0':1.0,'1':0.75,'2':0.6};
+  const visible   = [currentIdx-2, currentIdx-1, currentIdx, currentIdx+1, currentIdx+2];
+
+  function tStr(t){const a=Math.abs(t),m=Math.floor(a/60),s=a%60;return(t<0?'T-':'T+')+m+':'+String(s).padStart(2,'0');}
+
+  visible.forEach(i => {
+    if (i < 0 || i >= milestones.length) return;
+    const m   = milestones[i];
+    const y   = centerY + (i * spacing) - _tlSmooth;
+    if (y < 15 || y > 365) return;
+
+    const isDone    = elapsed > m.t;
+    const isCurrent = i === currentIdx && !isDone;
+    const dist      = i - currentIdx;
+    const opacity   = opacities[String(dist)] ?? 0.15;
+    const scale     = scales[String(dist)] ?? 0.6;
+
+    // Connecting line
+    const ni = i + 1;
+    if (visible.includes(ni) && ni < milestones.length) {
+      const ny = centerY + ni*spacing - _tlSmooth;
+      if (ny < 368) {
+        ctx.strokeStyle = isDone ? `rgba(0,232,122,${opacity*0.5})` : `rgba(255,255,255,${opacity*0.15})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();ctx.moveTo(dotX,y+7);ctx.lineTo(dotX,Math.min(ny-7,365));ctx.stroke();
+      }
+    }
+
+    // Dot
+    const r = Math.max(2, Math.round(5*scale));
+    if (isDone) {
+      ctx.fillStyle=`rgba(0,232,122,${opacity})`;
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
+    } else if (isCurrent) {
+      const pulse=0.5+0.5*Math.sin(Date.now()/300);
+      ctx.fillStyle=`rgba(255,211,61,${0.15*pulse})`;
+      ctx.beginPath();ctx.arc(dotX,y,r+5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffd93d';
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.strokeStyle=`rgba(255,255,255,${opacity*0.5})`;
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.stroke();
+    }
+
+    // Labels
+    const ls=Math.max(5,Math.round(9*scale));
+    const ts=Math.max(4,Math.round(6*scale));
+    ctx.textAlign='right';
+    ctx.font=`bold ${ls}px Courier New`;
+    ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:isDone?`rgba(0,232,122,${opacity})`:`rgba(255,255,255,${opacity})`;
+    ctx.fillText(m.label, dotX-12, y+3);
+    ctx.font=`${ts}px Courier New`;
+    ctx.fillStyle=`rgba(255,255,255,${opacity*0.5})`;
+    ctx.fillText(tStr(m.t), dotX-12, y+ls+4);
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  MAIN RENDER LOOP
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1209,6 +1499,12 @@ function render(now) {
 
   drawBackground();
   drawClouds();
+
+  // Weather effects
+  const cond = state.weather.condition;
+  if (cond === 'rain' || cond === 'light_rain') drawRain(false);
+  if (cond === 'thunderstorm') { drawRain(true); drawLightning(); }
+  if (cond === 'fog') drawFog();
   // drawVAB();  // VAB removed for now
   drawTE();
   drawHIF();
@@ -1222,11 +1518,12 @@ function render(now) {
   drawSpotlights();
   drawSmoke();
   drawFlameParticles();
-  drawInfoBar();
+  updateInfoBar();
   drawCountdown();
+  drawMilestoneTimeline();
+  drawGearIcon();
+  drawNoSignal();
   if (state.notification) drawNotification();
-
-  drawWifiIcon();
   drawNoSignal();
 }
 
@@ -1245,15 +1542,55 @@ function updateCooldown() {
   }
 }
 
+async function fetchProbability() {
+  const launch = currentLaunch();
+  if (!launch) return;
+  if (!state._ll2ProbFetched) {
+    state._ll2ProbFetched = true;
+    fetch(`/api/ll2?name=${encodeURIComponent(launch.name||'')}&id=${encodeURIComponent(launch.id||'')}`)
+      .then(r => r.json())
+      .then(ll2 => {
+        const prob = ll2?.probability ?? null;
+        if (prob !== null) {
+          document.getElementById('ib-prob-wrap').style.display = 'block';
+          document.getElementById('ib-prob-fill').style.width = prob + '%';
+          document.getElementById('ib-prob-fill').style.background = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
+          document.getElementById('ib-prob-pct').textContent = prob + '%';
+          document.getElementById('ib-prob-pct').style.color = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
+        }
+      }).catch(() => {});
+  }
+}
+
 function startPolling() {
+  fetchProbability();
   setInterval(() => {
     if (!state.isLaunching && !state.postLaunchCooldown) {
       fetchLaunches().then(() => showNotification('DATA UPDATED'));
+      state._ll2ProbFetched = false;
     }
   }, 5 * 60 * 1000);
 
+  // Canvas snapshot for launches page
+  setInterval(() => {
+    try {
+      fetch('/api/snapshot', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ data: canvas.toDataURL('image/jpeg', 0.6) })
+      });
+    } catch(e) {}
+  }, 500);
+
   // Refresh weather every 15 minutes
   setInterval(fetchWeather, 15 * 60 * 1000);
+
+  // Fetch LL2 probability once on load, then every 5 minutes
+  fetchProbability();
+  setInterval(fetchProbability, 5 * 60 * 1000);
+
+  // Update HTML info bar every second
+  setInterval(updateInfoBar, 1000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1309,10 +1646,19 @@ canvas.addEventListener('click', function(e) {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  
-  // WiFi icon tap zone (top right)
-  if (x > W - 52 && x < W && y > 0 && y < 40) {
-    window.location = 'http://localhost:5001/wifi';
+
+
+  // Gear icon tap zone (next to wifi) — goes to settings too
+  if (x > W - 40 && x < W  && y > 0 && y < 40) {
+    window.location = 'http://localhost:5001/settings';
+  }
+
+  // Mission name tap zone (bottom info bar)
+  if (x > 0 && x < 400 && y > BAR_Y && y < BAR_Y + 35) {
+    const launch = currentLaunch();
+    if (launch) {
+      window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
+    }
   }
 });
 
@@ -1323,7 +1669,8 @@ canvas.addEventListener('click', function(e) {
   await loadAssets();
   spawnBirds();
   spawnCars();
-  await Promise.all([fetchLaunches(), fetchWeather()]);
+  await Promise.all([fetchLaunches(), fetchWeather(), fetchSettings()]);
+  initWeatherParticles();
   startPolling();
   requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);

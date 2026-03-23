@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px;
+      height: 510px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 36px; flex-shrink: 0;
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 4px 8px; cursor: pointer;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .save-indicator { font-size: 6px; color: #00e87a; padding: 4px 8px; border: 1px solid rgba(0,232,122,0.3); background: rgba(0,232,122,0.08); min-width: 80px; text-align: center; }
+
+    /* BODY */
+    .body { flex: 1; display: flex; overflow: hidden; }
+
+    /* LEFT — device info */
+    .left {
+      width: 220px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .phdr {
+      font-size: 6px; color: #00e87a;
+      background: #0d1620; padding: 5px 8px;
+      border-bottom: 2px solid #1a2030;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+    .device-info { padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .rocket-icon { display: flex; justify-content: center; padding: 10px 0; }
+    .di-field { }
+    .di-label { font-size: 5px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; margin-bottom: 4px; }
+    .di-val { font-size: 7px; color: #fff; }
+    .di-val.green { color: #00e87a; }
+    .di-val.blue  { color: #4a9ede; }
+    .di-val.yellow { color: #ffd93d; }
+    .di-divider { height: 1px; background: #1a2030; }
+
+    /* CENTER — settings */
+    .center {
+      flex: 1; display: flex; flex-direction: column;
+      background: #0a0e14; overflow: hidden;
+      border-right: 3px solid #1a2030;
+    }
+    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; }
+    .setting-cell {
+      padding: 12px 14px;
+      border-bottom: 2px solid #1a2030;
+      border-right: 2px solid #1a2030;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .setting-cell:nth-child(even) { border-right: none; }
+    .setting-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .s-label { font-size: 6px; color: #4a9ede; letter-spacing: 0.08em; }
+    .s-sub { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 2px; line-height: 1.8; }
+    .s-control { display: flex; gap: 4px; margin-top: 4px; }
+
+    /* Toggle buttons */
+    .tog {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px; padding: 5px 10px;
+      border: 2px solid #1a2030;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer; background: #080c12;
+    }
+    .tog.active { border-color: #00e87a; color: #00e87a; background: rgba(0,232,122,0.08); }
+    .tog:hover:not(.active) { background: rgba(255,255,255,0.04); }
+    .tog.blue.active { border-color: #4a9ede; color: #4a9ede; background: rgba(74,158,222,0.08); }
+    .tog.yellow.active { border-color: #ffd93d; color: #ffd93d; background: rgba(255,211,61,0.08); }
+    .tog.disabled { opacity: 0.25; cursor: not-allowed; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    input[type=range] {
+      flex: 1; accent-color: #00e87a; cursor: pointer;
+      height: 4px;
+    }
+    .slider-val { font-size: 8px; color: #ffd93d; width: 32px; text-align: right; flex-shrink: 0; }
+
+    /* ACTIONS */
+    .actions {
+      display: flex; gap: 6px;
+      padding: 8px 12px;
+      border-top: 3px solid #00e87a;
+      background: #0d1620; flex-shrink: 0;
+    }
+    .act-btn {
+      flex: 1; padding: 7px 4px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px; cursor: pointer;
+      border: 2px solid; background: transparent;
+      letter-spacing: 0.04em;
+    }
+    .act-green  { border-color: #00e87a; color: #00e87a; }
+    .act-green:hover  { background: rgba(0,232,122,0.1); }
+    .act-yellow { border-color: #ffd93d; color: #ffd93d; }
+    .act-yellow:hover { background: rgba(255,211,61,0.1); }
+    .act-blue   { border-color: #4a9ede; color: #4a9ede; }
+    .act-blue:hover   { background: rgba(74,158,222,0.1); }
+    .act-red    { border-color: #ff4422; color: #ff4422; }
+    .act-red:hover    { background: rgba(255,68,34,0.1); }
+
+    /* RIGHT — system status */
+    .right {
+      width: 180px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .sys-list { flex: 1; display: flex; flex-direction: column; }
+    .sys-row {
+      flex: 1; display: flex; flex-direction: column;
+      justify-content: center; padding: 0 10px;
+      border-bottom: 1px solid #1a2030; gap: 4px;
+      position: relative;
+    }
+    .sys-row::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; }
+    .sys-row:nth-child(1)::before { background: #00e87a; }
+    .sys-row:nth-child(2)::before { background: #4a9ede; }
+    .sys-row:nth-child(3)::before { background: #ffd93d; }
+    .sys-row:nth-child(4)::before { background: #ff9933; }
+    .sys-row:last-child { border-bottom: none; }
+    .sys-label { font-size: 5px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; }
+    .sys-val { font-size: 8px; color: #fff; }
+    .sys-val.green  { color: #00e87a; }
+    .sys-val.blue   { color: #4a9ede; }
+    .sys-val.yellow { color: #ffd93d; }
+    .sys-val.orange { color: #ff9933; }
+
+    /* STATUS STRIP */
+    .status-strip {
+      height: 28px; flex-shrink: 0;
+      background: #0d1620; border-top: 3px solid #00e87a;
+      display: flex; align-items: center; padding: 0 10px; gap: 0;
+    }
+    .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
+    .ss-item:first-child { padding-left: 0; }
+    .ss-lbl { font-size: 5px; color: #4a9ede; }
+    .ss-val { font-size: 6px; color: #fff; }
+    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; background: #00e87a; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="top-title-wrap">
+      <div class="top-title">SYSTEM SETTINGS</div>
+      <div class="top-sub">// LAUNCHTRACKER2D · CONFIGURATION //</div>
+    </div>
+    <div class="save-indicator" id="save-indicator" style="visibility:hidden;">✓ SAVED</div>
+  </div>
+
+  <div class="body">
+
+    <!-- LEFT: device info -->
+    <div class="left">
+      <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> DEVICE INFO</div>
+      <div class="device-info">
+        <div class="rocket-icon">
+          <svg width="32" height="56" viewBox="0 0 32 56">
+            <rect x="10" y="8" width="12" height="36" fill="rgba(0,232,122,0.5)"/>
+            <polygon points="10,8 16,0 22,8" fill="rgba(0,232,122,0.7)"/>
+            <rect x="10" y="14" width="12" height="2" fill="rgba(0,0,0,0.3)"/>
+            <rect x="10" y="30" width="12" height="3" fill="rgba(0,0,0,0.3)"/>
+            <rect x="4" y="32" width="6" height="8" fill="rgba(0,232,122,0.3)"/>
+            <rect x="22" y="32" width="6" height="8" fill="rgba(0,232,122,0.3)"/>
+            <rect x="11" y="44" width="10" height="5" fill="rgba(150,150,150,0.4)"/>
+          </svg>
+        </div>
+        <div class="di-divider"></div>
+        <div class="di-field">
+          <div class="di-label">UNIT NAME</div>
+          <div class="di-val green">LAUNCHTRACKER 2D</div>
+        </div>
+        <div class="di-field">
+          <div class="di-label">UNIT ID</div>
+          <div class="di-val yellow" id="unit-id">LT-???</div>
+        </div>
+        <div class="di-field">
+          <div class="di-label">MAC ADDRESS</div>
+          <div class="di-val blue" id="mac-addr">??:??:??:??:??:??</div>
+        </div>
+        <div class="di-field">
+          <div class="di-label">FIRMWARE</div>
+          <div class="di-val" id="version-str">v1.0.0</div>
+        </div>
+        <div class="di-field">
+          <div class="di-label">PLATFORM</div>
+          <div class="di-val">RASPBERRY PI</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: settings + actions -->
+    <div class="center">
+      <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> CONFIGURATION</div>
+      <div class="settings-grid">
+
+        <!-- Brightness -->
+        <div class="setting-cell">
+          <div class="s-label">BRIGHTNESS</div>
+          <div class="s-sub">Screen backlight level</div>
+          <div class="slider-row">
+            <input type="range" min="5" max="100" value="40" step="1" id="brightness-slider">
+            <div class="slider-val" id="brightness-val">40%</div>
+          </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="setting-cell">
+          <div class="s-label">TEMPERATURE</div>
+          <div class="s-sub">Weather display units</div>
+          <div class="s-control">
+            <button class="tog" id="unit-f" onclick="setTempUnit('f')">°F</button>
+            <button class="tog" id="unit-c" onclick="setTempUnit('c')">°C</button>
+          </div>
+        </div>
+
+        <!-- Time format -->
+        <div class="setting-cell">
+          <div class="s-label">TIME FORMAT</div>
+          <div class="s-sub">Countdown display timezone</div>
+          <div class="s-control">
+            <button class="tog" id="time-utc"   onclick="setTimeFormat('utc')">UTC</button>
+            <button class="tog" id="time-local" onclick="setTimeFormat('local')">LOCAL</button>
+          </div>
+        </div>
+
+        <!-- Launch site -->
+        <div class="setting-cell">
+          <div class="s-label">LAUNCH SITE</div>
+          <div class="s-sub">Filter launches by location</div>
+          <div class="s-control" style="flex-direction:column;gap:4px;">
+            <button class="tog blue" id="site-cape" onclick="setSite('cape')">CAPE CANAVERAL</button>
+            <button class="tog disabled" disabled>VANDENBERG · SOON</button>
+            <button class="tog disabled" disabled>ALL SITES · SOON</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="actions">
+        <button class="act-btn act-green"  onclick="goBack()">← BACK</button>
+        <button class="act-btn act-yellow" onclick="restartPage()">↺ RESTART</button>
+        <button class="act-btn act-blue"   onclick="goWifi()">⌘ WIFI</button>
+        <button class="act-btn act-red"    onclick="rebootPi()">⏻ REBOOT PI</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: system status -->
+    <div class="right">
+      <div class="phdr"><div class="phdr-dot" style="background:#ffd93d;"></div>> SYSTEM STATUS</div>
+      <div class="sys-list">
+        <div class="sys-row">
+          <div class="sys-label">SERVER</div>
+          <div class="sys-val green">ONLINE</div>
+        </div>
+        <div class="sys-row">
+          <div class="sys-label">LAUNCH DATA</div>
+          <div class="sys-val blue" id="sys-launch">LOADING...</div>
+        </div>
+        <div class="sys-row">
+          <div class="sys-label">WEATHER</div>
+          <div class="sys-val yellow" id="sys-weather">LOADING...</div>
+        </div>
+        <div class="sys-row">
+          <div class="sys-label">LL2 CACHE</div>
+          <div class="sys-val orange" id="sys-ll2">CHECKING...</div>
+        </div>
+        <div class="sys-row">
+          <div class="sys-label">LOCATION</div>
+          <div class="sys-val" id="sys-location">DETECTING...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status-strip">
+    <div class="ss-item"><div class="ss-dot"></div><div class="ss-lbl">STATUS</div><div class="ss-val">SYSTEM READY</div></div>
+    <div class="ss-item"><div class="ss-lbl">UNIT</div><div class="ss-val" id="ss-unit">LT-???</div></div>
+    <div class="ss-item"><div class="ss-lbl">VERSION</div><div class="ss-val" id="ss-version">v1.0.0</div></div>
+    <div class="ss-item" style="margin-left:auto;border-right:none;"><div class="ss-lbl">TIME</div><div class="ss-val" id="ss-time">—</div></div>
+  </div>
+
+  <script>
+    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'utc' };
+    let saveTimer = null;
+
+    function showSaved() {
+      const el = document.getElementById('save-indicator');
+      el.style.visibility = 'visible';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => { el.style.visibility = 'hidden'; }, 2000);
+    }
+
+    async function saveSettings() {
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings)
+        });
+        showSaved();
+      } catch(e) {}
+    }
+
+    function applySettings() {
+      document.getElementById('brightness-slider').value = settings.brightness;
+      document.getElementById('brightness-val').textContent = settings.brightness + '%';
+      document.getElementById('unit-f').classList.toggle('active', settings.temp_unit === 'f');
+      document.getElementById('unit-c').classList.toggle('active', settings.temp_unit === 'c');
+      document.getElementById('site-cape').classList.toggle('active', settings.site === 'cape');
+      document.getElementById('time-utc').classList.toggle('active',   settings.time_format === 'utc');
+      document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
+    }
+
+    async function loadSettings() {
+      try {
+        const r = await fetch('/api/settings');
+        settings = { ...settings, ...await r.json() };
+        applySettings();
+      } catch(e) { applySettings(); }
+    }
+
+    document.getElementById('brightness-slider').addEventListener('input', function() {
+      const val = parseInt(this.value);
+      document.getElementById('brightness-val').textContent = val + '%';
+      settings.brightness = val;
+      fetch('/api/settings/brightness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: val })
+      }).catch(() => {});
+      saveSettings();
+    });
+
+    function setTempUnit(u) {
+      settings.temp_unit = u;
+      document.getElementById('unit-f').classList.toggle('active', u === 'f');
+      document.getElementById('unit-c').classList.toggle('active', u === 'c');
+      saveSettings();
+    }
+    function setSite(s) {
+      settings.site = s;
+      document.getElementById('site-cape').classList.toggle('active', s === 'cape');
+      saveSettings();
+    }
+    function setTimeFormat(f) {
+      settings.time_format = f;
+      document.getElementById('time-utc').classList.toggle('active',   f === 'utc');
+      document.getElementById('time-local').classList.toggle('active', f === 'local');
+      saveSettings();
+    }
+
+    function goBack()      { window.location = 'http://localhost:5001'; }
+    function restartPage() { window.location.reload(); }
+    function goWifi()      { window.location = 'http://localhost:5001/wifi'; }
+    function rebootPi() {
+      if (confirm('Reboot the Pi?')) {
+        fetch('/api/reboot', { method: 'POST' }).catch(() => {});
+      }
+    }
+
+    async function loadDeviceInfo() {
+      try {
+        const r = await fetch('/api/device');
+        const d = await r.json();
+        document.getElementById('unit-id').textContent   = d.unit_id || 'LT-???';
+        document.getElementById('mac-addr').textContent  = d.mac || '??:??:??:??:??:??';
+        document.getElementById('version-str').textContent = d.version || 'v1.0.0';
+        document.getElementById('ss-unit').textContent   = d.unit_id || 'LT-???';
+        document.getElementById('ss-version').textContent = d.version || 'v1.0.0';
+        if (d.lat && d.lon) {
+          document.getElementById('sys-location').textContent = d.lat.toFixed(2) + '°N ' + Math.abs(d.lon).toFixed(2) + '°W';
+        }
+      } catch(e) {}
+    }
+
+    async function loadSystemStatus() {
+      // Check launch data
+      try {
+        const r = await fetch('/api/launches');
+        const d = await r.json();
+        const count = d.launches?.length || 0;
+        document.getElementById('sys-launch').textContent = count + ' UPCOMING';
+      } catch(e) {
+        document.getElementById('sys-launch').textContent = 'UNAVAILABLE';
+      }
+      // Check weather
+      try {
+        const r = await fetch('/api/weather');
+        const d = await r.json();
+        document.getElementById('sys-weather').textContent = (d.label || 'OK').toUpperCase().slice(0,12);
+      } catch(e) {
+        document.getElementById('sys-weather').textContent = 'UNAVAILABLE';
+      }
+      // LL2 cache status
+      try {
+        const r = await fetch('/api/events');
+        const d = await r.json();
+        document.getElementById('sys-ll2').textContent = d.length > 0 ? 'POPULATED' : 'EMPTY';
+      } catch(e) {
+        document.getElementById('sys-ll2').textContent = 'UNAVAILABLE';
+      }
+    }
+
+    // Clock
+    function updateClock() {
+      document.getElementById('ss-time').textContent =
+        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' UTC';
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    loadSettings();
+    loadDeviceInfo();
+    loadSystemStatus();
+  </script>
+</body>
+</html>

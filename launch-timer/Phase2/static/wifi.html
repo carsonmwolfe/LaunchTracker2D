@@ -27,7 +27,8 @@
     .btn { flex: 1; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; cursor: pointer; border: none; }
     .btn-connect { background: #00e87a; color: #0a0a1e; }
     .btn-connect:disabled { background: rgba(0,232,122,0.3); cursor: not-allowed; }
-    .btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); }
+    .btn-back { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; }
+    .btn-back:hover { background: rgba(0,232,122,0.18); }
     .status { font-size: 10px; text-align: center; height: 14px; margin-top: 2px; color: #ffd93d; }
     .status.success { color: #00e87a; }
     .status.error { color: #ff4422; }
@@ -53,7 +54,7 @@
     <div class="kb-row" id="row4"></div>
   </div>
   <div class="bottom">
-    <button class="btn btn-back" id="btn-back" onclick="window.location='http://localhost:5001'">BACK</button>
+    <button class="btn btn-back" id="btn-back" onclick="window.location='http://localhost:5001/settings'">← BACK</button>
     <button class="btn btn-connect" id="btn-connect" onclick="connect()">CONNECT</button>
   </div>
   <div class="status" id="status"></div>
