@@ -21,7 +21,7 @@
     #wrapper {
       position: relative;
       width: 800px;
-      height: 510px;
+      height: 480px;
     }
 
     canvas {
@@ -53,17 +53,17 @@
       top: 48px;
       left: 10px;
       z-index: 10;
-      background: rgba(74,158,222,0.2);
-      border: 1px solid rgba(74,158,222,0.5);
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,211,61,0.6);
       border-radius: 4px;
-      color: #4a9ede;
+      color: #ffd93d;
       font-family: 'Courier New', monospace;
       font-size: 9px;
       font-weight: bold;
       padding: 4px 10px;
       cursor: pointer;
       letter-spacing: 1px;
-    }
+}
     #btn-launches:hover { background: rgba(74,158,222,0.35); }
 
     #info-bar {
@@ -127,7 +127,7 @@
 </head>
 <body>
   <div id="wrapper">
-    <canvas id="c" width="800" height="510"></canvas>
+    <canvas id="c" width="800" height="480"></canvas>
     <button id="btn-test">TEST LAUNCH</button>
     <button id="btn-launches" onclick="window.location='http://localhost:5001/launches'">LAUNCHES & EVENTS</button>
 

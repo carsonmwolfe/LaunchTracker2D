@@ -64,7 +64,7 @@ function loadAssets() {
 const canvas  = document.getElementById('c');
 const ctx     = canvas.getContext('2d');
 
-const W = 800, H = 510;
+const W = 800, H = 480;
 
 let state = {
   launches:    [],
