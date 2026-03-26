@@ -281,6 +281,9 @@ def _auto_brightness():
         time.sleep(300)
 
 threading.Thread(target=_auto_brightness, daemon=True).start()
+
+_ll2_last_launch_key = [None]  # mutable container so prefetch thread can update it
+
 def _ll2_prefetch():
     """Background thread — pre-fetches LL2 data on a schedule."""
     time.sleep(10)  # wait for server to fully start
@@ -323,6 +326,15 @@ def _ll2_prefetch():
             name = lv.get('name', '')
             launch_id = str(lv.get('id', ''))
             cache_key = launch_id or name
+
+            # If the next launch has changed, purge the old LL2 cache entry
+            if _ll2_last_launch_key[0] and _ll2_last_launch_key[0] != cache_key:
+                old_key = _ll2_last_launch_key[0]
+                if old_key in _ll2_cache:
+                    del _ll2_cache[old_key]
+                    print(f"[{_ts()}] Prefetch: purged stale LL2 cache for '{old_key}'")
+            _ll2_last_launch_key[0] = cache_key
+
             cached = _ll2_cache.get(cache_key, {})
             if not cached or now - cached.get('fetched', 0) > 300:
                 # Build search terms
@@ -427,6 +439,16 @@ def invalidate_launches():
     print(f"[{_ts()}] Launch cache invalidated")
     return jsonify({'ok': True})
 
+
+@app.route('/api/ll2/invalidate', methods=['POST'])
+def invalidate_ll2():
+    """Clear all LL2 mission cache entries (keeps events/year launches)."""
+    keys_to_delete = [k for k in _ll2_cache if k not in ('events', 'launches_year')]
+    for k in keys_to_delete:
+        del _ll2_cache[k]
+    _ll2_last_launch_key[0] = None
+    print(f"[{_ts()}] LL2 mission cache cleared ({len(keys_to_delete)} entries)")
+    return jsonify({'ok': True, 'cleared': len(keys_to_delete)})
 
 _ll2_cache = {}
 LL2_TTL = 3600  # 1 hour
