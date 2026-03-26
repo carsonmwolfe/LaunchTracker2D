@@ -889,19 +889,30 @@ function updateInfoBar() {
   else if (sl.includes('hold')) { badge.textContent='HOLD'; badge.className='hold'; }
   else { badge.textContent=(launch.status||'TBD').toUpperCase(); badge.className=''; }
 
-  // Sub line
+  // Sub line — vehicle · provider · pad (shortened)
   const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
     .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
   document.getElementById('ib-sub').textContent =
-    (launch.vehicle||'') + ' · ' + (launch.provider||'') + ' · ' + shorten(launch.pad||launch.location||'');
+    (launch.vehicle||'') + ' · ' + (launch.provider||'') + ' · ' + shorten(launch.pad||'');
+
+  // Location — city/state from launch.location
+  const locShorten = s => (s||'')
+    .replace('Cape Canaveral, Florida, USA','Cape Canaveral, FL')
+    .replace('Vandenberg Space Force Base, California, USA','Vandenberg, CA')
+    .replace('Kennedy Space Center, Florida, USA','Kennedy SC, FL')
+    .replace('Boca Chica, Texas, USA','Boca Chica, TX')
+    .replace('Mahia Peninsula, New Zealand','Mahia, NZ')
+    .replace('Wallops Island, Virginia, USA','Wallops Island, VA')
+    .replace(', USA','').replace(', United States','');
+  document.getElementById('ib-location').textContent = locShorten(launch.location||'');
 
   // Tap hint
   document.getElementById('ib-tap').onclick = () => {
     window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
   };
 
-  // Date + countdown
+  // Date + countdown (hidden elements kept for compat)
   const useLocal = state.settings?.time_format === 'local';
   const tz = useLocal ? undefined : 'UTC';
   const t0 = launch.t0 || launch.win_open;
@@ -911,6 +922,11 @@ function updateInfoBar() {
       d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:tz}) + ' · ' +
       d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) +
       (useLocal ? ' LOCAL' : ' UTC');
+    // T-0 display in new detail row
+    const t0Label = d.toLocaleDateString('en-US',{day:'numeric',month:'short',timeZone:tz}).toUpperCase()
+      + ' · ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})
+      + (useLocal ? ' LOCAL' : ' UTC');
+    document.getElementById('ib-t0').textContent = t0Label;
     const cd = computeCountdown(t0);
     if (cd && cd !== 'LAUNCHED') {
       const {days,hours,minutes,seconds} = cd;
@@ -923,9 +939,26 @@ function updateInfoBar() {
     const winOpen = launch.win_open || t0;
     if (winOpen) {
       document.getElementById('ib-win-open').textContent =
-        new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) + ' OPEN';
+        new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
     }
-    document.getElementById('ib-win-close').textContent = 'CLOSE —';
+    // win_close not in API so just show — for now
+    const winCloseEl = document.getElementById('ib-win-close');
+    winCloseEl.textContent = '—:—';
+
+    // T-0 dot position on window track
+    // If we have win_open and t0, place dot proportionally
+    // For instantaneous windows dot sits at left edge (0%)
+    const dotEl = document.getElementById('ib-win-dot');
+    if (dotEl && winOpen && t0 && winOpen !== t0) {
+      const openMs = new Date(winOpen).getTime();
+      const t0Ms   = new Date(t0).getTime();
+      // Assume 2hr window max for scaling if no close time
+      const windowMs = 2 * 3600 * 1000;
+      const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / windowMs * 100));
+      dotEl.style.left = pct + '%';
+    } else if (dotEl) {
+      dotEl.style.left = '0%';
+    }
   }
 
   // Weather
@@ -933,7 +966,7 @@ function updateInfoBar() {
   if (wx) {
     const useCelsius = state.settings?.temp_unit === 'c';
     document.getElementById('ib-temp').textContent   = useCelsius ? Math.round(wx.temp_c)+'°C' : Math.round(wx.temp_f)+'°F';
-    document.getElementById('ib-wind').textContent   = Math.round(wx.wind_speed)+'mph';
+    document.getElementById('ib-wind').textContent   = Math.round(wx.wind_speed)+' '+(wx.wind_dir||'');
     document.getElementById('ib-cloud').textContent  = (wx.cloud_cover||0)+'%';
     document.getElementById('ib-precip').textContent = (wx.precip||0).toFixed(1)+'"';
   }
@@ -1557,6 +1590,13 @@ async function fetchProbability() {
           document.getElementById('ib-prob-fill').style.background = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
           document.getElementById('ib-prob-pct').textContent = prob + '%';
           document.getElementById('ib-prob-pct').style.color = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
+          // prob badge in new info bar
+          const probBadge = document.getElementById('ib-prob-badge');
+          probBadge.textContent = prob + '%';
+          probBadge.style.display = 'block';
+          const pc = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
+          probBadge.style.color = pc;
+          probBadge.style.borderColor = pc.replace(')',',0.3)').replace('rgb','rgba');
         }
       }).catch(() => {});
   }

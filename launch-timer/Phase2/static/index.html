@@ -13,10 +13,9 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 480px;   /* ← change to: */
       height: 480px;
       overflow: hidden;
-    } 
+    }
 
     #wrapper {
       position: relative;
@@ -29,7 +28,6 @@
       image-rendering: pixelated;
     }
 
-    /* TEST LAUNCH button — top-left, same position as tkinter version */
     #btn-test {
       position: absolute;
       top: 10px;
@@ -63,9 +61,10 @@
       padding: 4px 10px;
       cursor: pointer;
       letter-spacing: 1px;
-}
+    }
     #btn-launches:hover { background: rgba(74,158,222,0.35); }
 
+    /* ── Info bar ── */
     #info-bar {
       position: absolute;
       bottom: 0; left: 0;
@@ -76,53 +75,72 @@
       font-family: 'Courier New', monospace;
       z-index: 5;
     }
-    #ib-left {
-      flex: 1.3;
-      padding: 10px 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 3px;
+
+    /* LEFT panel — launch window */
+    #ib-window {
+      width: 190px; flex-shrink: 0;
+      padding: 0 16px;
+      display: flex; flex-direction: column;
+      justify-content: center; gap: 6px;
       border-right: 1px solid rgba(255,255,255,0.07);
-      min-width: 0;
     }
-    #ib-name-row { display: flex; align-items: center; gap: 10px; }
-    #ib-name { font-size: 20px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #ib-badge { font-size: 10px; padding: 3px 9px; border-radius: 3px; font-weight: bold; letter-spacing: 0.08em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.4); color: #ffd93d; }
-    #ib-badge.go   { background: rgba(0,232,122,0.15);  border-color: rgba(0,232,122,0.4);  color: #00e87a; }
-    #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
-    #ib-sub { font-size: 11px; color: #4a9ede; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #ib-tap { font-size: 9px; color: rgba(0,232,122,0.45); letter-spacing: 0.06em; cursor: pointer; }
-    #ib-center {
-      width: 230px; flex-shrink: 0;
+    #ib-win-label { font-size: 8px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
+    #ib-win-times-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .ib-win-time { font-size: 18px; font-weight: bold; color: #ffd93d; line-height: 1; }
+    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.05em; }
+    #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
+    #ib-win-track {
+      height: 3px; background: rgba(255,255,255,0.08);
+      border-radius: 2px; position: relative;
+    }
+    #ib-win-dot {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #00e87a; border: 2px solid #080810;
+      left: 0%;
+    }
+
+    /* CENTER panel — mission info */
+    #ib-left {
+      flex: 1;
+      padding: 0 20px;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      gap: 4px; padding: 8px 14px;
-      border-right: 1px solid rgba(255,255,255,0.07);
+      gap: 7px; min-width: 0;
+      cursor: pointer;
     }
-    #ib-date { font-size: 11px; color: #ffd93d; letter-spacing: 0.04em; }
-    #ib-cd   { font-size: 15px; font-weight: bold; color: #00e87a; letter-spacing: 0.06em; }
-    #ib-win-wrap { width: 100%; }
-    #ib-win-bar  { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; margin: 4px 0 3px; }
-    #ib-win-fill { position: absolute; inset: 0; background: rgba(0,232,122,0.2); border-radius: 2px; }
-    .ib-win-dot  { position: absolute; top: -4px; width: 12px; height: 12px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #080810; }
-    #ib-win-times { display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.22); }
+    #ib-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    #ib-name { font-size: 22px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.4); color: #ffd93d; }
+    #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
+    #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
+    #ib-prob-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 1px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
+    #ib-detail-row { display: flex; align-items: center; gap: 10px; font-size: 11px; min-width: 0; }
+    #ib-sub      { color: #4a9ede; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-location { color: rgba(255,255,255,0.35); white-space: nowrap; flex-shrink: 0; }
+    #ib-t0       { color: #ffd93d; white-space: nowrap; flex-shrink: 0; }
+    .ib-sep      { color: rgba(255,255,255,0.2); flex-shrink: 0; }
+
+    /* hidden — kept for JS compat */
+    #ib-tap { display: none; }
+    #ib-cd  { display: none; }
+    #ib-date { display: none; }
+    #ib-prob-wrap { display: none; }
+    #ib-center { display: none; }
+
+    /* RIGHT panel — weather */
     #ib-right {
-      width: 200px; flex-shrink: 0;
+      width: 190px; flex-shrink: 0;
+      padding: 0 16px;
       display: flex; flex-direction: column;
-      justify-content: center; padding: 10px 16px; gap: 6px;
+      justify-content: center; gap: 6px;
+      border-left: 1px solid rgba(255,255,255,0.07);
     }
-    #ib-wx-row { display: flex; }
-    .ib-wx { flex: 1; text-align: center; }
-    .ib-wx-val { font-size: 13px; font-weight: bold; color: #fff; line-height: 1; }
-    .ib-wx-lbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.05em; }
-    #ib-ver { font-size: 8px; color: rgba(255,255,255,0.15); text-align: right; }
-    #ib-prob-wrap { width: 100%; }
-    #ib-prob-row { display: flex; align-items: center; gap: 6px; }
-    #ib-prob-label { font-size: 7px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; flex-shrink: 0; }
-    #ib-prob-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-    #ib-prob-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 0.5s; }
-    #ib-prob-pct { font-size: 9px; font-weight: bold; width: 28px; text-align: right; flex-shrink: 0; }
+    #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-end; }
+    .ib-wx { text-align: center; }
+    .ib-wx-val { font-size: 20px; font-weight: bold; color: #fff; line-height: 1; }
+    .ib-wx-lbl { font-size: 8px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.05em; }
+    #ib-ver { font-size: 9px; color: rgba(255,255,255,0.18); text-align: right; letter-spacing: 0.04em; }
   </style>
 </head>
 <body>
@@ -132,46 +150,68 @@
     <button id="btn-launches" onclick="window.location='http://localhost:5001/launches'">LAUNCHES & EVENTS</button>
 
     <div id="info-bar">
-      <div id="ib-left" onclick="window.location='http://localhost:5001/mission'" style="cursor:pointer;">
+
+      <!-- LEFT: launch window -->
+      <div id="ib-window">
+        <div id="ib-win-label">LAUNCH WINDOW</div>
+        <div id="ib-win-times-row">
+          <div>
+            <div class="ib-win-time" id="ib-win-open">—:—</div>
+            <div class="ib-win-sublbl">OPEN</div>
+          </div>
+          <div id="ib-win-sep">—</div>
+          <div style="text-align:right;">
+            <div class="ib-win-time" id="ib-win-close">—:—</div>
+            <div class="ib-win-sublbl">CLOSE</div>
+          </div>
+        </div>
+        <div id="ib-win-track">
+          <div id="ib-win-dot"></div>
+        </div>
+        <!-- hidden compat elements -->
+        <div id="ib-win-wrap" style="display:none;"><div id="ib-win-bar"><div id="ib-win-fill"></div></div></div>
+      </div>
+
+      <!-- CENTER: mission info — tappable → mission page -->
+      <div id="ib-left" onclick="window.location='http://localhost:5001/mission'">
         <div id="ib-name-row">
           <div id="ib-name">—</div>
           <div id="ib-badge">TBD</div>
+          <div id="ib-prob-badge">—%</div>
         </div>
-        <div id="ib-sub">—</div>
-        <div id="ib-tap">.→</div>
-      </div>
-      <div id="ib-center">
-        <div id="ib-date">—</div>
-        <div id="ib-cd">T− --:--:--</div>
+        <div id="ib-detail-row">
+          <span id="ib-sub">—</span>
+          <span class="ib-sep">·</span>
+          <span id="ib-location">—</span>
+          <span class="ib-sep">·</span>
+          <span id="ib-t0">—</span>
+        </div>
+        <!-- hidden — kept for JS compat -->
+        <div id="ib-tap" style="display:none;"></div>
+        <div id="ib-cd" style="display:none;"></div>
+        <div id="ib-date" style="display:none;"></div>
         <div id="ib-prob-wrap" style="display:none;">
           <div id="ib-prob-row">
-            <span id="ib-prob-label">LAUNCH PROB</span>
+            <span id="ib-prob-label"></span>
             <div id="ib-prob-bar"><div id="ib-prob-fill"></div></div>
             <span id="ib-prob-pct">—</span>
           </div>
         </div>
-        <div id="ib-win-wrap">
-          <div id="ib-win-bar">
-            <div id="ib-win-fill"></div>
-            <div class="ib-win-dot" id="ib-dot-open"  style="left:0%;background:#ffd93d;"></div>
-            <div class="ib-win-dot" id="ib-dot-t0"    style="left:33%;background:#00e87a;"></div>
-            <div class="ib-win-dot" id="ib-dot-close" style="left:100%;background:#ffd93d;"></div>
-          </div>
-          <div id="ib-win-times">
-            <span id="ib-win-open">— OPEN</span>
-            <span id="ib-win-close">CLOSE —</span>
-          </div>
-        </div>
       </div>
+
+      <!-- hidden center — kept for JS compat -->
+      <div id="ib-center" style="display:none;"></div>
+
+      <!-- RIGHT: weather -->
       <div id="ib-right">
         <div id="ib-wx-row">
           <div class="ib-wx"><div class="ib-wx-val" id="ib-temp">—</div><div class="ib-wx-lbl">TEMP</div></div>
-          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND</div></div>
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND mph</div></div>
           <div class="ib-wx"><div class="ib-wx-val" id="ib-cloud">—</div><div class="ib-wx-lbl">CLOUD</div></div>
-          <div class="ib-wx"><div class="ib-wx-val" id="ib-precip">—</div><div class="ib-wx-lbl">PRECIP</div></div>
         </div>
         <div id="ib-ver">v1.0.0 · data 0m ago</div>
       </div>
+
     </div>
   </div>
 
