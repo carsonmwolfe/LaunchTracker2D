@@ -413,7 +413,7 @@ function drawBirds() {
 // ─────────────────────────────────────────────────────────────────────────────
 const CAR_COLORS = ['#3a7bc8','#d44444','#f5f5f5','#2a2a2a','#ffd93d','#4a9d5f'];
 const GATE_X = 490;
-const ROAD_Y = 408;
+const ROAD_Y = 375;
 const BAR_H  = 80;
 const BAR_Y  = H - BAR_H;
 
@@ -1512,7 +1512,7 @@ function render(now) {
   drawRocket();         // ← Draw rocket FIRST (behind)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
-  drawPond();
+  //drawPond();
   drawBirds();
   drawCars();
   drawSpotlights();

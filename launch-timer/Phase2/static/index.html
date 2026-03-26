@@ -13,15 +13,15 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      font-family: 'Courier New', Courier, monospace;
+      min-height: 480px;   /* ← change to: */
+      height: 480px;
       overflow: hidden;
-    }
+    } 
 
     #wrapper {
       position: relative;
       width: 800px;
-      height: 390px;
+      height: 480px;
     }
 
     canvas {
@@ -127,18 +127,18 @@
 </head>
 <body>
   <div id="wrapper">
-    <canvas id="c" width="800" height="390"></canvas>
+    <canvas id="c" width="800" height="480"></canvas>
     <button id="btn-test">TEST LAUNCH</button>
     <button id="btn-launches" onclick="window.location='http://localhost:5001/launches'">LAUNCHES & EVENTS</button>
 
     <div id="info-bar">
-      <div id="ib-left">
+      <div id="ib-left" onclick="window.location='http://localhost:5001/mission'" style="cursor:pointer;">
         <div id="ib-name-row">
           <div id="ib-name">—</div>
           <div id="ib-badge">TBD</div>
         </div>
         <div id="ib-sub">—</div>
-        <div id="ib-tap">TAP FOR DETAILS →</div>
+        <div id="ib-tap">.→</div>
       </div>
       <div id="ib-center">
         <div id="ib-date">—</div>
