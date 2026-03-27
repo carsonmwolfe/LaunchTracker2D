@@ -12,7 +12,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 480px;
       overflow: hidden;
     }
@@ -106,20 +106,20 @@
       padding: 0 20px;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      gap: 7px; min-width: 0;
+      gap: 5px; min-width: 0; overflow: hidden;
       cursor: pointer;
     }
-    #ib-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-    #ib-name { font-size: 22px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-name-row { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-width: 0; }
+    #ib-name { font-size: 20px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #ib-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.4); color: #ffd93d; }
     #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
     #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
     #ib-prob-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 1px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
-    #ib-detail-row { display: flex; align-items: center; gap: 10px; font-size: 11px; min-width: 0; }
-    #ib-sub      { color: #4a9ede; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #ib-location { color: rgba(255,255,255,0.35); white-space: nowrap; flex-shrink: 0; }
-    #ib-t0       { color: #ffd93d; white-space: nowrap; flex-shrink: 0; }
-    .ib-sep      { color: rgba(255,255,255,0.2); flex-shrink: 0; }
+    #ib-detail-row { font-size: 11px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; }
+    #ib-sub      { color: #4a9ede; }
+    #ib-location { color: rgba(255,255,255,0.6); }
+    #ib-t0       { color: #ffd93d; }
+    .ib-sep      { color: rgba(255,255,255,0.25); }
 
     /* hidden — kept for JS compat */
     #ib-tap { display: none; }
@@ -140,7 +140,7 @@
     .ib-wx { text-align: center; }
     .ib-wx-val { font-size: 20px; font-weight: bold; color: #fff; line-height: 1; }
     .ib-wx-lbl { font-size: 8px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.05em; }
-    #ib-ver { font-size: 9px; color: rgba(255,255,255,0.18); text-align: right; letter-spacing: 0.04em; }
+    #ib-ver { font-size: 9px; color: rgba(255,255,255,0.4); text-align: right; letter-spacing: 0.04em; }
   </style>
 </head>
 <body>
@@ -180,11 +180,7 @@
           <div id="ib-prob-badge">—%</div>
         </div>
         <div id="ib-detail-row">
-          <span id="ib-sub">—</span>
-          <span class="ib-sep">·</span>
-          <span id="ib-location">—</span>
-          <span class="ib-sep">·</span>
-          <span id="ib-t0">—</span>
+          <span id="ib-sub">—</span><span class="ib-sep"> · </span><span id="ib-location">—</span><span class="ib-sep"> · </span><span id="ib-t0">—</span>
         </div>
         <!-- hidden — kept for JS compat -->
         <div id="ib-tap" style="display:none;"></div>

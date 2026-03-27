@@ -439,6 +439,7 @@
 
         // Tick milestones every second
       if (t0ms) {
+        let _navigating = false;
         setInterval(() => {
           const el2 = (new Date().getTime() - t0ms) / 1000;
 
@@ -447,20 +448,21 @@
             `<div class="phdr-dot" style="background:#ffd93d;width:6px;height:6px;flex-shrink:0;"></div>> FLIGHT PLAN · ${label}`;
 
           let nextFound = false;
+          let allDone = true;
           document.querySelectorAll('.ms-item').forEach((el, i) => {
             if (i === 0) {
               // PRE-LAUNCH — done if we're past first milestone
-              const state = el2 > milestones[0].t ? 'done' : 'pending';
+              const state = el2 >= milestones[0].t ? 'done' : 'pending';
               el.className = 'ms-item ' + state;
               el.querySelector('.ms-dot').className = 'ms-dot ' + state;
               return;
             }
-            const m = milestones[i - 1]; // offset by 1 for the rest
+            const m = milestones[i - 1];
             if (!m) return;
             let state;
-            if (el2 > m.t) { state = 'done'; }
-            else if (!nextFound) { state = 'next'; nextFound = true; }
-            else { state = 'pending'; }
+            if (el2 >= m.t) { state = 'done'; }
+            else if (!nextFound) { state = 'next'; nextFound = true; allDone = false; }
+            else { state = 'pending'; allDone = false; }
             el.className = 'ms-item ' + state;
             el.querySelector('.ms-dot').className = 'ms-dot ' + state;
           });
@@ -691,9 +693,17 @@
       const sl=statusName.toLowerCase();
       if(sl.includes('hold')){badge.textContent='HOLD';badge.style.borderColor='#ff4422';badge.style.color='#ff4422';}
       else if(t0){
-        function updateBadge(){
+      function updateBadge(){
           const diff=new Date(t0)-new Date();
-          if(diff<=0){badge.textContent='LAUNCHED';badge.style.color='#4a9ede';badge.style.borderColor='#4a9ede';return;}
+          if(diff<=0){
+            // Show live T+ elapsed time instead of static LAUNCHED
+            const elapsed=Math.floor((new Date()-new Date(t0))/1000);
+            const h=Math.floor(elapsed/3600),m=Math.floor((elapsed%3600)/60),s=elapsed%60;
+            badge.textContent=`T+ ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            badge.style.color='#00e87a';badge.style.borderColor='#00e87a';
+            return;
+          }
+          badge.style.color='';badge.style.borderColor='';
           const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000);
           const m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
           badge.textContent=d>0?`T- ${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`T- ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;

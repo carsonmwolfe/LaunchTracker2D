@@ -856,6 +856,10 @@ function drawInfoBar() {
 
 function updateInfoBar() {
 
+  // If the HTML info-bar isn't present in this page (e.g. canvas-only embed),
+  // bail out to avoid "Cannot set properties of null" errors.
+  if (!document.getElementById('ib-name')) return;
+
   // Post-launch cooldown state
   if (state.postLaunchCooldown) {
     document.getElementById('ib-name').textContent = 'LAUNCHED: ' + state.launchedMissionName;
@@ -889,12 +893,18 @@ function updateInfoBar() {
   else if (sl.includes('hold')) { badge.textContent='HOLD'; badge.className='hold'; }
   else { badge.textContent=(launch.status||'TBD').toUpperCase(); badge.className=''; }
 
-  // Sub line — vehicle · provider · pad (shortened)
+  // Sub line — vehicle · provider · pad
   const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
-    .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
+    .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB')
+    .replace(' Space Force Base','');
+  const shortenProvider = s => (s||'')
+    .replace('Space Exploration Technologies Corp.','SpaceX')
+    .replace('Rocket Lab USA','Rocket Lab')
+    .replace('United Launch Alliance','ULA')
+    .replace('Blue Origin, LLC','Blue Origin');
   document.getElementById('ib-sub').textContent =
-    (launch.vehicle||'') + ' · ' + (launch.provider||'') + ' · ' + shorten(launch.pad||'');
+    (launch.vehicle||'') + ' · ' + shortenProvider(launch.provider||'') + ' · ' + shorten(launch.pad||'');
 
   // Location — city/state from launch.location
   const locShorten = s => (s||'')
@@ -941,20 +951,22 @@ function updateInfoBar() {
       document.getElementById('ib-win-open').textContent =
         new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
     }
-    // win_close not in API so just show — for now
+    // Show win_close if available, otherwise repeat open time (instantaneous window)
     const winCloseEl = document.getElementById('ib-win-close');
-    winCloseEl.textContent = '—:—';
+    if (launch.win_close) {
+      winCloseEl.textContent = new Date(launch.win_close).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
+    } else {
+      // Instantaneous — show same time as open
+      winCloseEl.textContent = new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
+    }
 
     // T-0 dot position on window track
-    // If we have win_open and t0, place dot proportionally
-    // For instantaneous windows dot sits at left edge (0%)
     const dotEl = document.getElementById('ib-win-dot');
-    if (dotEl && winOpen && t0 && winOpen !== t0) {
-      const openMs = new Date(winOpen).getTime();
-      const t0Ms   = new Date(t0).getTime();
-      // Assume 2hr window max for scaling if no close time
-      const windowMs = 2 * 3600 * 1000;
-      const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / windowMs * 100));
+    if (dotEl && winOpen && t0 && launch.win_close) {
+      const openMs  = new Date(winOpen).getTime();
+      const t0Ms    = new Date(t0).getTime();
+      const closeMs = new Date(launch.win_close).getTime();
+      const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / (closeMs - openMs) * 100));
       dotEl.style.left = pct + '%';
     } else if (dotEl) {
       dotEl.style.left = '0%';
@@ -966,9 +978,9 @@ function updateInfoBar() {
   if (wx) {
     const useCelsius = state.settings?.temp_unit === 'c';
     document.getElementById('ib-temp').textContent   = useCelsius ? Math.round(wx.temp_c)+'°C' : Math.round(wx.temp_f)+'°F';
-    document.getElementById('ib-wind').textContent   = Math.round(wx.wind_speed)+' '+(wx.wind_dir||'');
+    document.getElementById('ib-wind').textContent   = Math.round(wx.wind_speed);
     document.getElementById('ib-cloud').textContent  = (wx.cloud_cover||0)+'%';
-    document.getElementById('ib-precip').textContent = (wx.precip||0).toFixed(1)+'"';
+    
   }
     // Version + data age
   const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
@@ -1025,33 +1037,35 @@ function checkLaunchTrigger() {
   const cd = computeCountdown(launch.t0);
 
   if (cd === 'LAUNCHED') {
-  const launchTime = new Date(launch.t0).getTime();
-  const minsAgo = (Date.now() - launchTime) / 60000;
+    const launchTime = new Date(launch.t0).getTime();
+    const minsAgo = (Date.now() - launchTime) / 60000;
 
-  if (minsAgo > 30) {
-    console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
-    state.launchTriggered = true;
-    state.buriedLaunchId  = launch.id;
-    fetchLaunches(true);
+    if (minsAgo > 30) {
+      console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
+      state.launchTriggered = true;
+      state.buriedLaunchId  = launch.id;
+      fetchLaunches(true);
+      return;
+    }
+
+    console.log(`[${ts()}] Missed launch detected — starting cooldown`);
+    state.launchTriggered     = true;
+    state.launchComplete      = true;
+    state.rocketOffscreen     = true;
+    state.buriedLaunchId      = launch.id;
+    state.launchedMissionName = launch.name || '';
+    state._lastLaunchT0       = launch.t0 || null;
+    state._lastLaunchVehicle  = launch.vehicle || '';
+
+    // Fetch latest launches to determine the next mission
+    fetch('/api/launches').then(r => r.json()).then(data => {
+      const all = data.launches || [];
+      const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
+      state.nextMissionName = next ? (next.name || '') : '';
+      state.nextMissionT0   = next ? (next.t0 || null) : null;
+    }).catch(() => {});
     return;
   }
-
-  console.log(`[${ts()}] Missed launch detected — starting cooldown`);
-  state.launchTriggered     = true;
-  state.launchComplete      = true;
-  state.rocketOffscreen     = true;
-  state.buriedLaunchId      = launch.id;
-  state.launchedMissionName = launch.name || '';
-  state.postLaunchCooldown  = true;
-  state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
-  fetch('/api/launches').then(r => r.json()).then(data => {
-    const all = data.launches || [];
-    const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
-    state.nextMissionName = next ? (next.name || '') : '';
-    state.nextMissionT0   = next ? (next.t0 || null) : null;
-  }).catch(() => {});
-  return;
-}
 
   if (!cd) return;
 
@@ -1064,6 +1078,13 @@ function checkLaunchTrigger() {
 }
 
 function startLaunchAnimation() {
+  // Capture launched mission data NOW so drawMilestoneTimeline fallback works
+  // during the animation and immediately after postLaunchCooldown starts
+  const _launching = currentLaunch();
+  if (_launching) {
+    state._lastLaunchT0      = _launching.t0 || null;
+    state._lastLaunchVehicle = _launching.vehicle || '';
+  }
   state.isLaunching    = true;
   state.launchFrame    = 0;
   state.rocketY        = PAD_Y_BASE;
@@ -1094,8 +1115,11 @@ function updateLaunch() {
       const _launched           = currentLaunch();
       state.buriedLaunchId      = _launched ? _launched.id : null;  
       state.launchedMissionName = _launched ? (_launched.name || '') : '';
+      state._lastLaunchT0       = _launched ? (_launched.t0 || null) : null;
+      state._lastLaunchVehicle  = _launched ? (_launched.vehicle || '') : '';
       state.postLaunchCooldown  = true;
       state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
+      saveState(); // persist immediately so navigation away doesn't lose cooldown
       if (!state.testMode) {
         fetch('/api/launches/invalidate', { method: 'POST' })
           .then(() => fetch('/api/launches')).then(r => r.json())
@@ -1341,6 +1365,7 @@ function drawGearIcon() {
     const ox = x + Math.cos(a) * 8;
     const oy = y + 10 + Math.sin(a) * 8;
     ctx.beginPath();
+
     ctx.moveTo(ix, iy);
     ctx.lineTo(ox, oy);
     ctx.stroke();
@@ -1425,13 +1450,13 @@ function getMilestones(vehicle) {
 let _tlSmooth = 0;
 
 function drawMilestoneTimeline() {
-  const launch = currentLaunch();
+  const launch = currentLaunch() || (state.postLaunchCooldown ? { t0: state._lastLaunchT0, vehicle: state._lastLaunchVehicle } : null);
   if (!launch || !launch.t0) return;
   const cd = computeCountdown(launch.t0);
-  if (!cd || cd === 'LAUNCHED') return;
-  if (cd.total_seconds > 1800) return;
-
   const elapsed = (Date.now() - new Date(launch.t0).getTime()) / 1000;
+  // Show timeline from T-30min until end of milestones sequence (~75 min post launch)
+  if (cd && cd !== 'LAUNCHED' && cd.total_seconds > 1800) return;
+  if (elapsed > 4500) return;
   const milestones = getMilestones(launch.vehicle || '');
   let currentIdx = 0;
   for (let i = 0; i < milestones.length; i++) {
@@ -1703,15 +1728,56 @@ canvas.addEventListener('click', function(e) {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  STATE PERSISTENCE — survive page navigation
+// ─────────────────────────────────────────────────────────────────────────────
+function saveState() {
+  try {
+    sessionStorage.setItem('lt_state', JSON.stringify({
+      postLaunchCooldown:  state.postLaunchCooldown,
+      cooldownEndsAt:      state.cooldownEndsAt,
+      buriedLaunchId:      state.buriedLaunchId,
+      launchedMissionName: state.launchedMissionName,
+      nextMissionName:     state.nextMissionName,
+      nextMissionT0:       state.nextMissionT0,
+      _lastLaunchT0:       state._lastLaunchT0,
+      _lastLaunchVehicle:  state._lastLaunchVehicle,
+    }));
+  } catch(e) {}
+}
+
+function restoreState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('lt_state') || 'null');
+    if (!saved) return;
+    // Only restore cooldown if it hasn't expired
+    if (saved.postLaunchCooldown && Date.now() < saved.cooldownEndsAt) {
+      state.postLaunchCooldown  = true;
+      state.cooldownEndsAt      = saved.cooldownEndsAt;
+      state.launchedMissionName = saved.launchedMissionName || '';
+      state.nextMissionName     = saved.nextMissionName || '';
+      state.nextMissionT0       = saved.nextMissionT0 || null;
+      state._lastLaunchT0       = saved._lastLaunchT0 || null;
+      state._lastLaunchVehicle  = saved._lastLaunchVehicle || '';
+      state.rocketOffscreen     = true;
+      state.launchComplete      = true;
+      state.launchTriggered     = true;
+    }
+    if (saved.buriedLaunchId) state.buriedLaunchId = saved.buriedLaunchId;
+  } catch(e) {}
+}
+
 //  BOOT
 // ─────────────────────────────────────────────────────────────────────────────
 (async function boot() {
   await loadAssets();
   spawnBirds();
   spawnCars();
+  restoreState();
   await Promise.all([fetchLaunches(), fetchWeather(), fetchSettings()]);
   initWeatherParticles();
   startPolling();
+  // Persist state every 5 seconds
+  setInterval(saveState, 5000);
   requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
 })();

@@ -80,22 +80,28 @@
     .status-dot.go   { background: #00e87a; }
     .status-dot.tbd  { background: #ffd93d; }
     .status-dot.hold { background: #ff4422; }
-    .status-text { font-size: 6px; }
-    .lc-name { font-size: 7px; color: #fff; line-height: 1.8; }
-    .lc-vehicle { font-size: 5px; color: #4a9ede; margin-top: 1px; }
+    .status-text { font-size: 8px; }
+    .lc-name { font-size: 11px; color: #fff; line-height: 1.8; }
+    .lc-vehicle { font-size: 8px; color: #4a9ede; margin-top: 1px; }
     .lc-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3px; overflow: hidden; }
-    .lc-countdown { font-size: 7px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
-    .lc-pad { font-size: 5px; color: rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lc-countdown { font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+    .lc-pad { font-size: 7px; color: rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cd-green  { color: #00e87a; }
     .cd-yellow { color: #ffd93d; }
     .cd-red    { color: #ff4422; }
 
     .divider { height: 3px; background: #1a2030; flex-shrink: 0; }
 
+    /* LAUNCH CARDS — bigger text */
+    .lc-name { font-size: 11px; color: #fff; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-vehicle { font-size: 8px; color: #4a9ede; margin-top: 2px; }
+    .lc-countdown { font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+    .status-text { font-size: 8px; }
+
     /* BOTTOM HALF */
     .bottom-half { flex: 1; display: flex; overflow: hidden; }
 
-    /* RECENT + LIVE PAD */
+    /* RECENT + LIVE PAD — REMOVED, kept as dead class */
     .recent-col {
       width: 220px; flex-shrink: 0;
       border-right: 3px solid #1a2030;
@@ -138,40 +144,40 @@
 
     /* LEADERBOARD */
     .lb-col {
-      width: 180px; flex-shrink: 0;
+      width: 260px; flex-shrink: 0;
       border-right: 3px solid #1a2030;
       display: flex; flex-direction: column;
       background: #0a0e14;
     }
-    .lb-total-block { padding: 8px 10px 6px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
-    .lb-total-num { font-size: 28px; color: #ffd93d; line-height: 1; }
-    .lb-total-lbl { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 4px; line-height: 2.2; }
+    .lb-total-block { padding: 10px 14px 8px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .lb-total-num { font-size: 40px; color: #ffd93d; line-height: 1; }
+    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; line-height: 2.2; }
     .lb-rows { flex: 1; display: flex; flex-direction: column; }
     .lb-row {
-      display: flex; align-items: center; gap: 6px;
-      padding: 0 10px; border-bottom: 1px solid #0d1620; flex: 1;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; border-bottom: 1px solid #0d1620; flex: 1;
     }
-    .lb-rank { font-size: 9px; width: 12px; flex-shrink: 0; text-align: center; }
+    .lb-rank { font-size: 13px; width: 16px; flex-shrink: 0; text-align: center; }
     .rank-1 { color: #ffd700; }
     .rank-2 { color: #c0c0c0; }
     .rank-3 { color: #cd7f32; }
     .rank-n { color: rgba(255,255,255,0.2); }
-    .lb-name { font-size: 6px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lb-bar-wrap { width: 36px; height: 3px; background: #1a2030; flex-shrink: 0; }
+    .lb-name { font-size: 9px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-bar-wrap { width: 50px; height: 4px; background: #1a2030; flex-shrink: 0; }
     .lb-bar { height: 100%; }
-    .lb-count { font-size: 8px; color: #ffd93d; width: 18px; text-align: right; flex-shrink: 0; }
+    .lb-count { font-size: 12px; color: #ffd93d; width: 24px; text-align: right; flex-shrink: 0; }
 
     /* EVENTS */
     .events-col { flex: 1; display: flex; flex-direction: column; background: #080c12; }
     .events-list { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .event-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0 10px; border-bottom: 1px solid #0d1620; flex: 1;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 12px; border-bottom: 1px solid #0d1620; flex: 1;
     }
     .event-icon {
-      width: 24px; height: 24px; flex-shrink: 0;
+      width: 30px; height: 30px; flex-shrink: 0;
       border: 2px solid; display: flex; align-items: center; justify-content: center;
-      font-size: 10px;
+      font-size: 13px;
     }
     .icon-eva     { border-color: rgba(255,153,51,0.5);  color: #ff9933; background: #ff99330a; }
     .icon-dock    { border-color: rgba(74,158,222,0.5);  color: #4a9ede; background: #4a9ede0a; }
@@ -179,12 +185,12 @@
     .icon-land    { border-color: rgba(0,232,122,0.5);   color: #00e87a; background: #00e87a0a; }
     .icon-default { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
     .event-info { flex: 1; min-width: 0; }
-    .event-name { font-size: 6px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .event-type { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 3px; }
-    .event-loc  { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-name { font-size: 9px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-type { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    .event-loc  { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event-date { text-align: right; flex-shrink: 0; }
-    .event-day  { font-size: 7px; color: #fff; }
-    .event-time { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 3px; }
+    .event-day  { font-size: 11px; color: #fff; }
+    .event-time { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; }
 
     /* STATUS STRIP */
     .status-strip {
@@ -230,22 +236,6 @@
     <div class="divider"></div>
 
     <div class="bottom-half">
-
-      <!-- RECENT + LIVE PAD -->
-      <div class="recent-col">
-        <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> RECENT LAUNCHES</div>
-        <div class="recent-list" id="recent-list">
-          <div class="loading-msg">LOADING...</div>
-        </div>
-        <div class="pad-section">
-          <div class="phdr" style="padding:4px 8px;"><div class="phdr-dot" style="background:#00e87a;width:5px;height:5px;"></div>> LIVE PAD VIEW</div>
-          <img id="pad-snapshot" src="" alt="">
-          <div id="pad-no-signal" class="pad-no-signal">
-            <div class="pad-no-signal-txt">NO SIGNAL</div>
-            <div class="pad-no-signal-sub">Open main screen to activate</div>
-          </div>
-        </div>
-      </div>
 
       <!-- LEADERBOARD -->
       <div class="lb-col">
@@ -319,25 +309,6 @@
       if(t.includes('land')||t.includes('splash'))    return {cls:'icon-land', char:'▽'};
       return {cls:'icon-default',char:'◇'};
     }
-
-    // ── Live pad snapshot via server ──────────────────────────────────────────
-    function updatePadSnapshot() {
-      const img   = document.getElementById('pad-snapshot');
-      const noSig = document.getElementById('pad-no-signal');
-      const test  = new Image();
-      test.onload = () => {
-        img.src = test.src;
-        img.style.display = 'block';
-        noSig.style.display = 'none';
-      };
-      test.onerror = () => {
-        img.style.display = 'none';
-        noSig.style.display = 'flex';
-      };
-      test.src = '/api/snapshot?' + Date.now();
-    }
-    updatePadSnapshot();
-    setInterval(updatePadSnapshot, 500);
 
     // ── Countdown tickers ─────────────────────────────────────────────────────
     const cdEls = {};
@@ -470,7 +441,6 @@
       let upcoming = [];
       try { upcoming = (await (await fetch('/api/launches')).json()).launches||[]; } catch(e) {}
       renderUpcoming(upcoming);
-      renderRecent(upcoming);
 
       try {
         const yr = await (await fetch('/api/launches/year')).json();

@@ -421,6 +421,7 @@ def api_launches():
             'status':   lv.get('status', {}).get('name', 'TBD'),
             't0':       t0,
             'win_open': lv.get('win_open'),
+            'win_close': lv.get('win_close'),
             'countdown': countdown,
             'result':   lv.get('result'),
         })
@@ -442,7 +443,6 @@ def invalidate_launches():
 
 @app.route('/api/ll2/invalidate', methods=['POST'])
 def invalidate_ll2():
-    """Clear all LL2 mission cache entries (keeps events/year launches)."""
     keys_to_delete = [k for k in _ll2_cache if k not in ('events', 'launches_year')]
     for k in keys_to_delete:
         del _ll2_cache[k]
