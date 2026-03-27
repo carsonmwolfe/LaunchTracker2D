@@ -702,7 +702,7 @@ def wifi_connect():
     except Exception as e:
         print(f"[{_ts()}] WiFi connect error: {e}")
         return jsonify({'ok': False, 'error': str(e)})
-
+#lol
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
