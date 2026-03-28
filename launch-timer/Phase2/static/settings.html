@@ -33,45 +33,45 @@
     }
     .back-btn {
       font-family: 'Press Start 2P', monospace;
-      font-size: 7px;
+      font-size: 9px;
       background: #0a1a10; border: 2px solid #00e87a;
-      color: #00e87a; padding: 4px 8px; cursor: pointer;
+      color: #00e87a; padding: 5px 10px; cursor: pointer;
     }
     .back-btn:hover { background: #0f2a18; }
     .top-sqs { display: flex; gap: 5px; }
-    .top-sq { width: 9px; height: 9px; }
+    .top-sq { width: 10px; height: 10px; }
     .top-title-wrap { flex: 1; text-align: center; }
-    .top-title { font-size: 8px; color: #fff; }
-    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
-    .save-indicator { font-size: 6px; color: #00e87a; padding: 4px 8px; border: 1px solid rgba(0,232,122,0.3); background: rgba(0,232,122,0.08); min-width: 80px; text-align: center; }
+    .top-title { font-size: 10px; color: #fff; }
+    .top-sub { font-size: 6px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .save-indicator { font-size: 7px; color: #00e87a; padding: 5px 10px; border: 1px solid rgba(0,232,122,0.3); background: rgba(0,232,122,0.08); min-width: 80px; text-align: center; }
 
     /* BODY */
     .body { flex: 1; display: flex; overflow: hidden; }
 
     /* LEFT — device info */
     .left {
-      width: 220px; flex-shrink: 0;
+      width: 240px; flex-shrink: 0;
       border-right: 3px solid #1a2030;
       display: flex; flex-direction: column;
       background: #080c12;
     }
     .phdr {
-      font-size: 6px; color: #00e87a;
-      background: #0d1620; padding: 5px 8px;
+      font-size: 7px; color: #00e87a;
+      background: #0d1620; padding: 6px 10px;
       border-bottom: 2px solid #1a2030;
       display: flex; align-items: center; gap: 5px;
       flex-shrink: 0;
     }
-    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
-    .device-info { padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-    .rocket-icon { display: flex; justify-content: center; padding: 10px 0; }
-    .di-field { }
-    .di-label { font-size: 5px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; margin-bottom: 4px; }
-    .di-val { font-size: 7px; color: #fff; }
+    .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .device-info { padding: 10px 14px; display: flex; flex-direction: column; gap: 0; flex: 1; }
+    .rocket-icon { display: flex; justify-content: center; padding: 8px 0 10px; }
+    .di-field { border-bottom: 1px solid #1a2030; padding: 7px 0; display: flex; justify-content: space-between; align-items: center; }
+    .di-label { font-size: 7px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; }
+    .di-val { font-size: 10px; color: #fff; }
     .di-val.green { color: #00e87a; }
-    .di-val.blue  { color: #4a9ede; }
+    .di-val.blue  { color: #4a9ede; font-size: 9px; }
     .di-val.yellow { color: #ffd93d; }
-    .di-divider { height: 1px; background: #1a2030; }
+    .di-divider { display: none; }
 
     /* CENTER — settings */
     .center {
@@ -81,21 +81,21 @@
     }
     .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; }
     .setting-cell {
-      padding: 12px 14px;
+      padding: 14px 16px;
       border-bottom: 2px solid #1a2030;
       border-right: 2px solid #1a2030;
       display: flex; flex-direction: column; gap: 8px;
     }
     .setting-cell:nth-child(even) { border-right: none; }
     .setting-cell:nth-last-child(-n+2) { border-bottom: none; }
-    .s-label { font-size: 6px; color: #4a9ede; letter-spacing: 0.08em; }
-    .s-sub { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 2px; line-height: 1.8; }
-    .s-control { display: flex; gap: 4px; margin-top: 4px; }
+    .s-label { font-size: 9px; color: #4a9ede; letter-spacing: 0.06em; }
+    .s-sub { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 2px; line-height: 1.8; }
+    .s-control { display: flex; gap: 5px; margin-top: 4px; }
 
     /* Toggle buttons */
     .tog {
       font-family: 'Press Start 2P', monospace;
-      font-size: 6px; padding: 5px 10px;
+      font-size: 9px; padding: 7px 13px;
       border: 2px solid #1a2030;
       color: rgba(255,255,255,0.25);
       cursor: pointer; background: #080c12;
@@ -104,7 +104,7 @@
     .tog:hover:not(.active) { background: rgba(255,255,255,0.04); }
     .tog.blue.active { border-color: #4a9ede; color: #4a9ede; background: rgba(74,158,222,0.08); }
     .tog.yellow.active { border-color: #ffd93d; color: #ffd93d; background: rgba(255,211,61,0.08); }
-    .tog.disabled { opacity: 0.25; cursor: not-allowed; }
+    .tog.disabled { opacity: 0.25; cursor: not-allowed; font-size: 8px; }
 
     /* Slider */
     .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
@@ -112,42 +112,42 @@
       flex: 1; accent-color: #00e87a; cursor: pointer;
       height: 4px;
     }
-    .slider-val { font-size: 8px; color: #ffd93d; width: 32px; text-align: right; flex-shrink: 0; }
+    .slider-val { font-size: 10px; color: #ffd93d; width: 36px; text-align: right; flex-shrink: 0; }
 
     /* ACTIONS */
     .actions {
       display: flex; gap: 6px;
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-top: 3px solid #00e87a;
       background: #0d1620; flex-shrink: 0;
     }
     .act-btn {
-      flex: 1; padding: 7px 4px;
+      flex: 1; padding: 9px 4px;
       font-family: 'Press Start 2P', monospace;
-      font-size: 6px; cursor: pointer;
-      border: 2px solid; background: transparent;
-      letter-spacing: 0.04em;
+      font-size: 8px; cursor: pointer;
+      border: 2px solid;
+      letter-spacing: 0.04em; text-align: center;
     }
-    .act-green  { border-color: #00e87a; color: #00e87a; }
-    .act-green:hover  { background: rgba(0,232,122,0.1); }
-    .act-yellow { border-color: #ffd93d; color: #ffd93d; }
-    .act-yellow:hover { background: rgba(255,211,61,0.1); }
-    .act-blue   { border-color: #4a9ede; color: #4a9ede; }
-    .act-blue:hover   { background: rgba(74,158,222,0.1); }
-    .act-red    { border-color: #ff4422; color: #ff4422; }
-    .act-red:hover    { background: rgba(255,68,34,0.1); }
+    .act-green  { border-color: #00e87a; color: #080c12; background: #00e87a; }
+    .act-green:hover  { background: #00c068; }
+    .act-yellow { border-color: #ffd93d; color: #080c12; background: #ffd93d; }
+    .act-yellow:hover { background: #e0c030; }
+    .act-blue   { border-color: #4a9ede; color: #080c12; background: #4a9ede; }
+    .act-blue:hover   { background: #3a84c4; }
+    .act-red    { border-color: #ff4422; color: #fff; background: #ff4422; }
+    .act-red:hover    { background: #dd2200; }
 
     /* RIGHT — system status */
     .right {
-      width: 180px; flex-shrink: 0;
+      width: 190px; flex-shrink: 0;
       display: flex; flex-direction: column;
       background: #080c12;
     }
     .sys-list { flex: 1; display: flex; flex-direction: column; }
     .sys-row {
       flex: 1; display: flex; flex-direction: column;
-      justify-content: center; padding: 0 10px;
-      border-bottom: 1px solid #1a2030; gap: 4px;
+      justify-content: center; padding: 0 12px;
+      border-bottom: 1px solid #1a2030; gap: 5px;
       position: relative;
     }
     .sys-row::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; }
@@ -156,8 +156,8 @@
     .sys-row:nth-child(3)::before { background: #ffd93d; }
     .sys-row:nth-child(4)::before { background: #ff9933; }
     .sys-row:last-child { border-bottom: none; }
-    .sys-label { font-size: 5px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; }
-    .sys-val { font-size: 8px; color: #fff; }
+    .sys-label { font-size: 7px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; }
+    .sys-val { font-size: 10px; color: #fff; }
     .sys-val.green  { color: #00e87a; }
     .sys-val.blue   { color: #4a9ede; }
     .sys-val.yellow { color: #ffd93d; }
@@ -165,15 +165,15 @@
 
     /* STATUS STRIP */
     .status-strip {
-      height: 28px; flex-shrink: 0;
+      height: 30px; flex-shrink: 0;
       background: #0d1620; border-top: 3px solid #00e87a;
-      display: flex; align-items: center; padding: 0 10px; gap: 0;
+      display: flex; align-items: center; padding: 0 12px; gap: 0;
     }
-    .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
+    .ss-item { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-right: 1px solid #1a2030; }
     .ss-item:first-child { padding-left: 0; }
-    .ss-lbl { font-size: 5px; color: #4a9ede; }
-    .ss-val { font-size: 6px; color: #fff; }
-    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; background: #00e87a; }
+    .ss-lbl { font-size: 6px; color: #4a9ede; }
+    .ss-val { font-size: 8px; color: #fff; }
+    .ss-dot { width: 8px; height: 8px; flex-shrink: 0; background: #00e87a; }
   </style>
 </head>
 <body>
@@ -210,27 +210,11 @@
             <rect x="11" y="44" width="10" height="5" fill="rgba(150,150,150,0.4)"/>
           </svg>
         </div>
-        <div class="di-divider"></div>
-        <div class="di-field">
-          <div class="di-label">UNIT NAME</div>
-          <div class="di-val green">LAUNCHTRACKER 2D</div>
-        </div>
-        <div class="di-field">
-          <div class="di-label">UNIT ID</div>
-          <div class="di-val yellow" id="unit-id">LT-???</div>
-        </div>
-        <div class="di-field">
-          <div class="di-label">MAC ADDRESS</div>
-          <div class="di-val blue" id="mac-addr">??:??:??:??:??:??</div>
-        </div>
-        <div class="di-field">
-          <div class="di-label">FIRMWARE</div>
-          <div class="di-val" id="version-str">v1.0.0</div>
-        </div>
-        <div class="di-field">
-          <div class="di-label">PLATFORM</div>
-          <div class="di-val">RASPBERRY PI</div>
-        </div>
+        <div class="di-field"><span class="di-label">UNIT NAME</span><span class="di-val green">LAUNCHTRACKER 2D</span></div>
+        <div class="di-field"><span class="di-label">UNIT ID</span><span class="di-val yellow" id="unit-id">LT-???</span></div>
+        <div class="di-field"><span class="di-label">MAC</span><span class="di-val blue" id="mac-addr">??:??:??:??:??:??</span></div>
+        <div class="di-field"><span class="di-label">FIRMWARE</span><span class="di-val" id="version-str">v1.0.0</span></div>
+        <div class="di-field"><span class="di-label">PLATFORM</span><span class="di-val">RASPBERRY PI</span></div>
       </div>
     </div>
 
