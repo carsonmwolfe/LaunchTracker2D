@@ -476,7 +476,7 @@ function getRocketAssetKey(vehicle) {
 
 const ROCKET_CONFIG = {
   rocket_falcon9:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
-  rocket_atlas:     { pad: { x: 433, y: 130, h: 250 }, te: { tx: 280, ty: 332, h: 200, offsetY: -100 } },
+  rocket_atlas:     { pad: { x: 433, y: 138, h: 250 }, te: { tx: 280, ty: 332, h: 200, offsetY: -90 } },
   rocket_vulcan:    { pad: { x: 315, y: 160, h: 209 }, te: { tx: 264, ty: 374, h: 211, offsetY: -106 } },
   rocket_electron:  { pad: { x: 466, y: 219, h: 158 }, te: { tx: 287, ty: 335, h: 200, offsetY: -100 } },
   rocket_ng:        { pad: { x: 428, y: 114, h: 268 }, te: { tx: 267, ty: 334, h: 229, offsetY: -115 } },
