@@ -90,24 +90,24 @@ def fetch_launches(num_launches=5):
         return []
     
 
+SITE_COORDS = {
+    'cape':       (28.3922, -80.6077),
+    'vandenberg': (34.6321, -120.6110),
+    'all':        (28.3922, -80.6077),
+}
+
 _location_cache = None
 
 def _get_location():
-    """Get approximate lat/lon from IP geolocation, cached."""
+    """Return lat/lon based on launch site setting."""
     global _location_cache
     if _location_cache:
         return _location_cache
-    try:
-        r = requests.get('https://ipapi.co/json/', timeout=5)
-        d = r.json()
-        lat = d.get('latitude', 28.3922)
-        lon = d.get('longitude', -80.6077)
-        _location_cache = (lat, lon)
-        print(f"[{_ts()}] Location detected: {lat}, {lon} ({d.get('city', '?')}, {d.get('region', '?')})")
-        return _location_cache
-    except:
-        print(f"[{_ts()}] Location detection failed — using Cape Canaveral default")
-        return 28.3922, -80.6077
+    site = _load_settings().get('site', 'cape')
+    coords = SITE_COORDS.get(site, SITE_COORDS['cape'])
+    _location_cache = coords
+    print(f"[{_ts()}] Location set from site setting '{site}': {coords[0]}, {coords[1]}")
+    return _location_cache
     
 def get_countdown(launch_time_iso):
     """Return countdown dict or 'LAUNCHED' string."""
@@ -286,7 +286,7 @@ _ll2_last_launch_key = [None]  # mutable container so prefetch thread can update
 
 def _ll2_prefetch():
     """Background thread — pre-fetches LL2 data on a schedule."""
-    time.sleep(10)  # wait for server to fully start
+    time.sleep(2)  # wait for server to fully start
     while True:
         now = time.time()
 
@@ -411,6 +411,19 @@ def api_launches():
     for lv in launches:
         t0       = lv.get('t0') or lv.get('win_open')
         countdown = get_countdown(t0)
+        launch_id_str = str(lv.get('id', ''))
+        win_close = lv.get('win_close')
+
+        # RLL rarely populates win_close — fall back to LL2 cache if available
+        if not win_close:
+            name_str = lv.get('name', '')
+            ll2_cached = (_ll2_cache.get(launch_id_str) or 
+                          _ll2_cache.get(name_str) or
+                          _ll2_cache.get(name_str.replace('(','').replace(')','').strip()))
+            if ll2_cached:
+                ll2_data = ll2_cached.get('data', {})
+                win_close = ll2_data.get('window_end') or ll2_data.get('window_start')
+
         result.append({
             'id':       lv.get('id'),
             'name':     lv.get('name', 'Unknown Mission'),
@@ -421,7 +434,7 @@ def api_launches():
             'status':   lv.get('status', {}).get('name', 'TBD'),
             't0':       t0,
             'win_open': lv.get('win_open'),
-            'win_close': lv.get('win_close'),
+            'win_close': win_close,
             'countdown': countdown,
             'result':   lv.get('result'),
         })
@@ -574,6 +587,8 @@ def api_settings():
     settings = _load_settings()
     settings.update(data)
     _save_settings(settings)
+    global _location_cache
+    _location_cache = None
     return jsonify({'ok': True, 'settings': settings})
 # ── Page routes ───────────────────────────────────────────────────────────────
 
@@ -702,6 +717,7 @@ def wifi_connect():
     except Exception as e:
         print(f"[{_ts()}] WiFi connect error: {e}")
         return jsonify({'ok': False, 'error': str(e)})
+
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 

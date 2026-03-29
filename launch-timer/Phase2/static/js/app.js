@@ -947,29 +947,32 @@ function updateInfoBar() {
       document.getElementById('ib-cd').style.color = '#4a9ede';
     }
     const winOpen = launch.win_open || t0;
-    if (winOpen) {
-      document.getElementById('ib-win-open').textContent =
-        new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
-    }
-    // Show win_close if available, otherwise repeat open time (instantaneous window)
-    const winCloseEl = document.getElementById('ib-win-close');
-    if (launch.win_close) {
-      winCloseEl.textContent = new Date(launch.win_close).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
-    } else {
-      // Instantaneous — show same time as open
-      winCloseEl.textContent = new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
-    }
+    const winClose = launch.win_close || null;
+    const windowEl = document.getElementById('ib-window');
+    const isInstant = !winClose ||
+      Math.abs(new Date(winClose).getTime() - new Date(winOpen).getTime()) < 60000;
 
-    // T-0 dot position on window track
-    const dotEl = document.getElementById('ib-win-dot');
-    if (dotEl && winOpen && t0 && launch.win_close) {
-      const openMs  = new Date(winOpen).getTime();
-      const t0Ms    = new Date(t0).getTime();
-      const closeMs = new Date(launch.win_close).getTime();
-      const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / (closeMs - openMs) * 100));
-      dotEl.style.left = pct + '%';
-    } else if (dotEl) {
-      dotEl.style.left = '0%';
+    if (isInstant) {
+      if (windowEl) windowEl.style.visibility = 'visible';
+      document.getElementById('ib-win-open').textContent = '—:—';
+      document.getElementById('ib-win-close').textContent = '—:—';
+      document.getElementById('ib-win-label').textContent = 'LAUNCH TIME';
+    } else {
+      if (windowEl) windowEl.style.visibility = 'visible';
+      if (winOpen) {
+        document.getElementById('ib-win-open').textContent =
+          new Date(winOpen).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
+      }
+      document.getElementById('ib-win-close').textContent =
+        new Date(winClose).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
+      const dotEl = document.getElementById('ib-win-dot');
+      if (dotEl) {
+        const openMs  = new Date(winOpen).getTime();
+        const t0Ms    = new Date(t0).getTime();
+        const closeMs = new Date(winClose).getTime();
+        const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / (closeMs - openMs) * 100));
+        dotEl.style.left = pct + '%';
+      }
     }
   }
 
@@ -1628,7 +1631,7 @@ async function fetchProbability() {
 }
 
 function startPolling() {
-  fetchProbability();
+  setTimeout(fetchProbability, 30000); // wait for prefetch cache to populate
   setInterval(() => {
     if (!state.isLaunching && !state.postLaunchCooldown) {
       fetchLaunches().then(() => showNotification('DATA UPDATED'));
