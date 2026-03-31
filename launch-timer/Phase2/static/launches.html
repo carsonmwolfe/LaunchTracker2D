@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
-    * { cursor: none !important; }
+    /** { cursor: none !important; }*/
     body {
       background: #0a0e14;
       color: #fff;
@@ -311,24 +311,25 @@
     }
 
     // ── Countdown tickers ─────────────────────────────────────────────────────
-    const cdEls = {};
+    const cdEls = {}; // keyed by launch ID
     function startTicker() {
       setInterval(() => {
-        Object.entries(cdEls).forEach(([t0, el]) => {
+        Object.entries(cdEls).forEach(([id, {el, t0}]) => {
           const cd = countdown(t0);
           el.textContent = cd.str;
           el.className = 'lc-countdown ' + cd.cls;
         });
-        const firstT0 = Object.keys(cdEls)[0];
-        if (firstT0) document.getElementById('ss-next').textContent = countdown(firstT0).str;
+        const first = Object.values(cdEls)[0];
+        if (first) document.getElementById('ss-next').textContent = countdown(first.t0).str;
       }, 1000);
     }
 
     // ── Render upcoming ───────────────────────────────────────────────────────
     function renderUpcoming(launches) {
       const row = document.getElementById('upcoming-row');
-      if (!launches.length) { row.innerHTML='<div class="loading-msg">NO DATA</div>'; return; }
-      row.innerHTML = launches.slice(0,5).map(l => {
+      const upcoming = launches.filter(l => !l.t0 || new Date(l.t0) > new Date());
+      if (!upcoming.length) { row.innerHTML='<div class="loading-msg">NO UPCOMING LAUNCHES</div>'; return; }
+      row.innerHTML = upcoming.slice(0,5).map(l => {
         const sl  = (l.status||'').toLowerCase();
         const cls = sl.includes('go')?'go':sl.includes('hold')?'hold':'tbd';
         const ac  = sl.includes('go')?'#00e87a':sl.includes('hold')?'#ff4422':'#ffd93d';
@@ -344,31 +345,13 @@
           <div class="lc-vehicle">${veh}</div>
           <div class="lc-bottom">
             <div class="lc-pad">${shorten(l.pad||l.location||'').slice(0,14)}</div>
-            <div class="lc-countdown ${cd.cls}" data-t0="${l.t0||''}">${cd.str}</div>
+            <div class="lc-countdown ${cd.cls}" data-id="${l.id||''}" data-t0="${l.t0||''}">${cd.str}</div>
           </div>
         </div>`;
       }).join('');
-      row.querySelectorAll('[data-t0]').forEach(el => { const t0=el.getAttribute('data-t0'); if(t0) cdEls[t0]=el; });
-      document.getElementById('ss-upcoming').textContent = launches.length;
-      if (launches[0]?.t0) document.getElementById('ss-next').textContent = countdown(launches[0].t0).str;
-    }
-
-    // ── Render recent ─────────────────────────────────────────────────────────
-    function renderRecent(launches) {
-      const list = document.getElementById('recent-list');
-      const past = launches.filter(l => l.result!==null||(l.t0&&new Date(l.t0)<new Date()));
-      if (!past.length) { list.innerHTML='<div class="loading-msg" style="flex:1;">NO RECENT DATA</div>'; return; }
-      list.innerHTML = past.slice(0,4).map(l => {
-        const ok = l.result===1||l.result===null;
-        return `<div class="recent-row">
-          <div class="result-icon ${ok?'result-ok':'result-neutral'}">${ok?'✓':'—'}</div>
-          <div class="recent-info">
-            <div class="recent-name">${l.name||'Unknown'}</div>
-            <div class="recent-meta">${(l.vehicle||'').split(' ').slice(0,2).join(' ')} · ${shorten(l.pad||l.location||'').slice(0,12)}</div>
-          </div>
-          <div class="recent-date">${fmtDate(l.t0)}</div>
-        </div>`;
-      }).join('');
+      row.querySelectorAll('[data-id]').forEach(el => { const id=el.getAttribute('data-id'); const t0=el.getAttribute('data-t0'); if(id&&t0) cdEls[id]={el,t0}; });
+      document.getElementById('ss-upcoming').textContent = upcoming.length;
+      if (upcoming[0]?.t0) document.getElementById('ss-next').textContent = countdown(upcoming[0].t0).str;
     }
 
     // ── Render leaderboard ────────────────────────────────────────────────────
@@ -425,12 +408,15 @@
     }
 
     function goMission(id, name) {
-      window.location = `http://localhost:5001/mission?id=${id}&name=${encodeURIComponent(name)}`;
+      window.location = `/mission?id=${id}&name=${encodeURIComponent(name)}`;
     }
 
     // ── Load ──────────────────────────────────────────────────────────────────
     async function loadAll() {
-      try { settings = await (await fetch('/api/settings')).json(); } catch(e) {}
+      let data = {};
+      try { data = await (await fetch('/api/data')).json(); } catch(e) {}
+      settings = data.settings || settings;
+
       document.getElementById('top-date').textContent =
         new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
       const useLocal = settings.time_format === 'local';
@@ -438,20 +424,16 @@
       const tzLabel = useLocal ? 'LOCAL' : 'UTC';
       document.getElementById('ss-updated').textContent =
         new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+' '+tzLabel;
-      let upcoming = [];
-      try { upcoming = (await (await fetch('/api/launches')).json()).launches||[]; } catch(e) {}
+
+      const upcoming = data.launches || [];
       renderUpcoming(upcoming);
 
-      try {
-        const yr = await (await fetch('/api/launches/year')).json();
-        renderLeaderboard(yr.length ? yr : upcoming);
-      } catch(e) { renderLeaderboard(upcoming); }
+      const yr = data.year_launches || [];
+      renderLeaderboard(yr.length ? yr : upcoming);
 
-      try {
-        renderEvents(await (await fetch('/api/events')).json());
-      } catch(e) {
-        document.getElementById('events-list').innerHTML='<div class="loading-msg">EVENTS UNAVAILABLE</div>';
-      }
+      const events = data.events || [];
+      if (events.length) renderEvents(events);
+      else document.getElementById('events-list').innerHTML='<div class="loading-msg">NO EVENTS</div>';
     }
 
     startTicker();

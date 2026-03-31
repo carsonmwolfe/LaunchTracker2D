@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
-    * { cursor: none !important; }
+    /** { cursor: none !important; }*/
     body {
       background: #0a0e14;
       color: #fff;
@@ -182,7 +182,7 @@
     .ms-line {
       position: absolute; left: 14px; top: 0; bottom: 0;
       width: 1px; background: #1a2030; z-index: 0;
-      
+
     }
     .ms-item:first-child .ms-line { top: 50%; }
     .ms-item:last-child .ms-line  { bottom: 50%; }
@@ -399,8 +399,6 @@
       const now = new Date();
       const t0ms = t0 ? new Date(t0).getTime() : null;
       const elapsed = t0ms ? (now.getTime() - t0ms) / 1000 : null;
-      let nextFound = false;
-
       const label = (vehicle||'').toLowerCase().includes('falcon') ? 'F9' :
                     (vehicle||'').toLowerCase().includes('electron') ? 'ELECTRON' :
                     (vehicle||'').toLowerCase().includes('starship') ? 'STARSHIP' :
@@ -410,8 +408,9 @@
       document.querySelector('.right .phdr').innerHTML =
         `<div class="phdr-dot" style="background:#ffd93d;width:6px;height:6px;flex-shrink:0;"></div> FLIGHT PLAN · ${label}`;
 
-      const preLaunchState = elapsed !== null && elapsed > milestones[0].t ? 'done' : 'pending';
-      document.getElementById('ms-list').innerHTML = 
+      const preLaunchState = elapsed === null ? 'pending' : elapsed >= milestones[0].t ? 'done' : 'next';
+      let nextFound = preLaunchState !== 'done';
+      document.getElementById('ms-list').innerHTML =
         `<div class="ms-item ${preLaunchState}">
           <div class="ms-line"></div>
           <div class="ms-dot ${preLaunchState}"></div>
@@ -452,10 +451,10 @@
           let allDone = true;
           document.querySelectorAll('.ms-item').forEach((el, i) => {
             if (i === 0) {
-              // PRE-LAUNCH — done if we're past first milestone
-              const state = el2 >= milestones[0].t ? 'done' : 'pending';
+              const state = el2 >= milestones[0].t ? 'done' : 'next';
               el.className = 'ms-item ' + state;
               el.querySelector('.ms-dot').className = 'ms-dot ' + state;
+              if (state === 'next') nextFound = true;
               return;
             }
             const m = milestones[i - 1];
@@ -614,7 +613,7 @@
     function shorten(s){return(s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC').replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC').replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB').replace("People's Republic of China",'China');}
     function getRocketImageUrl(vehicle){
       const v=(vehicle||'').toLowerCase();
-      const base='http://localhost:5001/static/assets/';
+      const base='/static/assets/';
       if(v.includes('starship'))return base+'rocket-starship.png';
       if(v.includes('soyuz'))return base+'rocket-Soyuz.png';
       if(v.includes('ariane'))return base+'rocket-Ariane6.png';
@@ -640,48 +639,56 @@
       const launchName=params.get('name')||'';
       const launchId=params.get('id')||'';
 
-      // Base data
-      let base=null;
-      try{const r=await fetch('/api/launches');const d=await r.json();const launches=d.launches||[];base=launches.find(l=>String(l.id)===String(launchId))||launches[0];}catch(e){}
+      // All data from single source
+      let base=null; let dataAge=0;
+      try{
+        const r=await fetch('/api/data');const d=await r.json();
+        dataAge=d.age_seconds||0;
+        const launches=d.launches||[];
+        const found=launches.find(l=>String(l.id)===String(launchId));
+        if(!found&&launchId&&launchId!=='test-9999'){
+          // ID not in upcoming list — show not-found message and stop
+          document.getElementById('page-title').textContent='MISSION NOT FOUND';
+          document.getElementById('status-badge').textContent='ERR';
+          document.getElementById('status-badge').style.color='#ff4422';
+          document.getElementById('status-badge').style.borderColor='#ff4422';
+          return;
+        }
+        base=found||launches[0];
+      }catch(e){}
 
-      // LL2 data
-      let ll2={};
-      try{const r=await fetch(`/api/ll2?name=${encodeURIComponent(launchName||(base?.name||''))}&id=${encodeURIComponent(launchId)}`);ll2=await r.json();}catch(e){}
-
-      // Extract fields
-      const name=(ll2?.name||base?.name||'Unknown').split('|').pop().trim();
-      const statusName=ll2?.status?.name||base?.status||'TBD';
-      const vehicle=ll2?.rocket?.configuration?.full_name||base?.vehicle||'—';
-      const provider=ll2?.launch_service_provider?.name||base?.provider||'—';
-      const padName=ll2?.pad?.name||base?.pad||'—';
-      const location=ll2?.pad?.location?.name||base?.location||'—';
-      const padLat=ll2?.pad?.latitude?parseFloat(ll2.pad.latitude):null;
-      const padLon=ll2?.pad?.longitude?parseFloat(ll2.pad.longitude):null;
-      const missionType=ll2?.mission?.type||'—';
-      const missionDesc=ll2?.mission?.description||'';
-      const program=ll2?.program?.[0]?.name||'—';
-      const t0=base?.t0||ll2?.net||null;
-      const winOpen=ll2?.window_start||base?.win_open||null;
-      const winClose=ll2?.window_end||null;
-      const probability=ll2?.probability??null;
-      const padCount=ll2?.pad_launch_attempt_count??null;
-      const orbitalYear=ll2?.orbital_launch_attempt_count_year??null;
-      const agencyYear=ll2?.agency_launch_attempt_count_year??null;
-      const lastUpdated=ll2?.last_updated||null;
+      // Extract fields from normalized launch data
+      const name=(base?.name||'Unknown').split('|').pop().trim();
+      const statusName=base?.status||'TBD';
+      const vehicle=base?.vehicle||'—';
+      const provider=base?.provider||'—';
+      const padName=base?.pad||'—';
+      const location=base?.location||'—';
+      const padLat=base?.pad_lat?parseFloat(base.pad_lat):null;
+      const padLon=base?.pad_lon?parseFloat(base.pad_lon):null;
+      const missionType=base?.mission_type||'—';
+      const missionDesc=base?.mission_desc||'';
+      const program=base?.program||'—';
+      const t0=base?.t0||null;
+      const winOpen=base?.win_open||null;
+      const winClose=base?.win_close||null;
+      const probability=base?.probability??null;
+      const padCount=base?.pad_launches??null;
+      const orbitalYear=base?.orbital_year??null;
+      const agencyYear=base?.agency_year??null;
+      const lastUpdated=base?.last_updated||null;
 
       // Booster data
-      const launcher=ll2?.rocket?.launcher_stage?.[0]||null;
-      const boosterSerial=launcher?.launcher?.serial_number||null;
-      const flightNum=launcher?.launcher_flight_number||null;
-      const lastFlight=launcher?.launcher?.last_launch_date||null;
+      const boosterSerial=base?.booster_serial||null;
+      const flightNum=base?.booster_flight||null;
+      const lastFlight=base?.booster_last_flight||null;
       const turnaroundDays=lastFlight&&t0?Math.round((new Date(t0)-new Date(lastFlight))/86400000):null;
-      const prevMission=launcher?.launcher?.previous_flights?.[0]?.name||null;
-      const recoveryVessel=launcher?.landing?.location?.name||null;
-      const recoveryType=launcher?.landing?.type?.name||null;
+      const prevMission=base?.booster_prev_mission||null;
+      const recoveryVessel=base?.recovery_vessel||null;
 
       // Orbit
       let orbitAbbrev,orbitFull,inferred=false;
-      if(ll2?.mission?.orbit){orbitAbbrev=ll2.mission.orbit.abbrev;orbitFull=ll2.mission.orbit.name;}
+      if(base?.orbit_abbrev){orbitAbbrev=base.orbit_abbrev;orbitFull=base.orbit_name||orbitAbbrev;}
       else{const inf=inferOrbit(name,missionDesc,vehicle);orbitAbbrev=inf.abbrev;orbitFull=inf.name;inferred=true;}
       orbitType=orbitAbbrev;
 
@@ -782,7 +789,7 @@
             <div class="bs-status-txt">Booster systems nominal · ready for flight</div>
           </div>`;
         detailBlock.style.display='block';
-      } else if(ll2?.pad){
+      } else if(padName&&padName!=='—'){
         // Show launch site intel
         const totalPad=padCount||'—';
         detailBlock.innerHTML=`
@@ -816,7 +823,8 @@
         document.getElementById('wx-precip').textContent=(wx.precip||0).toFixed(1)+'"';
         document.getElementById('wx-wrap').style.display='block';
         const goPill=document.getElementById('go-pill'),goText=document.getElementById('go-text');
-        if(ll2?.weather_concerns){goPill.textContent='CONCERN';goPill.className='go-px concern';goText.textContent=ll2.weather_concerns;}
+        if(false){// weather_concerns not available in normalized data
+}
         else if(wx.cloud_cover>80||wx.wind_speed>25){goPill.textContent='MONITOR';goPill.className='go-px monitor';goText.textContent='Weather conditions marginal';}
         else{goPill.textContent='GO';goPill.className='go-px';goText.textContent='No weather concerns reported';}
       }catch(e){document.getElementById('wx-wrap').style.display='block';document.getElementById('go-text').textContent='Weather unavailable';}
@@ -851,11 +859,11 @@
       if(recoveryVessel){document.getElementById('ss-recovery').textContent=recoveryVessel.toUpperCase();document.getElementById('ss-recovery-item').style.display='flex';}
 
       // Data age
-      const minAgo=Math.floor((Date.now()-Date.now())/60000);
-      document.getElementById('ss-age').textContent='LIVE';
+      const minAgo=Math.floor(dataAge/60);
+      document.getElementById('ss-age').textContent=minAgo<1?'LIVE':minAgo+'m AGO';
 
       // Mission patch
-      const patchUrl=ll2?.mission_patches?.[0]?.image_url||null;
+      const patchUrl=base?.patch_url||null;
       if(patchUrl){
         const patchEl=document.createElement('img');
         patchEl.src=patchUrl;

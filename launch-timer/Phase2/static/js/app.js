@@ -69,7 +69,6 @@ const W = 800, H = 480;
 let state = {
   launches:    [],
   currentIdx:  0,
-  _ll2ProbFetched: false,
   weather:     { condition: 'clear', temp_f: 75, wind_speed: 10, wind_dir: 'E', cloud_cover: 0, label: 'Clear sky' },
   settings:    { temp_unit: 'f', time_format: 'utc' },
   // Countdown / launch
@@ -118,7 +117,7 @@ let state = {
   launchedMissionName:  '',
   nextMissionName:      '',
   nextMissionT0:        null,
-  buriedLaunchId: null,
+  buriedLaunchIds: [],
 
   // Notification banner
   notification: null,
@@ -156,22 +155,43 @@ function lerpColor(c1, c2, t) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  SKY / TIME-OF-DAY
 // ─────────────────────────────────────────────────────────────────────────────
-function getSkyColors() {
+function _getSkyPhase() {
+  // Use server-provided sunrise/sunset if available, else fall back to clock
+  const now = Date.now();
+  const wx = state.weather;
+  let srMs = null, ssMs = null;
+  if (wx.sunrise) try { srMs = new Date(wx.sunrise).getTime(); } catch(e) {}
+  if (wx.sunset)  try { ssMs = new Date(wx.sunset).getTime();  } catch(e) {}
+  if (srMs && ssMs) {
+    const fade = 45 * 60 * 1000; // 45 min fade window
+    if (now < srMs - fade)               return 'night';
+    if (now < srMs)                      return 'sunrise';
+    if (now < ssMs - fade)               return 'day';
+    if (now < ssMs)                      return 'sunset';
+    return 'night';
+  }
+  // Fallback: hour-based
   const h = getHour();
+  if (h >= 10 && h < 16) return 'day';
+  if (h >= 16 && h < 18) return 'sunset';
+  if (h >= 6  && h < 10) return 'sunrise';
+  return 'night';
+}
+
+function getSkyColors() {
   const cond = state.weather.condition;
   const isRainy = ['rain','thunderstorm','light_rain'].includes(cond);
-
   if (isRainy) return { sky:'#3a4a5a', ocean:'#0d1a2e', cloud:'#505050' };
   if (cond === 'cloudy') return { sky:'#7a9ab8', ocean:'#1a5b6e', cloud:'#b0b0b0' };
   if (cond === 'fog')    return { sky:'#8a9aaa', ocean:'#1a5b6e', cloud:'#c0c8d0' };
-
-  if (h >= 10 && h < 16) return { sky:'#87ceeb', ocean:'#1a8b9e', cloud:'#ffffff' };
-  if (h >= 16 && h < 18) return { sky:'#ff9933', ocean:'#1a5b6e', cloud:'#ffd9b3' };
-  if (h >= 6  && h < 10) return { sky:'#ff9966', ocean:'#2a5b6e', cloud:'#ffe5cc' };
+  const phase = _getSkyPhase();
+  if (phase === 'day')     return { sky:'#87ceeb', ocean:'#1a8b9e', cloud:'#ffffff' };
+  if (phase === 'sunset')  return { sky:'#ff9933', ocean:'#1a5b6e', cloud:'#ffd9b3' };
+  if (phase === 'sunrise') return { sky:'#ff9966', ocean:'#2a5b6e', cloud:'#ffe5cc' };
   return { sky:'#0a0a1e', ocean:'#0d1a2e', cloud:'#d0d0d0' };
 }
 
-function isNight() { const h = getHour(); return h >= 18 || h < 6; }
+function isNight() { return _getSkyPhase() === 'night'; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  DRAW HELPERS
@@ -755,105 +775,6 @@ function drawCountdown() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BOTTOM INFO BAR
-// ─────────────────────────────────────────────────────────────────────────────
-function drawInfoBar() {
-
-  return;
-  const BY = BAR_Y, BH = BAR_H, IX = 20;
-
-  if (state.postLaunchCooldown) {
-    ctx.fillStyle = '#ff6644'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'left';
-    ctx.fillText('LAUNCHED:', IX, BY + 24);
-    const lw = ctx.measureText('LAUNCHED:').width;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('  ' + state.launchedMissionName, IX + lw, BY + 24);
-    if (state.nextMissionName) {
-      let tStr = '';
-      if (state.nextMissionT0) {
-        const cd2 = computeCountdown(state.nextMissionT0);
-        if (cd2 && cd2 !== 'LAUNCHED') {
-          tStr = cd2.days > 0
-            ? 'T−' + cd2.days + 'd ' + String(cd2.hours).padStart(2,'0') + ':' + String(cd2.minutes).padStart(2,'0') + ':' + String(cd2.seconds).padStart(2,'0')
-            : 'T−' + String(cd2.hours).padStart(2,'0') + ':' + String(cd2.minutes).padStart(2,'0') + ':' + String(cd2.seconds).padStart(2,'0');
-        }
-      }
-      ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '12px monospace';
-      ctx.fillText('UPCOMING:', IX, BY + 50);
-      const uw = ctx.measureText('UPCOMING:').width;
-      ctx.fillStyle = '#ffd93d';
-      ctx.fillText('  ' + state.nextMissionName, IX + uw, BY + 50);
-      if (tStr) {
-        ctx.fillStyle = '#00e87a'; ctx.font = 'bold 12px monospace';
-        const nw = ctx.measureText('  ' + state.nextMissionName).width;
-        ctx.fillText('  IN ' + tStr, IX + uw + nw, BY + 50);
-      }
-    }
-    return;
-  }
-  const launch = currentLaunch();
-  if (!launch) {
-    ctx.fillStyle = 'rgba(255,100,50,0.7)';
-    ctx.font = 'bold 13px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('NO LAUNCH DATA', 20, BAR_Y + 24);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.font = '11px monospace';
-    ctx.fillText('Check network connection or API status', 20, BAR_Y + 46);
-    return;
-  }
-  const statusColors = { 'Go':'#00e87a','Go for Launch':'#00e87a','TBD':'#ffd93d','To Be Determined':'#ffd93d','To Be Confirmed':'#ffd93d' };
-  const statusCol = statusColors[launch.status] || '#4a9ede';
-  const formatT0 = t0 => {
-    if (!t0) return { date:'TBD', time:'' };
-    try {
-      const useLocal = localStorage.getItem('lt_time_format') === 'local';
-      const tz = useLocal ? undefined : 'UTC';
-      const tzLabel = useLocal ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
-      const d = new Date(t0);
-      return {
-        date: d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:tz}),
-        time: d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz}) + ' ' + (useLocal ? 'LOCAL' : 'UTC'),
-      };
-    } catch(e) { return { date:t0, time:'' }; }
-  };
-  const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
-    .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
-    .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');
-  const lt = formatT0(launch.t0 || launch.win_open);
-  const availW = W - IX - 100;
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'left';
-  let missionName = launch.name || 'Unknown';
-  while (ctx.measureText(missionName).width > availW && missionName.length > 4) missionName = missionName.slice(0,-1);
-  ctx.fillText(missionName, IX, BY + 24);
-
-  // Tap hint inline next to mission name
-  const nameWidth = ctx.measureText(missionName).width;
-  ctx.fillStyle = 'rgba(0,232,122,0.5)';
-  ctx.font = 'bold 11px Courier New';
-  ctx.textAlign = 'left';
-  ctx.fillText('  TAP FOR DETAILS →', IX + nameWidth, BY + 24);
-  const dateStr = lt.date + (lt.time ? '  ·  ' + lt.time : '');
-  const vehStr  = (launch.vehicle||'') + '  ·  ' + (launch.provider||'') + '  ·  ' + shorten(launch.pad||launch.location||'');
-  ctx.fillStyle = '#ffd93d'; ctx.font = '13px monospace';
-  ctx.fillText(dateStr, IX, BY + 44);
-  const dw = ctx.measureText(dateStr).width;
-  ctx.fillStyle = '#4a9ede';
-  ctx.fillText('  ·  ' + vehStr, IX + dw, BY + 44);
-  const badgeW = 80, badgeH = 26, badgeX = W - badgeW - 14, badgeY = BY + 12;
-  ctx.fillStyle = statusCol + '28';
-  ctx.beginPath(); roundRectPath(badgeX, badgeY, badgeW, badgeH, 4); ctx.fill();
-  ctx.strokeStyle = statusCol; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = statusCol; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
-  ctx.fillText((launch.status||'TBD').toUpperCase(), badgeX + badgeW/2, badgeY + 17);
-  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('v2.0.0  ·  data ' + minAgo + 'm ago', W - 130, BAR_Y + BAR_H - 35);
-}
-
 function updateInfoBar() {
 
   // If the HTML info-bar isn't present in this page (e.g. canvas-only embed),
@@ -919,7 +840,7 @@ function updateInfoBar() {
 
   // Tap hint
   document.getElementById('ib-tap').onclick = () => {
-    window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
+    window.location = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
   };
 
   // Date + countdown (hidden elements kept for compat)
@@ -1046,7 +967,7 @@ function checkLaunchTrigger() {
     if (minsAgo > 30) {
       console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
       state.launchTriggered = true;
-      state.buriedLaunchId  = launch.id;
+      if (!state.buriedLaunchIds.includes(launch.id)) state.buriedLaunchIds.push(launch.id);
       fetchLaunches(true);
       return;
     }
@@ -1055,7 +976,7 @@ function checkLaunchTrigger() {
     state.launchTriggered     = true;
     state.launchComplete      = true;
     state.rocketOffscreen     = true;
-    state.buriedLaunchId      = launch.id;
+    if (!state.buriedLaunchIds.includes(launch.id)) state.buriedLaunchIds.push(launch.id);
     state.launchedMissionName = launch.name || '';
     state._lastLaunchT0       = launch.t0 || null;
     state._lastLaunchVehicle  = launch.vehicle || '';
@@ -1116,31 +1037,26 @@ function updateLaunch() {
       state.launchComplete  = true;
       state.flameParticles  = [];
       const _launched           = currentLaunch();
-      state.buriedLaunchId      = _launched ? _launched.id : null;  
+      if (_launched && !state.buriedLaunchIds.includes(_launched.id)) state.buriedLaunchIds.push(_launched.id);
       state.launchedMissionName = _launched ? (_launched.name || '') : '';
       state._lastLaunchT0       = _launched ? (_launched.t0 || null) : null;
       state._lastLaunchVehicle  = _launched ? (_launched.vehicle || '') : '';
       state.postLaunchCooldown  = true;
       state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
       saveState(); // persist immediately so navigation away doesn't lose cooldown
+      // Invalidate cache then fetch fresh data from the single source
+      const _afterLaunchFetch = () => fetch('/api/data').then(r => r.json()).then(data => {
+        const all    = data.launches || [];
+        const prevId = _launched ? _launched.id : null;
+        const next   = all.find(l => l.id !== prevId) || all[1] || all[0];
+        state.nextMissionName = next ? (next.name || '') : '';
+        state.nextMissionT0   = next ? (next.t0 || null) : null;
+      }).catch(() => {});
       if (!state.testMode) {
         fetch('/api/launches/invalidate', { method: 'POST' })
-          .then(() => fetch('/api/launches')).then(r => r.json())
-          .then(data => {
-            const all = data.launches || [];
-            const prevId = _launched ? _launched.id : null;
-            const next = all.find(l => l.id !== prevId) || all[1] || all[0];
-            state.nextMissionName = next ? (next.name || '') : '';
-            state.nextMissionT0   = next ? (next.t0 || null) : null;
-          }).catch(() => {});
+          .then(_afterLaunchFetch).catch(() => {});
       } else {
-        fetch('/api/launches').then(r => r.json()).then(data => {
-          const all = data.launches || [];
-          const prevId = _launched ? _launched.id : null;
-          const next = all.find(l => l.id !== prevId) || all[1] || all[0];
-          state.nextMissionName = next ? (next.name || '') : '';
-          state.nextMissionT0   = next ? (next.t0 || null) : null;
-        }).catch(() => {});
+        _afterLaunchFetch();
       }
     }
   }
@@ -1174,19 +1090,26 @@ function currentLaunch() {
   return state.launches[state.currentIdx] || null;
 }
 
-async function fetchLaunches(afterLaunch=false) {
+// Single data fetch — all pages use /api/data as the one source of truth.
+// Add ?testlaunch=N to the URL to use /api/test-launch?secs=N instead.
+const _testSecs = new URLSearchParams(location.search).get('testlaunch');
+const _dataUrl  = _testSecs ? `/api/test-launch?secs=${_testSecs}` : '/api/data';
+
+async function fetchData(afterLaunch=false) {
   try {
-    const res  = await fetch('/api/launches');
+    const res  = await fetch(_dataUrl);
     const data = await res.json();
-    const _cl = currentLaunch(); const prev = _cl ? _cl.id : undefined;
 
     const newLaunches = data.launches || [];
     if (newLaunches.length === 0 && state.launches.length > 0) return;
-    state.launches = newLaunches;
+
+    state.launches    = newLaunches;
+    state.weather     = data.weather  || state.weather;
+    state.settings    = data.settings || state.settings;
     state.lastFetchAt = Date.now();
 
     if (afterLaunch) {
-      const newLaunch = state.launches.find(l => l.id !== state.buriedLaunchId) || state.launches[0];
+      const newLaunch = state.launches.find(l => !state.buriedLaunchIds.includes(l.id)) || state.launches[0];
       state.currentIdx      = newLaunch ? state.launches.indexOf(newLaunch) : 0;
       state.launchTriggered = false;
       state.isLaunching     = false;
@@ -1196,30 +1119,30 @@ async function fetchLaunches(afterLaunch=false) {
       state.flameParticles  = [];
       showNotification('NEXT MISSION');
     } else {
-      // Skip buried launch on every regular poll
-      const firstValid = state.launches.findIndex(l => l.id !== state.buriedLaunchId);
+      const firstValid = state.launches.findIndex(l => !state.buriedLaunchIds.includes(l.id));
       state.currentIdx = firstValid >= 0 ? firstValid : 0;
     }
+
+    // Update probability badge directly from launch data (no separate /api/ll2 call)
+    const launch = currentLaunch();
+    if (launch?.probability != null) {
+      const prob      = launch.probability;
+      const pc        = prob >= 80 ? '#00e87a' : prob >= 50 ? '#ffd93d' : '#ff4422';
+      const probBadge = document.getElementById('ib-prob-badge');
+      if (probBadge) {
+        probBadge.textContent  = prob + '%';
+        probBadge.style.display      = 'block';
+        probBadge.style.color        = pc;
+        probBadge.style.borderColor  = pc;
+      }
+    }
   } catch(e) {
-    console.error('Launch fetch error:', e);
+    console.error('fetchData error:', e);
   }
 }
 
-async function fetchWeather() {
-  try {
-    const res  = await fetch('/api/weather');
-    state.weather = await res.json();
-  } catch(e) {
-    console.error('Weather fetch error:', e);
-  }
-}
-
-async function fetchSettings() {
-  try {
-    const r = await fetch('/api/settings');
-    state.settings = await r.json();
-  } catch(e) {}
-}
+// Thin wrapper so existing call-sites (fetchLaunches(true) etc.) still work.
+async function fetchLaunches(afterLaunch=false) { return fetchData(afterLaunch); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ANIMATION UPDATES
@@ -1351,33 +1274,25 @@ function drawWifiIcon() {
 }
 
 function drawGearIcon() {
-  const x = W - 20, y = 16;
-  const col = 'rgba(255,255,255,0.4)';
-  ctx.strokeStyle = col;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  // Outer circle
-  ctx.beginPath();
-  ctx.arc(x, y + 10, 5, 0, Math.PI * 2);
-  ctx.stroke();
-  // Teeth
-  for (let i = 0; i < 6; i++) {
-    const a = (Math.PI / 3) * i;
-    const ix = x + Math.cos(a) * 5;
-    const iy = y + 10 + Math.sin(a) * 5;
-    const ox = x + Math.cos(a) * 8;
-    const oy = y + 10 + Math.sin(a) * 8;
-    ctx.beginPath();
+  const bw = 88, bh = 22;
+  const bx = W - bw - 6, by = 5;
 
-    ctx.moveTo(ix, iy);
-    ctx.lineTo(ox, oy);
-    ctx.stroke();
-  }
-  // Center dot
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.arc(x, y + 10, 2, 0, Math.PI * 2);
-  ctx.fill();
+  // Background
+  ctx.fillStyle = '#080c12';
+  ctx.fillRect(bx, by, bw, bh);
+
+  // 2px green border
+  ctx.strokeStyle = '#00e87a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+
+  // Text
+  ctx.fillStyle = '#00e87a';
+  ctx.font = '7px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('> SETTINGS', bx + bw / 2, by + bh / 2);
+  ctx.textBaseline = 'alphabetic';
 }
 
 // ── Weather Particles ─────────────────────────────────────────────────────────
@@ -1461,11 +1376,9 @@ function drawMilestoneTimeline() {
   if (cd && cd !== 'LAUNCHED' && cd.total_seconds > 1800) return;
   if (elapsed > 4500) return;
   const milestones = getMilestones(launch.vehicle || '');
-  let currentIdx = 0;
-  for (let i = 0; i < milestones.length; i++) {
-    if (elapsed >= milestones[i].t) currentIdx = i;
-    else break;
-  }
+  // currentIdx = index of the next upcoming milestone (first one not yet reached)
+  let currentIdx = milestones.findIndex(m => elapsed < m.t);
+  if (currentIdx === -1) currentIdx = milestones.length - 1; // all done
 
   _tlSmooth += (currentIdx * 62 - _tlSmooth) * 0.08;
 
@@ -1484,7 +1397,7 @@ function drawMilestoneTimeline() {
     const y   = centerY + (i * spacing) - _tlSmooth;
     if (y < 15 || y > 365) return;
 
-    const isDone    = elapsed > m.t;
+    const isDone    = elapsed >= m.t;
     const isCurrent = i === currentIdx && !isDone;
     const dist      = i - currentIdx;
     const opacity   = opacities[String(dist)] ?? 0.15;
@@ -1495,9 +1408,29 @@ function drawMilestoneTimeline() {
     if (visible.includes(ni) && ni < milestones.length) {
       const ny = centerY + ni*spacing - _tlSmooth;
       if (ny < 368) {
-        ctx.strokeStyle = isDone ? `rgba(0,232,122,${opacity*0.5})` : `rgba(255,255,255,${opacity*0.15})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();ctx.moveTo(dotX,y+7);ctx.lineTo(dotX,Math.min(ny-7,365));ctx.stroke();
+        const lineTop = y + 7;
+        const lineBot = Math.min(ny - 7, 365);
+        const lineLen = lineBot - lineTop;
+        if (isDone) {
+          // Fill based on progress toward next milestone
+          const nextM = milestones[ni];
+          const progress = Math.min(1, Math.max(0, (elapsed - m.t) / (nextM.t - m.t)));
+          const fillY = lineTop + lineLen * progress;
+          // Green filled portion
+          ctx.strokeStyle = `rgba(0,232,122,${opacity*0.6})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, fillY); ctx.stroke();
+          // Gray remaining portion
+          if (fillY < lineBot) {
+            ctx.strokeStyle = `rgba(255,255,255,${opacity*0.12})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(dotX, fillY); ctx.lineTo(dotX, lineBot); ctx.stroke();
+          }
+        } else {
+          ctx.strokeStyle = `rgba(255,255,255,${opacity*0.12})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, lineBot); ctx.stroke();
+        }
       }
     }
 
@@ -1542,6 +1475,7 @@ function render(now) {
   requestAnimationFrame(render);
   if (now - lastFrame < FRAME_MS) return;
   lastFrame = now;
+  try {
 
   // ── Updates ──
   updateClouds();
@@ -1585,7 +1519,7 @@ function render(now) {
   drawGearIcon();
   drawNoSignal();
   if (state.notification) drawNotification();
-  drawNoSignal();
+  } catch(e) { console.error('[render]', e); }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1603,39 +1537,11 @@ function updateCooldown() {
   }
 }
 
-async function fetchProbability() {
-  const launch = currentLaunch();
-  if (!launch) return;
-  if (!state._ll2ProbFetched) {
-    state._ll2ProbFetched = true;
-    fetch(`/api/ll2?name=${encodeURIComponent(launch.name||'')}&id=${encodeURIComponent(launch.id||'')}`)
-      .then(r => r.json())
-      .then(ll2 => {
-        const prob = ll2?.probability ?? null;
-        if (prob !== null) {
-          document.getElementById('ib-prob-wrap').style.display = 'block';
-          document.getElementById('ib-prob-fill').style.width = prob + '%';
-          document.getElementById('ib-prob-fill').style.background = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
-          document.getElementById('ib-prob-pct').textContent = prob + '%';
-          document.getElementById('ib-prob-pct').style.color = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
-          // prob badge in new info bar
-          const probBadge = document.getElementById('ib-prob-badge');
-          probBadge.textContent = prob + '%';
-          probBadge.style.display = 'block';
-          const pc = prob>=80?'#00e87a':prob>=50?'#ffd93d':'#ff4422';
-          probBadge.style.color = pc;
-          probBadge.style.borderColor = pc.replace(')',',0.3)').replace('rgb','rgba');
-        }
-      }).catch(() => {});
-  }
-}
-
 function startPolling() {
-  setTimeout(fetchProbability, 30000); // wait for prefetch cache to populate
+  // Refresh all data every 5 minutes from the single /api/data source
   setInterval(() => {
     if (!state.isLaunching && !state.postLaunchCooldown) {
-      fetchLaunches().then(() => showNotification('DATA UPDATED'));
-      state._ll2ProbFetched = false;
+      fetchData().then(() => showNotification('DATA UPDATED'));
     }
   }, 5 * 60 * 1000);
 
@@ -1649,13 +1555,6 @@ function startPolling() {
       });
     } catch(e) {}
   }, 500);
-
-  // Refresh weather every 15 minutes
-  setInterval(fetchWeather, 15 * 60 * 1000);
-
-  // Fetch LL2 probability once on load, then every 5 minutes
-  fetchProbability();
-  setInterval(fetchProbability, 5 * 60 * 1000);
 
   // Update HTML info bar every second
   setInterval(updateInfoBar, 1000);
@@ -1716,9 +1615,9 @@ canvas.addEventListener('click', function(e) {
   const y = e.clientY - rect.top;
 
 
-  // Gear icon tap zone (next to wifi) — goes to settings too
-  if (x > W - 40 && x < W  && y > 0 && y < 40) {
-    window.location = 'http://localhost:5001/settings';
+  // Settings button tap zone — matches drawGearIcon: bx = W-94, by = 5, bw = 88, bh = 22
+  if (x > W - 100 && x < W - 6 && y > 5 && y < 27) {
+    window.location = '/settings';
   }
 
   // Mission name tap zone (bottom info bar)
@@ -1735,22 +1634,27 @@ canvas.addEventListener('click', function(e) {
 // ─────────────────────────────────────────────────────────────────────────────
 function saveState() {
   try {
-    sessionStorage.setItem('lt_state', JSON.stringify({
+    localStorage.setItem('lt_state', JSON.stringify({
       postLaunchCooldown:  state.postLaunchCooldown,
       cooldownEndsAt:      state.cooldownEndsAt,
-      buriedLaunchId:      state.buriedLaunchId,
+      buriedLaunchIds:     state.buriedLaunchIds,
       launchedMissionName: state.launchedMissionName,
       nextMissionName:     state.nextMissionName,
       nextMissionT0:       state.nextMissionT0,
       _lastLaunchT0:       state._lastLaunchT0,
       _lastLaunchVehicle:  state._lastLaunchVehicle,
+      _savedAt:            Date.now(),
     }));
   } catch(e) {}
 }
 
 function restoreState() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem('lt_state') || 'null');
+    const saved = JSON.parse(localStorage.getItem('lt_state') || 'null');
+    // Discard saves older than 24 hours to prevent permanent stale state
+    if (saved && Date.now() - (saved._savedAt || 0) > 86400000) {
+      localStorage.removeItem('lt_state'); return;
+    }
     if (!saved) return;
     // Only restore cooldown if it hasn't expired
     if (saved.postLaunchCooldown && Date.now() < saved.cooldownEndsAt) {
@@ -1765,7 +1669,7 @@ function restoreState() {
       state.launchComplete      = true;
       state.launchTriggered     = true;
     }
-    if (saved.buriedLaunchId) state.buriedLaunchId = saved.buriedLaunchId;
+    if (Array.isArray(saved.buriedLaunchIds)) state.buriedLaunchIds = saved.buriedLaunchIds;
   } catch(e) {}
 }
 
@@ -1776,7 +1680,7 @@ function restoreState() {
   spawnBirds();
   spawnCars();
   restoreState();
-  await Promise.all([fetchLaunches(), fetchWeather(), fetchSettings()]);
+  await fetchData();
   initWeatherParticles();
   startPolling();
   // Persist state every 5 seconds

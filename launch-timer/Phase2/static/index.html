@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=800" />
   <title>Launch Countdown</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    * { cursor: none !important; }
+    * { margin: 0; padding: 0; box-sizing: border-box; cursor: none !important; }
 
     body {
-      background: #0a0a0a;
+      background: #0a0e14;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -30,36 +30,20 @@
     }
 
     #btn-test {
+      display: none;
+    }
+
+    #btn-launches {
       position: absolute;
       top: 10px;
       left: 10px;
       z-index: 10;
-      background: #ff6600;
-      color: #fff;
-      border: none;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      font-weight: bold;
-      padding: 6px 12px;
-      cursor: pointer;
-      letter-spacing: 1px;
-    }
-    #btn-test:hover { background: #ff8833; }
-    #btn-test:active { background: #cc5500; }
-
-    #btn-launches {
-      position: absolute;
-      top: 48px;
-      left: 10px;
-      z-index: 10;
       background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,211,61,0.6);
-      border-radius: 4px;
+      border: 2px solid rgba(255,211,61,0.6);
       color: #ffd93d;
-      font-family: 'Courier New', monospace;
-      font-size: 9px;
-      font-weight: bold;
-      padding: 4px 10px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 5px 10px;
       cursor: pointer;
       letter-spacing: 1px;
     }
@@ -70,57 +54,57 @@
       position: absolute;
       bottom: 0; left: 0;
       width: 800px; height: 90px;
-      background: rgba(8,8,18,0.97);
-      border-top: 2px solid rgba(0,232,122,0.35);
+      background: rgba(8,12,18,0.97);
+      border-top: 3px solid #00e87a;
       display: flex;
-      font-family: 'Courier New', monospace;
+      font-family: 'Press Start 2P', monospace;
       z-index: 5;
     }
 
     /* LEFT panel — launch window */
     #ib-window {
-      width: 190px; flex-shrink: 0;
-      padding: 0 16px;
+      width: 185px; flex-shrink: 0;
+      padding: 0 12px;
       display: flex; flex-direction: column;
-      justify-content: center; gap: 6px;
-      border-right: 1px solid rgba(255,255,255,0.07);
+      justify-content: center; gap: 7px;
+      border-right: 2px solid #0d1620;
     }
-    #ib-win-label { font-size: 8px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
-    #ib-win-times-row { display: flex; justify-content: space-between; align-items: baseline; }
-    .ib-win-time { font-size: 18px; font-weight: bold; color: #ffd93d; line-height: 1; }
-    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.05em; }
-    #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
+    #ib-win-label { font-size: 6px; color: rgba(0,232,122,0.5); letter-spacing: 0.05em; }
+    #ib-win-times-row { display: flex; justify-content: space-between; align-items: center; }
+    .ib-win-time { font-size: 11px; color: #ffd93d; line-height: 1; }
+    .ib-win-sublbl { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    #ib-win-sep { font-size: 8px; color: rgba(255,255,255,0.2); }
     #ib-win-track {
       height: 3px; background: rgba(255,255,255,0.08);
-      border-radius: 2px; position: relative;
+      position: relative;
     }
     #ib-win-dot {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
-      width: 9px; height: 9px; border-radius: 50%;
-      background: #00e87a; border: 2px solid #080810;
+      width: 7px; height: 7px;
+      background: #00e87a; border: 2px solid #080c12;
       left: 0%;
     }
 
     /* CENTER panel — mission info */
     #ib-left {
       flex: 1;
-      padding: 0 20px;
+      padding: 0 14px;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      gap: 5px; min-width: 0; overflow: hidden;
+      gap: 7px; min-width: 0; overflow: hidden;
       cursor: pointer;
     }
     #ib-name-row { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-width: 0; }
-    #ib-name { font-size: 20px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #ib-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.4); color: #ffd93d; }
+    #ib-name { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-badge { font-size: 6px; padding: 3px 7px; letter-spacing: 0.05em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 2px solid rgba(255,211,61,0.4); color: #ffd93d; }
     #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
     #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
-    #ib-prob-badge { font-size: 10px; padding: 2px 9px; font-weight: bold; letter-spacing: 0.06em; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 1px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
-    #ib-detail-row { font-size: 11px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; }
+    #ib-prob-badge { font-size: 6px; padding: 3px 7px; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 2px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
+    #ib-detail-row { font-size: 6px; text-align: center; line-height: 2; width: 100%; overflow: hidden; }
     #ib-sub      { color: #4a9ede; }
-    #ib-location { color: rgba(255,255,255,0.6); }
+    #ib-location { color: rgba(255,255,255,0.5); }
     #ib-t0       { color: #ffd93d; }
-    .ib-sep      { color: rgba(255,255,255,0.25); }
+    .ib-sep      { color: rgba(255,255,255,0.2); }
 
     /* hidden — kept for JS compat */
     #ib-tap { display: none; }
@@ -131,24 +115,24 @@
 
     /* RIGHT panel — weather */
     #ib-right {
-      width: 190px; flex-shrink: 0;
-      padding: 0 16px;
+      width: 185px; flex-shrink: 0;
+      padding: 0 12px;
       display: flex; flex-direction: column;
-      justify-content: center; gap: 6px;
-      border-left: 1px solid rgba(255,255,255,0.07);
+      justify-content: center; gap: 7px;
+      border-left: 2px solid #0d1620;
     }
     #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-end; }
     .ib-wx { text-align: center; }
-    .ib-wx-val { font-size: 20px; font-weight: bold; color: #fff; line-height: 1; }
-    .ib-wx-lbl { font-size: 8px; color: rgba(255,255,255,0.3); margin-top: 4px; letter-spacing: 0.05em; }
-    #ib-ver { font-size: 9px; color: rgba(255,255,255,0.4); text-align: right; letter-spacing: 0.04em; }
+    .ib-wx-val { font-size: 13px; color: #fff; line-height: 1; }
+    .ib-wx-lbl { font-size: 5px; color: rgba(255,255,255,0.3); margin-top: 5px; }
+    #ib-ver { font-size: 5px; color: rgba(255,255,255,0.3); text-align: right; }
   </style>
 </head>
 <body>
   <div id="wrapper">
     <canvas id="c" width="800" height="480"></canvas>
     <button id="btn-test">TEST LAUNCH</button>
-    <button id="btn-launches" onclick="window.location='http://localhost:5001/launches'">LAUNCHES & EVENTS</button>
+    <button id="btn-launches" onclick="window.location='/launches'">LAUNCHES & EVENTS</button>
 
     <div id="info-bar">
 
@@ -174,7 +158,7 @@
       </div>
 
       <!-- CENTER: mission info — tappable → mission page -->
-      <div id="ib-left" onclick="window.location='http://localhost:5001/mission'">
+      <div id="ib-left" onclick="window.location='/mission'">
         <div id="ib-name-row">
           <div id="ib-name">—</div>
           <div id="ib-badge">TBD</div>
