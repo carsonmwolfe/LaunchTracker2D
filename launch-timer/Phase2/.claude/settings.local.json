@@ -6,7 +6,10 @@
       "Bash(curl -s \"https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=3&format=json\")",
       "Bash(curl -s -X POST http://localhost:5001/api/launches/invalidate)",
       "Bash(curl -v http://localhost:5000/)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
