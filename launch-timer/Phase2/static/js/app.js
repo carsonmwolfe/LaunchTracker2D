@@ -37,7 +37,6 @@ const ASSETS = {
   rocket_soyuz5:    'rocket-Soyuz5.png',
   rocket_ariane6:   'rocket-Ariane6.png',
   rocket_sls:       'rocket-SLS.png',
-  rocket_kinetica:  'rocket-Kinetica2.png',
   rocket_gslv:      'rocket-GSLV.png',
   rocket_firefly:   'rocket-firefly.png',
   rocket_longmarch12:  'rocket-longmarch12.png',
@@ -585,7 +584,6 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('soyuz'))     return 'rocket_soyuz';
   if (v.includes('ariane'))    return 'rocket_ariane6';
   if (v.includes('sls') || v.includes('space launch system')) return 'rocket_sls';
-  if (v.includes('kinetica'))  return 'rocket_kinetica';
   if (v.includes('gslv') || v.includes('geosynchronous')) return 'rocket_gslv';
   if (v.includes('falcon'))    return 'rocket_falcon9';
   if (v.includes('firefly') || v.includes('alpha'))  return 'rocket_firefly';
@@ -623,7 +621,6 @@ const ROCKET_CONFIG = {
   rocket_soyuz5:      { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
   rocket_ariane6:     { pad: { x: 472, y: 204, h: 146 }, te: { x: 173, y: 194, h: 146 } },
   rocket_sls:         { pad: { x: 513, y: 177, h: 169 }, te: { x: 208, y: 170, h: 169 } },
-  rocket_kinetica:    { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
   rocket_gslv:        { pad: { x: 479, y: 215, h: 132 }, te: { x: 177, y: 206, h: 132 } },
   rocket_longmarch12: { pad: { x: 470, y: 214, h: 155 }, te: { x: 170, y: 203, h: 155 } },
   rocket_longmarch2d: { pad: { x: 474, y: 212, h: 147 }, te: { x: 173, y: 202, h: 147 } },
