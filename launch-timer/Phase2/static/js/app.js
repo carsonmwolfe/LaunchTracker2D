@@ -49,7 +49,7 @@ const ASSETS = {
   rocket_neutron:      'rocket-Neutron.png',
   rocket_rfaone:       'rocket-RFAone.png',
   rocket_spectrum:     'rocket-Spectrum.png',
-  rocket_tianlong:     'rocket-Tianlong3.png',
+  rocket_tianlong:     'rocket-tianlong3.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
