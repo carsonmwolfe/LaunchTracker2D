@@ -310,6 +310,141 @@ function drawVAB() {
   ctx.drawImage(IMG.vab, -64, 61, w, h);
 }
 
+// ── MOCKUP OPTION 2: VIF (Vertical Integration Facility) ─────────────────────
+function drawVIF() {
+  const bx = 18, bw = 90, bh = 170, by = 390 - bh;   // building box
+  const roofY = by;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillRect(bx + 6, roofY + bh - 4, bw, 8);
+
+  // Main building body — concrete grey
+  ctx.fillStyle = '#b0b4b8';
+  ctx.fillRect(bx, roofY, bw, bh);
+
+  // Side shading
+  ctx.fillStyle = '#98999c';
+  ctx.fillRect(bx, roofY, 8, bh);
+  ctx.fillStyle = '#c8cacc';
+  ctx.fillRect(bx + bw - 8, roofY, 8, bh);
+
+  // Horizontal panel lines
+  ctx.strokeStyle = '#9a9c9f';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
+    const ly = roofY + (bh / 5) * i;
+    ctx.beginPath(); ctx.moveTo(bx, ly); ctx.lineTo(bx + bw, ly); ctx.stroke();
+  }
+
+  // Large vertical door opening at bottom centre
+  const dw = 28, dh = 55;
+  const dx = bx + (bw - dw) / 2;
+  ctx.fillStyle = '#1a1f26';
+  ctx.fillRect(dx, roofY + bh - dh, dw, dh);
+
+  // Door frame
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dx, roofY + bh - dh, dw, dh);
+
+  // Roof parapet
+  ctx.fillStyle = '#888a8c';
+  ctx.fillRect(bx - 2, roofY - 5, bw + 4, 7);
+
+  // "NEXT UP" label on building
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(bx + 8, roofY + 18, bw - 16, 14);
+  ctx.fillStyle = '#00e87a';
+  ctx.font = '5px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('NEXT UP', bx + bw / 2, roofY + 28);
+  ctx.textAlign = 'left';
+
+  // Next rocket peeking out the top
+  const nextLaunch = state.launches[state.currentIdx + 1] || null;
+  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const assetKey2  = getRocketAssetKey(vehicle2);
+  const rocketImg  = IMG[assetKey2];
+  if (rocketImg) {
+    const peekH  = 80;   // how tall the visible portion is above roofline
+    const totalH = 110;  // drawn height of rocket
+    const rw = Math.round(rocketImg.width * (totalH / rocketImg.height));
+    const rx = bx + (bw - rw) / 2;
+    // Clip to only show nose poking above roof
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, roofY - peekH, bw, peekH);
+    ctx.clip();
+    ctx.drawImage(rocketImg, rx, roofY - totalH + (totalH - peekH), rw, totalH);
+    ctx.restore();
+  }
+}
+
+// ── MOCKUP OPTION 1: Background secondary pad ─────────────────────────────────
+function drawBackgroundPad() {
+  const sc   = 0.52;           // scale relative to main pad
+  const gnd  = 390;            // ground Y
+  const px   = 295;            // centre X of background pad
+  const alpha = 0.72;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Simple truss tower — vertical beams + cross braces
+  const tw = Math.round(38 * sc);
+  const th = Math.round(210 * sc);
+  const tx = px - tw / 2;
+  const ty = gnd - th;
+
+  // Tower body fill
+  ctx.fillStyle = '#3a3f48';
+  ctx.fillRect(tx, ty, tw, th);
+
+  // Cross braces
+  ctx.strokeStyle = '#2a2e35';
+  ctx.lineWidth = 1;
+  const braces = 5;
+  for (let i = 0; i < braces; i++) {
+    const y0 = ty + (th / braces) * i;
+    const y1 = ty + (th / braces) * (i + 1);
+    ctx.beginPath(); ctx.moveTo(tx, y0); ctx.lineTo(tx + tw, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx + tw, y0); ctx.lineTo(tx, y1); ctx.stroke();
+  }
+
+  // Pad base
+  ctx.fillStyle = '#555a62';
+  ctx.fillRect(tx - Math.round(12 * sc), gnd - Math.round(14 * sc), tw + Math.round(24 * sc), Math.round(14 * sc));
+
+  // Hazard stripes on base
+  const stripeW = Math.round(8 * sc);
+  const stripeCount = 4;
+  const baseX = tx - Math.round(12 * sc);
+  const baseY = gnd - Math.round(8 * sc);
+  for (let i = 0; i < stripeCount; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#ffd93d' : '#1a1a1a';
+    ctx.fillRect(baseX + i * stripeW * 2, baseY, stripeW, Math.round(8 * sc));
+  }
+
+  // Arm extending right
+  ctx.fillStyle = '#4a4f58';
+  ctx.fillRect(tx + tw, ty + Math.round(30 * sc), Math.round(20 * sc), Math.round(5 * sc));
+
+  // Next rocket on this pad
+  const nextLaunch = state.launches[state.currentIdx + 1] || null;
+  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const assetKey2  = getRocketAssetKey(vehicle2);
+  const rocketImg  = IMG[assetKey2];
+  if (rocketImg) {
+    const rh = Math.round(150 * sc);
+    const rw = Math.round(rocketImg.width * (rh / rocketImg.height));
+    ctx.drawImage(rocketImg, px - rw / 2 - Math.round(6 * sc), gnd - Math.round(14 * sc) - rh, rw, rh);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  LAUNCH TOWER + PAD
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1654,10 +1789,9 @@ function render(now) {
   if (cond === 'rain' || cond === 'light_rain') drawRain(false);
   if (cond === 'thunderstorm') { drawRain(true); drawLightning(); }
   if (cond === 'fog') drawFog();
-  drawVAB();
-  // drawFences();
-  drawMLPRocket();      // ← Next rocket behind MLP
-  drawMLP();            // ← MLP over its rocket
+  // MOCKUP: Option 2 (VIF) on left, Option 1 (background pad) in middle
+  drawVIF();            // ← Option 2: VIF building with rocket nose peeking
+  drawBackgroundPad();  // ← Option 1: mini secondary pad with rocket
   drawRocket();         // ← Active pad rocket (behind tower)
   drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
