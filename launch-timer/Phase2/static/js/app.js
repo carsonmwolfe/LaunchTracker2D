@@ -23,8 +23,7 @@ const ASSETS = {
   launchTower:     'ground-LaunchPad.png',  // This file contains both tower AND pad
   launchPad:       'ground-LaunchPad.png',
   countdownClock:  'ground-countdownclock.png',  // New countdown clock display
-  hif:             'ground-HIF.png',
-  te:              'ground-TE.png',
+  mlp:             'ground-MLP.png',
   rocket_falcon9:   'rocket-falcon9.png',
   rocket_atlas:     'rocket-atlasV.png',
   rocket_vulcan:    'rocket-vulcan.png',
@@ -40,6 +39,16 @@ const ASSETS = {
   rocket_kinetica:  'rocket-Kinetica2.png',
   rocket_gslv:      'rocket-GSLV.png',
   rocket_firefly:   'rocket-firefly.png',
+  rocket_longmarch12:  'rocket-longmarch12.png',
+  rocket_longmarch2d:  'rocket-longmarch2d.png',
+  rocket_vegaC:        'rocket-vegaC.png',
+  rocket_jielong:      'rocket-Jielong.png',
+  rocket_falconheavy:  'rocket-FalconHeavy.png',
+  rocket_minotaur:     'rocket-MinotaurIV.png',
+  rocket_neutron:      'rocket-Neutron.png',
+  rocket_rfaone:       'rocket-RFAone.png',
+  rocket_spectrum:     'rocket-Spectrum.png',
+  rocket_tianlong:     'rocket-Tianlong3.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
@@ -292,15 +301,13 @@ function drawPixelGrass() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  HIF BUILDING
+//  VAB
 // ─────────────────────────────────────────────────────────────────────────────
-function drawHIF() {
-  if (!IMG.hif) return;
-  const TARGET_HEIGHT = 207;
-  const scale = TARGET_HEIGHT / IMG.hif.height;
-  const scaledW = Math.round(IMG.hif.width * scale);
-  // Default position: left side, sitting on grass. Adjust x/y to reposition.
-  ctx.drawImage(IMG.hif, -30, 229, scaledW, 216);
+function drawVAB() {
+  if (!IMG.vab) return;
+  const h = 427;
+  const w = Math.round(IMG.vab.width * (h / IMG.vab.height));
+  ctx.drawImage(IMG.vab, -64, 61, w, h);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -308,10 +315,9 @@ function drawHIF() {
 // ─────────────────────────────────────────────────────────────────────────────
 function drawLaunchTower() {
   if (IMG.launchTower) {
-    const TARGET_HEIGHT = 275;
-    const scale = TARGET_HEIGHT / IMG.launchTower.height;
-    const scaledW = Math.round(IMG.launchTower.width * scale);
-    ctx.drawImage(IMG.launchTower, 454, 153, scaledW, TARGET_HEIGHT);
+    const h = 289;
+    const w = Math.round(IMG.launchTower.width * (h / IMG.launchTower.height));
+    ctx.drawImage(IMG.launchTower, 456, 141.1, w, h);
   }
 }
 
@@ -321,6 +327,70 @@ function drawLaunchPad() {
   if (IMG.launchPad && !IMG.launchTower) {
     ctx.drawImage(IMG.launchPad, 550, 320, 140, 40);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  UMBILICAL ARMS
+// ─────────────────────────────────────────────────────────────────────────────
+function drawUmbilicals() {
+  if (state.rocketOffscreen || state.launchComplete || state.postLaunchCooldown) return;
+  if (state.isLaunching && state.rocketY < PAD_Y_BASE - 10) return;
+
+  const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const assetKey = getRocketAssetKey(vehicle);
+  const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
+  const launchOffset = state.isLaunching ? state.rocketY - PAD_Y_BASE : 0;
+
+  // Tower face where arm is bolted, rocket right side where cables attach
+  // Anchor to NOZZLE_X (pad centre) rather than cfg.x (image left edge)
+  const rocketRightX = NOZZLE_X + 8;   // right side of rocket body ≈ 523
+  const towerFaceX   = NOZZLE_X + 28;  // left structural face of tower ≈ 543
+
+  // Each arm: { frac=height along rocket, cableColors=array of line colors }
+  const arms = [
+    { frac: 0.18, cableColors: ['#dddddd','#ffffff','#cccccc'] },
+    { frac: 0.44, cableColors: ['#cc2222','#ff4444','#cc2222'] },
+    { frac: 0.67, cableColors: ['#dddddd','#ffffff','#cccccc'] },
+  ];
+
+  arms.forEach(({ frac, cableColors }) => {
+    const pivotY = Math.round(cfg.y + launchOffset + cfg.h * frac);
+
+    // ── Rigid swing arm: grey beam from tower face out to rocket ──
+    ctx.strokeStyle = '#777777';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(towerFaceX, pivotY);
+    ctx.lineTo(rocketRightX + 5, pivotY);
+    ctx.stroke();
+
+    // Small mounting bracket box at tower
+    ctx.fillStyle = '#555555';
+    ctx.fillRect(towerFaceX, pivotY - 4, 4, 8);
+
+    // ── Cable bundle: 3 lines drooping from arm tip to rocket ──
+    const cableStartX = rocketRightX + 5;
+    const cableEndX   = rocketRightX;
+    // cables droop downward from where arm ends to the rocket skin
+    const droopY = pivotY + 5;
+
+    cableColors.forEach((col, j) => {
+      const offY = (j - 1) * 1.5;  // slight vertical spread
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cableStartX, pivotY + offY);
+      ctx.quadraticCurveTo(
+        cableStartX - 4, droopY + offY,
+        cableEndX,       pivotY + offY + 2
+      );
+      ctx.stroke();
+    });
+
+    // Connector plate at rocket skin
+    ctx.fillStyle = cableColors[1];
+    ctx.fillRect(rocketRightX - 2, pivotY - 3, 4, 7);
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,12 +427,14 @@ function drawPond() {
 //  SPOTLIGHTS
 // ─────────────────────────────────────────────────────────────────────────────
 function drawSpotlights() {
-  const groundY = 370;
+  // Spotlight poles sit left and right of the pad, aim at the rocket centre
+  const groundY = PAD_Y_BASE + 7;
   const poleH   = 30;
-  const lx      = NOZZLE_X - 90;
-  const rx      = NOZZLE_X + 75;
-  const targetX = NOZZLE_X;
-  const targetY = NOZZLE_Y - 80;
+  const targetX = NOZZLE_X + 10;   // rocket centre
+  const targetY = NOZZLE_Y - 40;
+  const lx      = targetX - 60;   // left pole
+  const rx      = targetX + 80;    // right pole
+
   drawRect(lx + 4, groundY - poleH, 3, poleH, '#505050');
   drawRect(rx + 4, groundY - poleH, 3, poleH, '#505050');
   drawRect(lx,     groundY - poleH - 5, 12, 6, '#404040');
@@ -385,6 +457,36 @@ function drawSpotlights() {
   } else {
     drawRect(lx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
     drawRect(rx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
+  }
+
+  // ── Blinking aviation lights on right side of tower ───────────────────────
+  // Pulse on for 0.5s every 3s
+  const blink = (Date.now() % 3000) < 500;
+  const towerRightX = 562;  // right edge of launch tower
+  const light1Y = 185;      // upper light
+  const light2Y = 250;      // lower light
+  if (blink) {
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    // Glow
+    const gl1 = ctx.createRadialGradient(towerRightX, light1Y, 0, towerRightX, light1Y, 8);
+    gl1.addColorStop(0, 'rgba(255,255,255,0.9)'); gl1.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl1;
+    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 8, 0, Math.PI*2); ctx.fill();
+    const gl2 = ctx.createRadialGradient(towerRightX, light2Y, 0, towerRightX, light2Y, 8);
+    gl2.addColorStop(0, 'rgba(255,255,255,0.9)'); gl2.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl2;
+    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 8, 0, Math.PI*2); ctx.fill();
+    // Core dot
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else {
+    // Dim off-state
+    ctx.fillStyle = 'rgba(180,180,180,0.3)';
+    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 2, 0, Math.PI*2); ctx.fill();
   }
 }
 
@@ -490,50 +592,69 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('electron'))                          return 'rocket_electron';
   if (v.includes('new glenn') || v.includes(' ng'))    return 'rocket_ng';
   if (v.includes('kairos'))                            return 'rocket_kairos';
+  if (v.includes('long march 12') || v.includes('longmarch-12') || v.includes('lm-12')) return 'rocket_longmarch12';
+  if (v.includes('long march 2d') || v.includes('longmarch-2d') || v.includes('cz-2d')) return 'rocket_longmarch2d';
   if (v.includes('long march') || v.includes('longmarch') || v.includes('chang zheng')) return 'rocket_longmarch';
+  if (v.includes('vega'))                                                               return 'rocket_vegaC';
+  if (v.includes('jielong') || v.includes('smart dragon'))                              return 'rocket_jielong';
+  if (v.includes('falcon heavy'))                                                        return 'rocket_falconheavy';
+  if (v.includes('minotaur'))                                                            return 'rocket_minotaur';
+  if (v.includes('neutron'))                                                             return 'rocket_neutron';
+  if (v.includes('rfa') || v.includes('rfa one'))                                       return 'rocket_rfaone';
+  if (v.includes('spectrum'))                                                            return 'rocket_spectrum';
+  if (v.includes('tianlong') || v.includes('sky dragon'))                               return 'rocket_tianlong';
   return 'rocket_generic';
 }
 
 const ROCKET_CONFIG = {
-  rocket_falcon9:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
-  rocket_atlas:     { pad: { x: 433, y: 138, h: 250 }, te: { tx: 280, ty: 332, h: 200, offsetY: -90 } },
-  rocket_vulcan:    { pad: { x: 315, y: 160, h: 209 }, te: { tx: 264, ty: 374, h: 211, offsetY: -106 } },
-  rocket_electron:  { pad: { x: 466, y: 219, h: 158 }, te: { tx: 287, ty: 335, h: 200, offsetY: -100 } },
-  rocket_ng:        { pad: { x: 428, y: 114, h: 268 }, te: { tx: 267, ty: 334, h: 229, offsetY: -115 } },
-  rocket_kairos:    { pad: { x: 450, y: 173, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
-  rocket_longmarch: { pad: { x: 440, y: 136, h: 234 }, te: { tx: 269, ty: 334, h: 200, offsetY: -100 } },
-  rocket_generic:   { pad: { x: 410, y: 165, h: 200 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
-  rocket_firefly:   { pad: { x: 450, y: 193, h: 200 }, te: { tx: 282, ty: 336, h: 185, offsetY:  -93 } },
-  rocket_starship:  { pad: { x: 423, y:  92, h: 280 }, te: { tx: 261, ty: 331, h: 242, offsetY: -121 } },
-  rocket_soyuz:     { pad: { x: 459, y: 176, h: 177 }, te: { tx: 270, ty: 331, h: 177, offsetY:  -89 } },
-  rocket_ariane6:   { pad: { x: 430, y: 140, h: 230 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
-  rocket_sls:       { pad: { x: 433, y:  88, h: 294 }, te: { tx: 277, ty: 334, h: 193, offsetY:  -97 } },
-  rocket_kinetica:  { pad: { x: 450, y: 180, h: 190 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
-  rocket_gslv:      { pad: { x: 440, y: 150, h: 220 }, te: { tx: 269, ty: 293, h: 204, offsetY: -102 } },
+  rocket_falcon9:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
+  rocket_atlas:       { pad: { x: 469, y: 209, h: 162 }, te: { x: 167, y: 200, h: 162 } },
+  rocket_vulcan:      { pad: { x: 464, y: 170, h: 181 }, te: { x: 159, y: 164, h: 181 } },
+  rocket_electron:    { pad: { x: 483, y: 251, h: 116 }, te: { x: 180, y: 239, h: 116 } },
+  rocket_ng:          { pad: { x: 457, y: 170, h: 200 }, te: { x: 154, y: 161, h: 200 } },
+  rocket_kairos:      { pad: { x: 511, y: 234, h: 127 }, te: { x: 207, y: 224, h: 127 } },
+  rocket_longmarch:   { pad: { x: 471, y: 205, h: 156 }, te: { x: 167, y: 195, h: 156 } },
+  rocket_generic:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
+  rocket_firefly:     { pad: { x: 470, y: 210, h: 164 }, te: { x: 167, y: 203, h: 164 } },
+  rocket_starship:    { pad: { x: 445, y: 157, h: 228 }, te: { x: 143, y: 148, h: 228 } },
+  rocket_soyuz:       { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
+  rocket_ariane6:     { pad: { x: 472, y: 204, h: 146 }, te: { x: 173, y: 194, h: 146 } },
+  rocket_sls:         { pad: { x: 513, y: 177, h: 169 }, te: { x: 208, y: 170, h: 169 } },
+  rocket_kinetica:    { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
+  rocket_gslv:        { pad: { x: 479, y: 215, h: 132 }, te: { x: 177, y: 206, h: 132 } },
+  rocket_longmarch12: { pad: { x: 470, y: 214, h: 155 }, te: { x: 170, y: 203, h: 155 } },
+  rocket_longmarch2d: { pad: { x: 474, y: 212, h: 147 }, te: { x: 173, y: 202, h: 147 } },
+  rocket_vegaC:       { pad: { x: 459, y: 186, h: 187 }, te: { x: 155, y: 176, h: 187 } },
+  rocket_jielong:     { pad: { x: 474, y: 220, h: 146 }, te: { x: 172, y: 209, h: 146 } },
+  rocket_falconheavy: { pad: { x: 479, y: 220, h: 116 }, te: { x: 179, y: 220, h: 116 } },
+  rocket_minotaur:    { pad: { x: 485, y: 235, h: 115 }, te: { x: 182, y: 225, h: 115 } },
+  rocket_neutron:     { pad: { x: 484, y: 232, h: 118 }, te: { x: 181, y: 220, h: 118 } },
+  rocket_rfaone:      { pad: { x: 484, y: 239, h: 124 }, te: { x: 180, y: 228, h: 124 } },
+  rocket_spectrum:    { pad: { x: 476, y: 219, h: 142 }, te: { x: 172, y: 209, h: 142 } },
+  rocket_tianlong:    { pad: { x: 478, y: 222, h: 136 }, te: { x: 174, y: 211, h: 136 } },
 };
-const PAD_Y_BASE = 366;
-const NOZZLE_X   = 517;
-const NOZZLE_Y   = 340;
+const PAD_Y_BASE = 359
+const NOZZLE_X   = 515;
+const NOZZLE_Y   = 280;
 
-function drawTE() {
-  if (!IMG.te) return;
-  const TARGET_HEIGHT = 135;
-  const teScale = TARGET_HEIGHT / IMG.te.height;
-  const scaledW = Math.round(IMG.te.width * teScale);
-  ctx.drawImage(IMG.te, 167, 288, scaledW, TARGET_HEIGHT);
+function drawMLP() {
+  if (!IMG.mlp) return;
+  const h = 78;
+  const w = Math.round(IMG.mlp.width * (h / IMG.mlp.height));
+  ctx.save();
+  ctx.translate(233, 348);
+  ctx.rotate(0.0021);
+  ctx.drawImage(IMG.mlp, -w / 2, -39, w, h);
+  ctx.restore();
+  // Draw next rocket upright on the MLP
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
   const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey2  = getRocketAssetKey(vehicle2);
   const rocketImg  = IMG[assetKey2];
   if (!rocketImg) return;
-  const cfg    = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
-  const rScale = cfg.h / rocketImg.height;
-  const rw2    = Math.round(rocketImg.width * rScale);
-  ctx.save();
-  ctx.translate(cfg.tx, cfg.ty);
-  ctx.rotate(-1.5708);
-  ctx.drawImage(rocketImg, -rw2 / 2, cfg.offsetY, rw2, cfg.h);
-  ctx.restore();
+  const cfg  = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
+  const rw2  = Math.round(rocketImg.width * (cfg.h / rocketImg.height));
+  ctx.drawImage(rocketImg, cfg.x, cfg.y, rw2, cfg.h);
 }
 
 function drawRocket() {
@@ -612,7 +733,7 @@ function drawSmoke() {
   const assetKey = getRocketAssetKey(vehicle);
   const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
   const ventX    = NOZZLE_X;
-  const ventY    = cfg.y + cfg.h * 0.5;
+  const ventY    = cfg.y + cfg.h * 0.5;  // mid-rocket
   const f        = state.smokeFrame;
 
   for(let i=0;i<12;i++){
@@ -801,11 +922,13 @@ function updateInfoBar() {
     return;
   }
 
-  // Name
+  // Name — use mission name after " | " if present, otherwise full name
   const fullName = launch.name || '—';
+  const pipeIdx  = fullName.indexOf(' | ');
+  const missionName = pipeIdx >= 0 ? fullName.slice(pipeIdx + 3) : fullName;
   const nameEl = document.getElementById('ib-name');
-  nameEl.textContent = fullName;
-  nameEl.style.fontSize = fullName.length > 30 ? '16px' : fullName.length > 22 ? '18px' : '20px';
+  nameEl.textContent = missionName;
+  nameEl.style.fontSize = missionName.length > 24 ? '10px' : missionName.length > 16 ? '12px' : '14px';
 
   // Badge
   const badge = document.getElementById('ib-badge');
@@ -813,6 +936,18 @@ function updateInfoBar() {
   if (sl.includes('go')) { badge.textContent='GO'; badge.className='go'; }
   else if (sl.includes('hold')) { badge.textContent='HOLD'; badge.className='hold'; }
   else { badge.textContent=(launch.status||'TBD').toUpperCase(); badge.className=''; }
+
+  // Probability badge
+  const probBadge = document.getElementById('ib-prob-badge');
+  if (probBadge) {
+    const prob = launch.probability;
+    if (prob !== null && prob !== undefined && prob >= 0) {
+      probBadge.textContent = prob + '%';
+      probBadge.style.display = 'block';
+    } else {
+      probBadge.style.display = 'none';
+    }
+  }
 
   // Sub line — vehicle · provider · pad
   const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
@@ -838,10 +973,11 @@ function updateInfoBar() {
     .replace(', USA','').replace(', United States','');
   document.getElementById('ib-location').textContent = locShorten(launch.location||'');
 
-  // Tap hint
-  document.getElementById('ib-tap').onclick = () => {
-    window.location = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
-  };
+  // Tap hint — update both the hidden compat element and the visible ib-left panel
+  const _missionUrl = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
+  document.getElementById('ib-tap').onclick = () => { window.location = _missionUrl; };
+  const ibLeft = document.getElementById('ib-left');
+  if (ibLeft) ibLeft.onclick = () => { window.location = _missionUrl; };
 
   // Date + countdown (hidden elements kept for compat)
   const useLocal = state.settings?.time_format === 'local';
@@ -1416,26 +1552,38 @@ function drawMilestoneTimeline() {
           const nextM = milestones[ni];
           const progress = Math.min(1, Math.max(0, (elapsed - m.t) / (nextM.t - m.t)));
           const fillY = lineTop + lineLen * progress;
+          // Black outline behind green line
+          ctx.strokeStyle = `rgba(0,0,0,0.7)`;
+          ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, fillY); ctx.stroke();
           // Green filled portion
-          ctx.strokeStyle = `rgba(0,232,122,${opacity*0.6})`;
+          ctx.strokeStyle = `rgba(0,232,122,${opacity*0.8})`;
           ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, fillY); ctx.stroke();
           // Gray remaining portion
           if (fillY < lineBot) {
-            ctx.strokeStyle = `rgba(255,255,255,${opacity*0.12})`;
+            ctx.strokeStyle = `rgba(0,0,0,0.5)`;
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(dotX, fillY); ctx.lineTo(dotX, lineBot); ctx.stroke();
+            ctx.strokeStyle = `rgba(255,255,255,${opacity*0.25})`;
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(dotX, fillY); ctx.lineTo(dotX, lineBot); ctx.stroke();
           }
         } else {
-          ctx.strokeStyle = `rgba(255,255,255,${opacity*0.12})`;
+          ctx.strokeStyle = `rgba(0,0,0,0.5)`;
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, lineBot); ctx.stroke();
+          ctx.strokeStyle = `rgba(255,255,255,${opacity*0.25})`;
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, lineBot); ctx.stroke();
         }
       }
     }
 
-    // Dot
+    // Dot — black halo behind for contrast
     const r = Math.max(2, Math.round(5*scale));
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.beginPath(); ctx.arc(dotX, y, r+2, 0, Math.PI*2); ctx.fill();
     if (isDone) {
       ctx.fillStyle=`rgba(0,232,122,${opacity})`;
       ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
@@ -1446,21 +1594,24 @@ function drawMilestoneTimeline() {
       ctx.fillStyle='#ffd93d';
       ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
     } else {
-      ctx.strokeStyle=`rgba(255,255,255,${opacity*0.5})`;
-      ctx.lineWidth=1;
+      ctx.strokeStyle=`rgba(255,255,255,${opacity*0.7})`;
+      ctx.lineWidth=1.5;
       ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.stroke();
     }
 
-    // Labels
+    // Labels — shadow for readability against bright backgrounds
     const ls=Math.max(5,Math.round(9*scale));
     const ts=Math.max(4,Math.round(6*scale));
     ctx.textAlign='right';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 4;
     ctx.font=`bold ${ls}px Courier New`;
     ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:isDone?`rgba(0,232,122,${opacity})`:`rgba(255,255,255,${opacity})`;
     ctx.fillText(m.label, dotX-12, y+3);
     ctx.font=`${ts}px Courier New`;
-    ctx.fillStyle=`rgba(255,255,255,${opacity*0.5})`;
+    ctx.fillStyle=`rgba(255,255,255,${opacity*0.7})`;
     ctx.fillText(tStr(m.t), dotX-12, y+ls+4);
+    ctx.shadowBlur = 0;
   });
 }
 
@@ -1500,13 +1651,13 @@ function render(now) {
   if (cond === 'rain' || cond === 'light_rain') drawRain(false);
   if (cond === 'thunderstorm') { drawRain(true); drawLightning(); }
   if (cond === 'fog') drawFog();
-  // drawVAB();  // VAB removed for now
-  drawTE();
-  drawHIF();
+  drawVAB();
   // drawFences();
   drawRocket();         // ← Draw rocket FIRST (behind)
+  drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
+  drawMLP();            // ← MLP frontmost layer
   //drawPond();
   drawBirds();
   drawCars();

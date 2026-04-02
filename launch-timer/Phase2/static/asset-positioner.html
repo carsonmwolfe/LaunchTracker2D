@@ -76,6 +76,11 @@ input[type=file] { display:none; }
     </div>
     <input type="file" id="fi" multiple accept="image/*">
 
+    <div class="load-btn" onclick="loadFromServer()" style="border-color:#00e87a;color:#00e87a;">
+      🌐 Load from Server
+      <br><span style="font-size:8px;color:#333;">auto-loads all /static/assets/</span>
+    </div>
+
     <div class="load-btn" onclick="document.getElementById('fjs').click()" style="border-color:#333;">
       📄 Load app.js <span style="font-size:8px;color:#444;">(to enable Save)</span>
     </div>
@@ -174,14 +179,62 @@ const META = {
   'ground-countdownclock':{label:'Countdown Clock',  code:'countdownClock'},
   'rocket-falcon9':       {label:'Falcon 9',         code:'rocket_falcon9'},
   'rocket-electron':      {label:'Electron',         code:'rocket_electron'},
+  'rocket-atlasv':        {label:'Atlas V',          code:'rocket_atlas'},
   'rocket-atlas':         {label:'Atlas V',          code:'rocket_atlas'},
   'rocket-vulcan':        {label:'Vulcan',           code:'rocket_vulcan'},
   'rocket-kairos':        {label:'KAIROS',           code:'rocket_kairos'},
+  'rocket-longmarch12':   {label:'Long March 12',    code:'rocket_longmarch12'},
+  'rocket-longmarch2d':   {label:'Long March 2D',    code:'rocket_longmarch2d'},
   'rocket-longmarch':     {label:'Long March',       code:'rocket_longmarch'},
   'rocket-ng':            {label:'New Glenn',        code:'rocket_ng'},
+  'rocket-starship':      {label:'Starship',         code:'rocket_starship'},
+  'rocket-ariane6':       {label:'Ariane 6',         code:'rocket_ariane6'},
+  'rocket-sls':           {label:'SLS',              code:'rocket_sls'},
+  'rocket-firefly':       {label:'Firefly Alpha',    code:'rocket_firefly'},
+  'rocket-gslv':          {label:'GSLV',             code:'rocket_gslv'},
+  'rocket-soyuz':         {label:'Soyuz',            code:'rocket_soyuz'},
+  'rocket-vegac':         {label:'Vega-C',           code:'rocket_vegaC'},
+  'rocket-jielong':       {label:'Jielong',          code:'rocket_jielong'},
 };
 function stemOf(fn){ return fn.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9-]/g,'-'); }
 function metaFor(stem){ for(const[k,v]of Object.entries(META))if(stem.includes(k))return v; return{label:stem,code:stem.replace(/-/g,'_')}; }
+
+// ── Server asset loading ──────────────────────────────────────────────────────
+async function loadFromServer() {
+  try {
+    const res = await fetch('/api/assets');
+    if (!res.ok) throw new Error('not ok');
+    const files = await res.json();
+    let pending = files.length;
+    if (!pending) { showSaved('No assets found on server'); return; }
+    for (const fn of files) {
+      const img = new Image();
+      const stem = stemOf(fn);
+      img.onload = () => {
+        const isR = stem.startsWith('rocket');
+        const tH = isR ? 200 : 280;
+        const sc = tH / img.naturalHeight;
+        const dw = Math.round(img.naturalWidth * sc);
+        let cx = isR ? 620 : (stem.includes('launch') ? 500 : (stem.includes('countdown') ? 630 : 160));
+        let cy = stem.includes('countdown') ? 320 : Math.max(tH/2, 365-tH/2);
+        if (!AM[stem]) AM[stem] = {img, filename:fn, cx, cy, w:dw, h:tH, rot:0, origW:img.naturalWidth, origH:img.naturalHeight, visible:true};
+        else { AM[stem].img = img; AM[stem].origW = img.naturalWidth; AM[stem].origH = img.naturalHeight; }
+        if (--pending <= 0) { refreshList(); redraw(); showSaved(`✓ Loaded ${files.length} assets from server`); }
+      };
+      img.onerror = () => { if (--pending <= 0) { refreshList(); redraw(); } };
+      img.src = `/static/assets/${fn}`;
+    }
+  } catch(e) {
+    showSaved('⚠ Server not reachable — use file upload instead');
+  }
+}
+
+// Auto-load when served from localhost
+window.addEventListener('load', () => {
+  if (location.hostname === 'localhost' || location.hostname.match(/\.local$/)) {
+    loadFromServer();
+  }
+});
 
 // ── File loading ──────────────────────────────────────────────────────────────
 document.getElementById('fi').addEventListener('change', e=>{
@@ -488,18 +541,24 @@ function saveToAppJs(){
     const tly = Math.round(a.cy - a.h/2);
 
     if(isR){
-      // Update PAD_X, PAD_Y_BASE, ROCKET_TARGET_HEIGHT
-      const centerX = Math.round(a.cx);
-      const bottomY = Math.round(a.cy + a.h/2);
-      updated = updated.replace(
-        /const PAD_X\s*=\s*[\d.]+,\s*PAD_Y_BASE\s*=\s*[\d.]+;/,
-        `const PAD_X = ${centerX}, PAD_Y_BASE = ${bottomY};`
-      );
-      updated = updated.replace(
-        /const ROCKET_TARGET_HEIGHT\s*=\s*[\d]+;/,
-        `const ROCKET_TARGET_HEIGHT = ${a.h};`
-      );
-      changeCount++;
+      const tlx = Math.round(a.cx - a.w/2);
+      const tly = Math.round(a.cy - a.h/2);
+      const rKey = meta.code; // e.g. 'rocket_falcon9'
+      // Update ROCKET_CONFIG pad entry: rocket_xxx:   { pad: { x: NNN, y: NNN, h: NNN }
+      const cfgRe = new RegExp(`(${rKey}\\s*:\\s*\\{\\s*pad\\s*:\\s*\\{\\s*x\\s*:)\\s*\\d+(\\s*,\\s*y\\s*:)\\s*\\d+(\\s*,\\s*h\\s*:)\\s*\\d+`);
+      if (cfgRe.test(updated)) {
+        updated = updated.replace(cfgRe, `$1 ${tlx}$2 ${tly}$3 ${a.h}`);
+        changeCount++;
+      } else {
+        // Legacy: try PAD_X / PAD_Y_BASE / ROCKET_TARGET_HEIGHT
+        const centerX = Math.round(a.cx);
+        const bottomY = Math.round(a.cy + a.h/2);
+        updated = updated.replace(/const PAD_X\s*=\s*[\d.]+,\s*PAD_Y_BASE\s*=\s*[\d.]+;/,
+          `const PAD_X = ${centerX}, PAD_Y_BASE = ${bottomY};`);
+        updated = updated.replace(/const ROCKET_TARGET_HEIGHT\s*=\s*[\d]+;/,
+          `const ROCKET_TARGET_HEIGHT = ${a.h};`);
+        changeCount++;
+      }
     } else if(stem.includes('launchpad') || stem.includes('launch')){
       // Update drawLaunchTower
       updated = updated.replace(

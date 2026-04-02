@@ -54,8 +54,8 @@
 
     /* PANEL HEADER */
     .phdr {
-      font-size: 6px; color: #00e87a;
-      background: #0d1620; padding: 5px 8px;
+      font-size: 7px; color: #00e87a;
+      background: #0d1620; padding: 6px 10px;
       border-bottom: 2px solid #1a2030;
       display: flex; align-items: center; gap: 5px;
       flex-shrink: 0;
@@ -64,16 +64,16 @@
 
     /* LEFT PANEL */
     .left {
-      width: 195px; flex-shrink: 0;
+      width: 215px; flex-shrink: 0;
       border-right: 3px solid #1a2030;
       display: flex; flex-direction: column;
       background: #080c12;
     }
     .radar-wrap {
-      flex: 1; display: flex;
-      align-items: center; justify-content: center;
+      flex: 1; display: block;
       background: #060a0e; position: relative; overflow: hidden;
     }
+    #earthCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     .orbit-pill {
       position: absolute; bottom: 5px; left: 50%;
       transform: translateX(-50%);
@@ -85,17 +85,17 @@
       border-top: 2px solid #1a2030;
       padding: 7px 10px 6px; background: #080c12; flex-shrink: 0;
     }
-    .win-hdr { font-size: 5px; color: #4a9ede; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+    .win-hdr { font-size: 7px; color: #4a9ede; margin-bottom: 9px; display: flex; align-items: center; gap: 4px; }
     .win-outer { position: relative; padding-bottom: 20px; margin: 0 8px; }
     .win-track { height: 6px; background: #0d1620; border: 2px solid #1a2030; position: relative; }
     .win-fill { position: absolute; inset: 0; background: #00e87a15; }
     .win-dot { position: absolute; top: -5px; width: 12px; height: 12px; border: 2px solid #060a0e; transform: translateX(-50%); }
-    .win-label-open { position: absolute; bottom: 0; left: -8px; font-size: 5px; color: rgba(255,255,255,0.3); }
-    .win-label-close { position: absolute; bottom: 0; right: -8px; font-size: 5px; color: rgba(255,255,255,0.3); }
-    .win-t0 { 
-      font-size: 5px; color: #00e87a; 
-      text-align: center; margin-top: 6px;
-      line-height: 2.2;
+    .win-label-open { position: absolute; bottom: 0; left: -8px; font-size: 6px; color: rgba(255,255,255,0.4); }
+    .win-label-close { position: absolute; bottom: 0; right: -8px; font-size: 6px; color: rgba(255,255,255,0.4); }
+    .win-t0 {
+      font-size: 7px; color: #00e87a;
+      text-align: center; margin-top: 7px;
+      line-height: 2.4;
     }
     .win-t0.tbd { color: #ffd93d; }
 
@@ -110,64 +110,69 @@
     .info-scroll::-webkit-scrollbar-thumb { background: #1a2030; }
     .info-row {
       display: flex; justify-content: space-between;
-      padding: 6px 10px; border-bottom: 1px solid #0d1620;
+      padding: 7px 10px; border-bottom: 1px solid #0d1620;
       align-items: center;
     }
-    .ikey { font-size: 5px; color: #4a9ede; flex-shrink: 0; letter-spacing: 0.06em; }
-    .ival { font-size: 6px; color: #fff; text-align: right; }
+    .ikey { font-size: 7px; color: #4a9ede; flex-shrink: 0; letter-spacing: 0.06em; }
+    .ival { font-size: 8px; color: #fff; text-align: right; }
     .ival.green { color: #00e87a; }
     .ival.yellow { color: #ffd93d; }
     .ival.blue { color: #4a9ede; }
 
+    /* Key info hero block */
+    .key-block { padding: 9px 10px 7px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
+    .key-vehicle { font-size: 11px; color: #fff; margin-bottom: 5px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .key-sub { font-size: 7px; color: #4a9ede; line-height: 2.2; }
+
     /* Description block */
-    .desc-block { padding: 7px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
-    .block-hdr { font-size: 5px; margin-bottom: 5px; display: flex; align-items: center; gap: 4px; }
-    .desc-text { font-size: 5px; color: rgba(255,255,255,0.35); line-height: 2.2; }
+    .desc-block { padding: 8px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
+    .block-hdr { font-size: 6px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .desc-text { font-size: 6px; color: rgba(255,255,255,0.45); line-height: 2.2; }
 
     /* Booster / site block */
-    .detail-block { padding: 7px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
+    .detail-block { padding: 8px 10px; border-bottom: 2px solid #1a2030; background: #080c12; flex-shrink: 0; }
     .booster-id { font-size: 12px; color: #fff; margin-bottom: 5px; display: flex; align-items: baseline; gap: 8px; }
-    .booster-flight { font-size: 7px; color: #ffd93d; }
+    .booster-flight { font-size: 8px; color: #ffd93d; }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
     .detail-stat { padding: 4px 0; border-bottom: 1px solid #0d1620; }
     .detail-stat:nth-child(odd) { border-right: 1px solid #0d1620; padding-right: 8px; }
     .detail-stat:nth-child(even) { padding-left: 8px; }
     .detail-stat:nth-last-child(-n+2) { border-bottom: none; }
-    .ds-lbl { font-size: 5px; color: #4a9ede; margin-bottom: 2px; }
-    .ds-val { font-size: 6px; color: #fff; }
+    .ds-lbl { font-size: 6px; color: #4a9ede; margin-bottom: 2px; }
+    .ds-val { font-size: 8px; color: #fff; }
     .ds-val.green { color: #00e87a; }
     .ds-val.yellow { color: #ffd93d; }
     .booster-status { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
-    .bs-badge { font-size: 5px; padding: 2px 5px; border: 1px solid; }
+    .bs-badge { font-size: 6px; padding: 3px 6px; border: 1px solid; }
     .bs-badge.go { border-color: #00e87a; color: #00e87a; background: #00e87a0a; }
     .bs-badge.nominal { border-color: #4a9ede; color: #4a9ede; background: #4a9ede0a; }
-    .bs-status-txt { font-size: 5px; color: rgba(255,255,255,0.2); }
+    .bs-status-txt { font-size: 6px; color: rgba(255,255,255,0.25); }
 
     /* Stats row */
     .stats-row { display: flex; border-top: 2px solid #1a2030; flex-shrink: 0; }
-    .stat-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 4px; border-right: 1px solid #1a2030; gap: 3px; position: relative; }
+    .stat-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px; border-right: 1px solid #1a2030; gap: 3px; position: relative; }
     .stat-box:last-child { border-right: none; }
     .stat-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
     .stat-box:nth-child(1)::before { background: #00e87a; }
     .stat-box:nth-child(2)::before { background: #4a9ede; }
     .stat-box:nth-child(3)::before { background: #ffd93d; }
-    .stat-num { font-size: 14px; color: #ffd93d; line-height: 1; }
-    .stat-lbl { font-size: 5px; color: rgba(255,255,255,0.25); text-align: center; line-height: 1.8; }
+    .stat-num { font-size: 18px; color: #ffd93d; line-height: 1; }
+    .stat-lbl { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; line-height: 1.8; }
 
     /* Weather */
-    .wx-section { border-top: 2px solid #1a2030; padding: 5px 10px; background: #0a0e14; flex-shrink: 0; }
+    .wx-section { border-top: 2px solid #1a2030; padding: 6px 10px; background: #0a0e14; flex-shrink: 0; }
     .wx-row { display: flex; margin-bottom: 4px; }
     .wx-item { flex: 1; text-align: center; }
-    .wx-val { font-size: 10px; color: #fff; line-height: 1; }
-    .wx-lbl { font-size: 5px; color: #4a9ede; margin-top: 2px; }
+    .wx-val { font-size: 12px; color: #fff; line-height: 1; }
+    .wx-lbl { font-size: 6px; color: #4a9ede; margin-top: 3px; }
     .go-row { display: flex; align-items: center; gap: 6px; }
-    .go-px { font-size: 6px; padding: 3px 8px; background: #0a2014; border: 2px solid #00e87a; color: #00e87a; }
+    .go-px { font-size: 7px; padding: 4px 9px; background: #0a2014; border: 2px solid #00e87a; color: #00e87a; }
     .go-px.monitor { border-color: #ffd93d; color: #ffd93d; background: #1a1400; }
     .go-px.concern { border-color: #ff4422; color: #ff4422; background: #1a0800; }
 
     /* RIGHT PANEL — milestones */
     .right {
-      width: 185px; flex-shrink: 0;
+      width: 195px; flex-shrink: 0;
       display: flex; flex-direction: column;
       background: #080c12;
     }
@@ -176,7 +181,7 @@
     .ms-list::-webkit-scrollbar-thumb { background: #1a2030; }
     .ms-item {
       display: flex; align-items: center; gap: 7px;
-      padding: 5px 8px; border-bottom: 1px solid #0d1620;
+      padding: 6px 8px; border-bottom: 1px solid #0d1620;
       position: relative;
     }
     .ms-line {
@@ -187,7 +192,7 @@
     .ms-item:first-child .ms-line { top: 50%; }
     .ms-item:last-child .ms-line  { bottom: 50%; }
     .ms-dot {
-      width: 8px; height: 8px; flex-shrink: 0;
+      width: 10px; height: 10px; flex-shrink: 0;
       border: 2px solid; z-index: 1; position: relative;
     }
     .ms-dot.done { background: #00e87a; border-color: #00e87a; }
@@ -195,22 +200,22 @@
     .ms-dot.pending { background: #0a0e14; border-color: #1a2030; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
     .ms-info { flex: 1; min-width: 0; }
-    .ms-label { font-size: 6px; color: rgba(255,255,255,0.35); line-height: 1; }
-    .ms-time { font-size: 5px; color: rgba(255,255,255,0.2); margin-top: 3px; }
+    .ms-label { font-size: 8px; color: rgba(255,255,255,0.45); line-height: 1; }
+    .ms-time { font-size: 6px; color: rgba(255,255,255,0.3); margin-top: 4px; }
     .ms-item.done .ms-label { color: #00e87a; }
     .ms-item.next .ms-label { color: #ffd93d; }
 
     .rkt-section {
       border-top: 3px solid #00e87a;
-      padding: 6px 8px; background: #0d1620; flex-shrink: 0;
+      padding: 7px 8px; background: #0d1620; flex-shrink: 0;
     }
-    .rkt-img-wrap { width: 28px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; }
-    .rkt-img-wrap img { max-height: 52px; width: auto; object-fit: contain; object-position: bottom; }
+    .rkt-img-wrap { width: 36px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; }
+    .rkt-img-wrap img { max-height: 60px; width: auto; object-fit: contain; object-position: bottom; }
     .rkt-details { flex: 1; }
-    .rkt-name { font-size: 8px; color: #fff; margin-bottom: 3px; }
-    .rkt-sub { font-size: 5px; color: rgba(255,255,255,0.25); margin-bottom: 4px; }
+    .rkt-name { font-size: 9px; color: #fff; margin-bottom: 4px; }
+    .rkt-sub { font-size: 6px; color: rgba(255,255,255,0.35); margin-bottom: 5px; }
     .rkt-tags { display: flex; gap: 3px; flex-wrap: wrap; }
-    .rkt-tag { font-size: 5px; padding: 2px 4px; border: 1px solid #1a2030; color: rgba(255,255,255,0.25); }
+    .rkt-tag { font-size: 5px; padding: 2px 4px; border: 1px solid #1a2030; color: rgba(255,255,255,0.3); }
 
     /* STATUS STRIP */
     .status-strip {
@@ -221,9 +226,9 @@
     }
     .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
     .ss-item:first-child { padding-left: 0; }
-    .ss-lbl { font-size: 5px; color: #4a9ede; }
-    .ss-val { font-size: 6px; color: #fff; }
-    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .ss-lbl { font-size: 6px; color: #4a9ede; }
+    .ss-val { font-size: 7px; color: #fff; }
+    .ss-dot { width: 8px; height: 8px; flex-shrink: 0; }
 
     .loading { display: flex; align-items: center; justify-content: center; padding: 20px; font-size: 6px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; }
   </style>
@@ -250,7 +255,7 @@
     <div class="left">
       <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> EST. ORBIT</div>
       <div class="radar-wrap">
-        <canvas id="earthCanvas" width="170" height="196"></canvas>
+        <canvas id="earthCanvas"></canvas>
         <div class="orbit-pill" id="orbit-pill">ORBIT TBD</div>
       </div>
       <div class="win-section">
@@ -272,6 +277,7 @@
     <!-- CENTER: data + desc + booster/site + stats + wx -->
     <div class="center">
       <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> MISSION DATA FEED</div>
+      <div class="key-block" id="key-block" style="display:none;"></div>
       <div class="info-scroll" id="info-scroll">
         <div class="loading">FETCHING MISSION DATA...</div>
       </div>
@@ -473,17 +479,39 @@
     // ── Earth canvas (top-down polar view) ────────────────────────────────────
     const ec = document.getElementById('earthCanvas');
     const ectx = ec.getContext('2d');
-    const CX=85, CY=95, R=68;
+    let CX=85, CY=95, R=68;
     let angle=0, orbitType='LEO';
+    let padLat=null, padLon=null;
 
-    const ORBIT_STYLES = {
-      'LEO': { r: R+16, color:'#00e87a', dash:[4,4] },
-      'MEO': { r: R+28, color:'#4a9ede', dash:[4,4] },
-      'GEO': { r: R+42, color:'#ffd93d', dash:[3,3] },
-      'SSO': { r: R+16, color:'#ff9933', dash:[2,2], inclined: true },
-      'TLI': { r: R+48, color:'#ff4422', dash:[4,4] },
-      'SUB': { r: R+10, color:'#aaaaaa', dash:[2,4] },
+    // orbit type → drawing parameters
+    // frac: orbit radius as multiple of Earth visual radius R
+    // type:'ellipse' → GTO/HEO: peri/apo in units of R, Earth at one focus
+    // type:'lunar'   → TLI: completely different scene with Moon
+    // inclined       → SSO: tilted ellipse
+    // polar          → 90° polar orbit
+    const ORBIT_DEFS = {
+      'LEO':   { frac:1.22, color:'#00e87a', rgb:'0,232,122',   dash:[4,4] },
+      'MEO':   { frac:1.45, color:'#4a9ede', rgb:'74,158,222',  dash:[4,4] },
+      'GEO':   { frac:1.72, color:'#ffd93d', rgb:'255,217,61',  dash:[3,3] },
+      'GTO':   { type:'ellipse', peri:1.10, apo:2.20, color:'#ff9933', rgb:'255,153,51', dash:[3,4] },
+      'SSO':   { frac:1.22, color:'#ff9933', rgb:'255,153,51',  dash:[2,2], inclined:true },
+      'POLAR': { frac:1.22, color:'#4a9ede', rgb:'74,158,222',  dash:[2,2], polar:true },
+      'TLI':   { type:'lunar', color:'#ff4422', rgb:'255,68,34', dash:[4,4] },
+      'SUB':   { frac:1.10, color:'#aaaaaa', rgb:'170,170,170', dash:[2,4], arc:true },
+      'HEO':   { type:'ellipse', peri:1.08, apo:1.95, color:'#cc66ff', rgb:'204,102,255', dash:[4,4] },
     };
+
+    function initCanvas() {
+      const w = ec.offsetWidth;
+      const h = ec.offsetHeight;
+      if (w > 10 && h > 10) {
+        ec.width = w;
+        ec.height = h;
+        CX = w / 2;
+        CY = h / 2;
+        R = Math.min(w * 0.38, h * 0.26);
+      }
+    }
 
     function proj(lat,lon){
       const d=(90-lat)/90;
@@ -491,47 +519,40 @@
       return [CX+R*d*Math.sin(lonr), CY-R*d*Math.cos(lonr)];
     }
 
-    function drawTopDown(){
-      ectx.clearRect(0,0,170,196);
-      ectx.fillStyle='#060a0e'; ectx.fillRect(0,0,170,196);
-
-      // Stars
-      ectx.fillStyle='rgba(255,255,255,0.5)';
-      [[5,8],[162,12],[8,85],[165,80],[10,155],[160,148],[85,5],[88,188],[3,125],[167,118],[155,30],[15,160]].forEach(([sx,sy])=>ectx.fillRect(sx,sy,1,1));
-
-      // Atmosphere
-      for(let r=R+2;r<=R+10;r+=3){
-        ectx.strokeStyle=`rgba(30,80,160,${0.08-(r-R)*0.005})`;
+    // ── Draw Earth globe (reused by both scenes) ──────────────────────────────
+    function drawEarth(cx, cy, re) {
+      // Atmosphere glow
+      for(let r=re+1;r<=re+6;r+=2){
+        ectx.strokeStyle=`rgba(30,80,160,${0.09-(r-re)*0.01})`;
         ectx.lineWidth=3;
-        ectx.beginPath();ectx.arc(CX,CY,r,0,Math.PI*2);ectx.stroke();
+        ectx.beginPath();ectx.arc(cx,cy,r,0,Math.PI*2);ectx.stroke();
       }
-
       // Ocean
-      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);
+      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);
       ectx.fillStyle='#0a2040';ectx.fill();
 
-      // Clip
       ectx.save();
-      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);ectx.clip();
+      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);ectx.clip();
 
-      // Grid
+      // Grid lines
       ectx.setLineDash([2,3]);
       [30,60].forEach(lat=>{
         const d=(90-lat)/90;
         ectx.strokeStyle='rgba(30,80,140,0.2)';ectx.lineWidth=0.8;
-        ectx.beginPath();ectx.arc(CX,CY,R*d,0,Math.PI*2);ectx.stroke();
+        ectx.beginPath();ectx.arc(cx,cy,re*d,0,Math.PI*2);ectx.stroke();
       });
       for(let lo=0;lo<360;lo+=30){
         const loR=lo*Math.PI/180;
         ectx.strokeStyle='rgba(30,80,140,0.15)';ectx.lineWidth=0.8;
-        ectx.beginPath();ectx.moveTo(CX,CY);
-        ectx.lineTo(CX+R*Math.sin(loR),CY-R*Math.cos(loR));ectx.stroke();
+        ectx.beginPath();ectx.moveTo(cx,cy);
+        ectx.lineTo(cx+re*Math.sin(loR),cy-re*Math.cos(loR));ectx.stroke();
       }
       ectx.setLineDash([]);
 
-      // Continents
+      // Continents (north-polar projection centred on cx,cy)
+      const _proj=(lat,lon)=>{const d=(90-lat)/90,lr=lon*Math.PI/180;return[cx+re*d*Math.sin(lr),cy-re*d*Math.cos(lr)];};
       ectx.fillStyle='#1e5020';
-      const continents = [
+      [
         [[72,-140],[76,-95],[72,-75],[62,-62],[50,-62],[38,-72],[28,-90],[32,-118],[44,-126],[58,-132],[68,-140]],
         [[84,-30],[80,-18],[74,-18],[70,-28],[72,-42],[78,-48],[82,-44]],
         [[72,14],[68,28],[58,24],[46,10],[44,2],[50,-4],[56,4],[62,8],[68,16]],
@@ -539,66 +560,325 @@
         [[65,50],[60,60],[50,68],[40,60],[35,44],[42,36],[55,40]],
         [[55,100],[48,120],[38,130],[28,118],[25,100],[30,85],[42,82],[52,92]],
         [[38,10],[34,36],[22,44],[8,42],[0,32],[4,14],[14,-2],[26,-4],[36,2]],
-      ];
-      continents.forEach(pts=>{
+      ].forEach(pts=>{
         ectx.beginPath();
-        pts.forEach(([la,lo],i)=>{const[x,y]=proj(la,lo);i===0?ectx.moveTo(x,y):ectx.lineTo(x,y);});
+        pts.forEach(([la,lo],i)=>{const[x,y]=_proj(la,lo);i===0?ectx.moveTo(x,y):ectx.lineTo(x,y);});
         ectx.closePath();ectx.fill();
       });
-      // Small islands/features
       [[36,138,4,8,-0.4],[65,-20,5,4,0],[56,38,3,3,0]].forEach(([la,lo,rx,ry,rot])=>{
-        const[x,y]=proj(la,lo);
-        ectx.beginPath();ectx.ellipse(x,y,rx,ry,rot,0,Math.PI*2);ectx.fill();
+        const[x,y]=_proj(la,lo);ectx.beginPath();ectx.ellipse(x,y,rx*(re/R),ry*(re/R),rot,0,Math.PI*2);ectx.fill();
       });
-
-      // North pole ice
+      // Ice cap
       ectx.fillStyle='rgba(180,220,255,0.55)';
-      ectx.beginPath();ectx.arc(CX,CY,R*0.1,0,Math.PI*2);ectx.fill();
-
+      ectx.beginPath();ectx.arc(cx,cy,re*0.10,0,Math.PI*2);ectx.fill();
       ectx.restore();
 
-      // Earth border
-      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);
+      // Border
+      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);
       ectx.strokeStyle='rgba(74,158,222,0.35)';ectx.lineWidth=2;ectx.stroke();
+    }
 
-      // Orbit
-      const orb = ORBIT_STYLES[orbitType] || ORBIT_STYLES['LEO'];
-      ectx.strokeStyle=orb.color+'88';ectx.lineWidth=1.5;
-      ectx.setLineDash(orb.dash);
-      if (orb.inclined) {
-        ectx.save();
-        ectx.beginPath();ectx.arc(CX,CY,R+50,0,Math.PI*2);ectx.clip();
-        ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
-        ectx.beginPath();ectx.ellipse(0,0,orb.r*0.5,orb.r,0,0,Math.PI*2);ectx.stroke();
-        ectx.restore();
-        ectx.restore();
-      } else {
-        ectx.beginPath();ectx.arc(CX,CY,orb.r,0,Math.PI*2);ectx.stroke();
-      }
+    // ── Stars background ──────────────────────────────────────────────────────
+    function drawStars(W, H) {
+      ectx.fillStyle='rgba(255,255,255,0.5)';
+      [[0.029,0.041],[0.953,0.061],[0.047,0.434],[0.971,0.408],[0.059,0.791],[0.941,0.755],
+       [0.500,0.026],[0.518,0.959],[0.018,0.638],[0.982,0.602],[0.912,0.153],[0.088,0.816],
+       [0.250,0.150],[0.750,0.200],[0.150,0.550],[0.850,0.650],[0.400,0.880],[0.600,0.120],
+       [0.700,0.750],[0.300,0.750],[0.920,0.450],[0.080,0.350]
+      ].forEach(([fx,fy])=>ectx.fillRect(Math.round(fx*W),Math.round(fy*H),1,1));
+    }
+
+    // ── Elliptical orbit (GTO / HEO) ─────────────────────────────────────────
+    function drawEllipticalOrbit(def) {
+      const r_peri = R * def.peri;
+      const r_apo  = R * def.apo;
+      const a = (r_peri + r_apo) / 2;
+      const c = (r_apo  - r_peri) / 2;
+      const b = Math.sqrt(Math.max(1, a*a - c*c));
+      const rot = (angle * 0.04) % (Math.PI*2);
+
+      ectx.save();
+      ectx.translate(CX, CY);
+      ectx.rotate(rot);
+
+      // Orbit path — Earth at right focus → ellipse center shifted left by c
+      ectx.strokeStyle = def.color+'88'; ectx.lineWidth=1.5;
+      ectx.setLineDash(def.dash);
+      ectx.beginPath();
+      ectx.ellipse(-c, 0, a, b, 0, 0, Math.PI*2);
+      ectx.stroke();
       ectx.setLineDash([]);
 
-      // Satellite
-      const sx=CX+orb.r*Math.cos(angle);
-      const sy=CY+orb.r*Math.sin(angle);
-      for(let t=5;t>=1;t--){
-        const ta=angle-t*0.08;
-        const tx=CX+orb.r*Math.cos(ta),ty=CY+orb.r*Math.sin(ta);
-        ectx.fillStyle=`rgba(0,232,122,${0.07*t})`;
-        ectx.fillRect(tx-2,ty-2,4,4);
+      // Perigee marker (closest point to Earth = right vertex of ellipse)
+      ectx.fillStyle = def.color+'60';
+      ectx.fillRect(-c+a-2, -2, 4, 4);
+
+      // Spacecraft with Kepler speed variation (faster near Earth)
+      const e_ecc = c / a;
+      const M = (angle * 0.65) % (Math.PI*2);
+      let E = M;
+      for(let i=0;i<6;i++) E = M + e_ecc*Math.sin(E);
+      const cosF = (Math.cos(E)-e_ecc)/(1-e_ecc*Math.cos(E));
+      const sinF = Math.sqrt(1-e_ecc*e_ecc)*Math.sin(E)/(1-e_ecc*Math.cos(E));
+      const r_sc  = a*(1-e_ecc*Math.cos(E));
+      const scx = -c + r_sc*cosF;
+      const scy =      r_sc*sinF;
+
+      // Trail
+      for(let t=6;t>=1;t--){
+        const tM=(M-t*0.07+Math.PI*2)%(Math.PI*2);
+        let tE=tM; for(let i=0;i<3;i++) tE=tM+e_ecc*Math.sin(tE);
+        const tc=(Math.cos(tE)-e_ecc)/(1-e_ecc*Math.cos(tE));
+        const ts2=Math.sqrt(1-e_ecc*e_ecc)*Math.sin(tE)/(1-e_ecc*Math.cos(tE));
+        const tr=a*(1-e_ecc*Math.cos(tE));
+        ectx.fillStyle=`rgba(${def.rgb},${0.06*t})`;
+        ectx.fillRect(-c+tr*tc-2, tr*ts2-2, 4, 4);
       }
-      ectx.fillStyle=orb.color;
-      ectx.fillRect(sx-3,sy-3,6,6);
+      ectx.fillStyle=def.color;
+      ectx.fillRect(scx-3, scy-3, 6, 6);
+      ectx.restore();
+    }
+
+    // ── Lunar free-return trajectory (Artemis 2) ─────────────────────────────
+    // Layout matches actual Artemis 2 diagram:
+    //   Earth — large, left-centre
+    //   Moon  — smaller, lower-right
+    //   Two Earth parking-orbit ellipses before TLI
+    //   Outbound: departs Earth right side, sweeps UP and RIGHT to Moon's top
+    //   Flyby: wraps clockwise around Moon's FAR (right) side
+    //   Return: sweeps DOWN and LEFT back to Earth bottom — classic figure-8
+    function drawLunarScene(W, H) {
+      // Body positions
+      const ex=W*0.27, ey=H*0.42, Re=W*0.20;
+      const mx=W*0.82, my=H*0.73, Rm=W*0.065;
+
+      // ── Earth parking orbits (two concentric ellipses, tilted slightly) ───
+      ectx.save();
+      ectx.translate(ex, ey);
+      ectx.rotate(-0.18);
+      [[Re*1.30,Re*0.60],[Re*1.70,Re*0.75]].forEach(([ra,rb],i)=>{
+        ectx.strokeStyle=`rgba(150,180,255,${0.18-i*0.04})`;
+        ectx.lineWidth=1;ectx.setLineDash([3,4]);
+        ectx.beginPath();ectx.ellipse(0,0,ra,rb,0,0,Math.PI*2);ectx.stroke();
+      });
+      ectx.setLineDash([]);
+      ectx.restore();
+
+      // ── Trajectory path points ────────────────────────────────────────────
+      // Flyby: clockwise around far (right) side of Moon
+      // approach from upper-left (-120°), depart lower-left (+120°)
+      const flyR    = Rm * 2.8;
+      const flyStart= -Math.PI * 0.67;   // upper-left of Moon
+      const flyEnd  =  Math.PI * 0.67;   // lower-left of Moon
+      const arx = mx + flyR*Math.cos(flyStart);
+      const ary = my + flyR*Math.sin(flyStart);
+      const rtx = mx + flyR*Math.cos(flyEnd);
+      const rty = my + flyR*Math.sin(flyEnd);
+
+      // Outbound: depart upper-right of Earth → sweep up-right → arrive Moon upper-left
+      const dpx=ex+Re*0.72, dpy=ey-Re*0.45;
+      const c1x=W*0.52,     c1y=H*0.03;
+      const c2x=W*0.80,     c2y=H*0.12;
+
+      // Return: depart Moon lower-left → sweep down-left → arrive lower of Earth
+      const rax=ex-Re*0.10, ray=ey+Re*0.85;
+      const r1x=W*0.72,     r1y=H*0.98;
+      const r2x=W*0.30,     r2y=H*0.95;
+
+      // ── Earth glow + globe ────────────────────────────────────────────────
+      const eg=ectx.createRadialGradient(ex,ey,Re*0.5,ex,ey,Re*2.0);
+      eg.addColorStop(0,'rgba(30,80,160,0.20)');eg.addColorStop(1,'rgba(30,80,160,0)');
+      ectx.fillStyle=eg;ectx.beginPath();ectx.arc(ex,ey,Re*2.0,0,Math.PI*2);ectx.fill();
+      drawEarth(ex, ey, Re);
+
+      // ── Moon ──────────────────────────────────────────────────────────────
+      ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);
+      ectx.fillStyle='#555560';ectx.fill();
+      ectx.fillStyle='#484852';
+      [[mx-Rm*0.30,my-Rm*0.22,Rm*0.22],[mx+Rm*0.24,my+Rm*0.28,Rm*0.16],[mx-Rm*0.08,my+Rm*0.40,Rm*0.12]].forEach(([cx2,cy2,cr])=>{
+        ectx.beginPath();ectx.arc(cx2,cy2,cr,0,Math.PI*2);ectx.fill();
+      });
+      ectx.strokeStyle='rgba(200,200,220,0.22)';ectx.lineWidth=1;
+      ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);ectx.stroke();
+
+      // ── Labels ────────────────────────────────────────────────────────────
+      ectx.textAlign='center';
+      ectx.font='6px "Press Start 2P",monospace';
+      ectx.fillStyle='rgba(255,255,255,0.35)';
+      ectx.fillText('EARTH',ex,ey+Re+10);
+      ectx.font='5px "Press Start 2P",monospace';
+      ectx.fillStyle='rgba(255,255,255,0.25)';
+      ectx.fillText('MOON',mx,my+Rm+10);
+
+      // ── Outbound leg (dashed) ─────────────────────────────────────────────
+      ectx.strokeStyle='rgba(255,90,34,0.70)';ectx.lineWidth=1.5;
+      ectx.setLineDash([5,4]);
+      ectx.beginPath();ectx.moveTo(dpx,dpy);
+      ectx.bezierCurveTo(c1x,c1y,c2x,c2y,arx,ary);
+      ectx.stroke();
+
+      // ── Flyby arc — clockwise around far (right) side of Moon ─────────────
+      ectx.setLineDash([]);
+      ectx.strokeStyle='rgba(255,90,34,0.95)';ectx.lineWidth=2;
+      ectx.beginPath();ectx.arc(mx,my,flyR,flyStart,flyEnd,false);ectx.stroke();
+
+      // ── Return leg (dimmer dashed) ────────────────────────────────────────
+      ectx.strokeStyle='rgba(255,90,34,0.28)';ectx.lineWidth=1.5;
+      ectx.setLineDash([4,5]);
+      ectx.beginPath();ectx.moveTo(rtx,rty);
+      ectx.bezierCurveTo(r1x,r1y,r2x,r2y,rax,ray);
+      ectx.stroke();
+      ectx.setLineDash([]);
+
+      // ── Spacecraft animation ───────────────────────────────────────────────
+      // 0.00–0.38: outbound bezier (slower — 4 day coast)
+      // 0.38–0.52: flyby arc clockwise (fast — close approach)
+      // 0.52–1.00: return bezier (slower — 4 day coast)
+      const tn=((angle*0.06)%1+1)%1;
+      let scx,scy;
+      if(tn<0.38){
+        const bt=tn/0.38, om=1-bt;
+        scx=om**3*dpx+3*om**2*bt*c1x+3*om*bt**2*c2x+bt**3*arx;
+        scy=om**3*dpy+3*om**2*bt*c1y+3*om*bt**2*c2y+bt**3*ary;
+      } else if(tn<0.52){
+        const bt=(tn-0.38)/0.14;
+        const fa=flyStart+bt*(flyEnd-flyStart);
+        scx=mx+flyR*Math.cos(fa); scy=my+flyR*Math.sin(fa);
+      } else {
+        const bt=(tn-0.52)/0.48, om=1-bt;
+        scx=om**3*rtx+3*om**2*bt*r1x+3*om*bt**2*r2x+bt**3*rax;
+        scy=om**3*rty+3*om**2*bt*r1y+3*om*bt**2*r2y+bt**3*ray;
+      }
+      const sg=ectx.createRadialGradient(scx,scy,0,scx,scy,7);
+      sg.addColorStop(0,'rgba(255,90,34,0.40)');sg.addColorStop(1,'rgba(255,90,34,0)');
+      ectx.fillStyle=sg;ectx.beginPath();ectx.arc(scx,scy,7,0,Math.PI*2);ectx.fill();
+      ectx.fillStyle='#ff5a22';ectx.fillRect(scx-3,scy-3,6,6);
+    }
+
+    // ── Orbit def resolver — handles raw API strings like "Lunar Flyby", "GTO" ─
+    function resolveOrbitDef(ot) {
+      if (!ot) return ORBIT_DEFS['LEO'];
+      // Exact match first
+      if (ORBIT_DEFS[ot]) return ORBIT_DEFS[ot];
+      const u = ot.toUpperCase();
+      if (ORBIT_DEFS[u]) return ORBIT_DEFS[u];
+      // Fuzzy match
+      if (u.includes('LUNAR') || u.includes('MOON') || u.includes('TLI') || u.includes('CISLUNAR')) return ORBIT_DEFS['TLI'];
+      if (u.includes('TRANSFER') || u.includes('GTO')) return ORBIT_DEFS['GTO'];
+      if (u.includes('HIGHLY ELLIPTICAL') || u.includes('HEO') || u.includes('MOLNIYA')) return ORBIT_DEFS['HEO'];
+      if (u.includes('GEOSTATIONARY') || u.includes('GEO')) return ORBIT_DEFS['GEO'];
+      if (u.includes('MEDIUM') || u.includes('MEO')) return ORBIT_DEFS['MEO'];
+      if (u.includes('SUN-SYNC') || u.includes('SUN SYNC') || u.includes('SSO')) return ORBIT_DEFS['SSO'];
+      if (u.includes('POLAR')) return ORBIT_DEFS['POLAR'];
+      if (u.includes('SUBORBITAL') || u.includes('SUB')) return ORBIT_DEFS['SUB'];
+      return ORBIT_DEFS['LEO'];
+    }
+
+    // ── Main draw ─────────────────────────────────────────────────────────────
+    function drawTopDown(){
+      const W=ec.width, H=ec.height;
+      ectx.clearRect(0,0,W,H);
+      ectx.fillStyle='#060a0e'; ectx.fillRect(0,0,W,H);
+      drawStars(W, H);
+
+      const def = resolveOrbitDef(orbitType);
+
+      if(def.type==='lunar'){
+        drawLunarScene(W, H);
+        return;
+      }
+
+      // Earth-centric view
+      drawEarth(CX, CY, R);
+
+      if(def.type==='ellipse'){
+        drawEllipticalOrbit(def);
+      } else {
+        // Circular / inclined / polar / arc
+        const orb_r = R * def.frac;
+        ectx.strokeStyle=def.color+'88'; ectx.lineWidth=1.5;
+        ectx.setLineDash(def.dash);
+        if(def.inclined){
+          ectx.save();
+          ectx.beginPath();ectx.arc(CX,CY,orb_r*1.1,0,Math.PI*2);ectx.clip();
+          ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
+          ectx.beginPath();ectx.ellipse(0,0,orb_r*0.5,orb_r,0,0,Math.PI*2);ectx.stroke();
+          ectx.restore();ectx.restore();
+        } else if(def.polar){
+          ectx.save();
+          ectx.beginPath();ectx.arc(CX,CY,orb_r*1.1,0,Math.PI*2);ectx.clip();
+          ectx.save();ectx.translate(CX,CY);
+          ectx.beginPath();ectx.ellipse(0,0,orb_r*0.15,orb_r,0,0,Math.PI*2);ectx.stroke();
+          ectx.restore();ectx.restore();
+        } else if(def.arc){
+          ectx.beginPath();ectx.arc(CX,CY,orb_r,-Math.PI*0.65,-Math.PI*0.35);ectx.stroke();
+        } else {
+          ectx.beginPath();ectx.arc(CX,CY,orb_r,0,Math.PI*2);ectx.stroke();
+        }
+        ectx.setLineDash([]);
+
+        // Spacecraft dot + trail
+        if(!def.arc){
+          let sx,sy;
+          if(def.inclined){
+            ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
+            sx=orb_r*0.5*Math.cos(angle); sy=orb_r*Math.sin(angle);
+            for(let t=7;t>=1;t--){
+              const ta=angle-t*0.07;
+              ectx.fillStyle=`rgba(${def.rgb},${0.05*t})`;
+              ectx.fillRect(orb_r*0.5*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
+            }
+            ectx.fillStyle=def.color;ectx.fillRect(sx-3,sy-3,6,6);
+            ectx.restore();
+          } else if(def.polar){
+            ectx.save();ectx.translate(CX,CY);
+            sx=orb_r*0.15*Math.cos(angle); sy=orb_r*Math.sin(angle);
+            for(let t=7;t>=1;t--){
+              const ta=angle-t*0.07;
+              ectx.fillStyle=`rgba(${def.rgb},${0.05*t})`;
+              ectx.fillRect(orb_r*0.15*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
+            }
+            ectx.fillStyle=def.color;ectx.fillRect(sx-3,sy-3,6,6);
+            ectx.restore();
+          } else {
+            sx=CX+orb_r*Math.cos(angle); sy=CY+orb_r*Math.sin(angle);
+            for(let t=8;t>=1;t--){
+              const ta=angle-t*0.07;
+              ectx.fillStyle=`rgba(${def.rgb},${0.06*t})`;
+              ectx.fillRect(CX+orb_r*Math.cos(ta)-2,CY+orb_r*Math.sin(ta)-2,4,4);
+            }
+            ectx.fillStyle=def.color;ectx.fillRect(sx-3,sy-3,6,6);
+          }
+        }
+      }
+
+      // Launch site marker
+      if(padLat!==null&&padLon!==null){
+        const[lsx,lsy]=proj(padLat,padLon);
+        const dist=Math.sqrt((lsx-CX)**2+(lsy-CY)**2);
+        if(dist<=R*0.97){
+          if(Math.floor(angle*4)%2===0){
+            ectx.strokeStyle='rgba(255,68,34,0.6)';ectx.lineWidth=1;
+            ectx.beginPath();ectx.arc(lsx,lsy,5,0,Math.PI*2);ectx.stroke();
+          }
+          ectx.fillStyle='#ff4422';ectx.fillRect(lsx-2,lsy-2,4,4);
+        }
+      }
     }
     function loop(){angle+=0.013;drawTopDown();requestAnimationFrame(loop);}
+    initCanvas();
     loop();
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function inferOrbit(name,desc,vehicle){
       const t=((name||'')+' '+(desc||'')+' '+(vehicle||'')).toLowerCase();
-      if(t.includes('geostationary')||t.includes(' geo ')||t.includes('gto'))return{abbrev:'GEO',name:'Geostationary Orbit'};
+      if(t.includes('lunar')||t.includes('moon')||t.includes('tli')||t.includes('artemis'))return{abbrev:'TLI',name:'Trans-Lunar Injection'};
+      if(t.includes('transfer orbit')||t.includes('gto')||t.includes('geosynchronous transfer'))return{abbrev:'GTO',name:'Geostationary Transfer'};
+      if(t.includes('highly elliptical')||t.includes('heo')||t.includes('molniya'))return{abbrev:'HEO',name:'Highly Elliptical Orbit'};
+      if(t.includes('geostationary')||t.includes(' geo '))return{abbrev:'GEO',name:'Geostationary Orbit'};
       if(t.includes('medium earth')||t.includes(' meo ')||t.includes('gps'))return{abbrev:'MEO',name:'Medium Earth Orbit'};
-      if(t.includes('sun-sync')||t.includes('sso')||t.includes('polar'))return{abbrev:'SSO',name:'Sun-Synchronous Orbit'};
-      if(t.includes('lunar')||t.includes('moon')||t.includes('tli'))return{abbrev:'TLI',name:'Trans-Lunar Injection'};
+      if(t.includes('sun-sync')||t.includes('sso'))return{abbrev:'SSO',name:'Sun-Synchronous Orbit'};
+      if(t.includes('polar orbit'))return{abbrev:'POLAR',name:'Polar Orbit'};
       if(t.includes('suborbital'))return{abbrev:'SUB',name:'Suborbital'};
       return{abbrev:'LEO',name:'Low Earth Orbit'};
     }
@@ -623,9 +903,19 @@
       if(v.includes('new glenn')||v.includes(' ng'))return base+'rocket-NG.png';
       if(v.includes('atlas'))return base+'rocket-atlasV.png';
       if(v.includes('vulcan'))return base+'rocket-vulcan.png';
+      if(v.includes('long march 12')||v.includes('lm-12'))return base+'rocket-longmarch12.png';
+      if(v.includes('long march 2d')||v.includes('cz-2d'))return base+'rocket-longmarch2d.png';
       if(v.includes('long march')||v.includes('kuaizhou'))return base+'rocket-longmarch.png';
       if(v.includes('kairos'))return base+'rocket-KAIROS.png';
       if(v.includes('firefly'))return base+'rocket-firefly.png';
+      if(v.includes('vega'))return base+'rocket-vegaC.png';
+      if(v.includes('jielong')||v.includes('smart dragon'))return base+'rocket-Jielong.png';
+      if(v.includes('falcon heavy'))return base+'rocket-FalconHeavy.png';
+      if(v.includes('minotaur'))return base+'rocket-MinotaurIV.png';
+      if(v.includes('neutron'))return base+'rocket-Neutron.png';
+      if(v.includes('rfa'))return base+'rocket-RFAone.png';
+      if(v.includes('spectrum'))return base+'rocket-Spectrum.png';
+      if(v.includes('tianlong')||v.includes('sky dragon'))return base+'rocket-Tianlong3.png';
       return base+'rocket-falcon9.png';
     }
 
@@ -664,8 +954,8 @@
       const provider=base?.provider||'—';
       const padName=base?.pad||'—';
       const location=base?.location||'—';
-      const padLat=base?.pad_lat?parseFloat(base.pad_lat):null;
-      const padLon=base?.pad_lon?parseFloat(base.pad_lon):null;
+      padLat=base?.pad_lat?parseFloat(base.pad_lat):null;
+      padLon=base?.pad_lon?parseFloat(base.pad_lon):null;
       const missionType=base?.mission_type||'—';
       const missionDesc=base?.mission_desc||'';
       const program=base?.program||'—';
@@ -751,15 +1041,17 @@
       }
       else{t0El.textContent='T-0 · TBD';t0El.className='win-t0 tbd';}
 
-      // Info rows
+      // Key-block hero (pinned above scroll)
+      const kbEl=document.getElementById('key-block');
+      if(kbEl){
+        kbEl.innerHTML=`<div class="key-vehicle">${vehicle}</div><div class="key-sub">${provider}<br>${shorten(location)}</div>`;
+        kbEl.style.display='block';
+      }
+      // Info rows (secondary data only — vehicle/provider/location are in key-block)
       function row(key,val,cls=''){if(!val||val==='—'||val==='Unknown')return'';return`<div class="info-row"><div class="ikey">${key}</div><div class="ival ${cls}">${val}</div></div>`;}
       document.getElementById('info-scroll').innerHTML=[
-        row('MISSION',name,'blue'),
         row('TYPE',missionType,''),
         row('DESTINATION',orbitFull,'green'),
-        row('PROVIDER',provider,''),
-        row('VEHICLE',vehicle,''),
-        row('LAUNCH SITE',shorten(location),''),
         row('PAD',shorten(padName),''),
         program&&program!=='—'?row('PROGRAM',program,'yellow'):'',
       ].join('');

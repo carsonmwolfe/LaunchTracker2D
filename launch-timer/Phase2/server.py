@@ -474,6 +474,19 @@ def settings_page():
 def wifi_page():
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'wifi.html')
 
+@app.route('/positioner')
+def positioner_page():
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'asset-positioner.html')
+
+@app.route('/api/assets')
+def api_assets():
+    assets_dir = os.path.join(BASE_DIR, 'static', 'assets')
+    try:
+        files = sorted([f for f in os.listdir(assets_dir) if f.lower().endswith('.png')])
+    except Exception:
+        files = []
+    return jsonify(files)
+
 
 # ── Primary data endpoint — all pages read from here ─────────────────────────
 
