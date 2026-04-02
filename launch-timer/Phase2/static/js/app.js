@@ -34,6 +34,7 @@ const ASSETS = {
   rocket_generic:   'rocket-falcon9.png',
   rocket_starship:  'rocket-starship.png',
   rocket_soyuz:     'rocket-Soyuz.png',
+  rocket_soyuz5:    'rocket-Soyuz5.png',
   rocket_ariane6:   'rocket-Ariane6.png',
   rocket_sls:       'rocket-SLS.png',
   rocket_kinetica:  'rocket-Kinetica2.png',
@@ -580,6 +581,7 @@ function getRocketAssetKey(vehicle) {
   if (!vehicle) return 'rocket_generic';
   const v = vehicle.toLowerCase();
   if (v.includes('starship'))  return 'rocket_starship';
+  if (v.includes('soyuz-5') || v.includes('soyuz5')) return 'rocket_soyuz5';
   if (v.includes('soyuz'))     return 'rocket_soyuz';
   if (v.includes('ariane'))    return 'rocket_ariane6';
   if (v.includes('sls') || v.includes('space launch system')) return 'rocket_sls';
@@ -618,6 +620,7 @@ const ROCKET_CONFIG = {
   rocket_firefly:     { pad: { x: 470, y: 210, h: 164 }, te: { x: 167, y: 203, h: 164 } },
   rocket_starship:    { pad: { x: 445, y: 157, h: 228 }, te: { x: 143, y: 148, h: 228 } },
   rocket_soyuz:       { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
+  rocket_soyuz5:      { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
   rocket_ariane6:     { pad: { x: 472, y: 204, h: 146 }, te: { x: 173, y: 194, h: 146 } },
   rocket_sls:         { pad: { x: 513, y: 177, h: 169 }, te: { x: 208, y: 170, h: 169 } },
   rocket_kinetica:    { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
@@ -637,6 +640,18 @@ const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
 const NOZZLE_Y   = 280;
 
+function drawMLPRocket() {
+  // Draw the next rocket on the MLP — must be called BEFORE drawMLP() so MLP overlays it
+  const nextLaunch = state.launches[state.currentIdx + 1] || null;
+  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const assetKey2  = getRocketAssetKey(vehicle2);
+  const rocketImg  = IMG[assetKey2];
+  if (!rocketImg) return;
+  const cfg  = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
+  const rw2  = Math.round(rocketImg.width * (cfg.h / rocketImg.height));
+  ctx.drawImage(rocketImg, cfg.x, cfg.y, rw2, cfg.h);
+}
+
 function drawMLP() {
   if (!IMG.mlp) return;
   const h = 78;
@@ -646,15 +661,6 @@ function drawMLP() {
   ctx.rotate(0.0021);
   ctx.drawImage(IMG.mlp, -w / 2, -39, w, h);
   ctx.restore();
-  // Draw next rocket upright on the MLP
-  const nextLaunch = state.launches[state.currentIdx + 1] || null;
-  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
-  const assetKey2  = getRocketAssetKey(vehicle2);
-  const rocketImg  = IMG[assetKey2];
-  if (!rocketImg) return;
-  const cfg  = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
-  const rw2  = Math.round(rocketImg.width * (cfg.h / rocketImg.height));
-  ctx.drawImage(rocketImg, cfg.x, cfg.y, rw2, cfg.h);
 }
 
 function drawRocket() {
@@ -1653,11 +1659,13 @@ function render(now) {
   if (cond === 'fog') drawFog();
   drawVAB();
   // drawFences();
-  drawRocket();         // ← Draw rocket FIRST (behind)
+  drawMLPRocket();      // ← Next rocket behind MLP
+  drawMLP();            // ← MLP over its rocket
+  drawRocket();         // ← Active pad rocket (behind tower)
   drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
-  drawMLP();            // ← MLP frontmost layer
+  
   //drawPond();
   drawBirds();
   drawCars();
