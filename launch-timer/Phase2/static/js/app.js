@@ -313,9 +313,9 @@ function drawVAB() {
   const groundY = 422;
   const y = groundY - h;
   ctx.save();
-  ctx.filter = 'opacity(88%) saturate(75%) brightness(92%)';
+  ctx.globalAlpha = 0.88;
   ctx.drawImage(IMG.vab, x, y, w, h);
-  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
   // Light atmospheric haze
   ctx.fillStyle = 'rgba(140,170,200,0.08)';
   ctx.fillRect(x, y, w, h);
@@ -670,8 +670,9 @@ function drawBackgroundPad() {
   const ty = groundY - th;
 
   ctx.save();
-  ctx.filter = 'opacity(82%) saturate(60%) brightness(88%)';
+  ctx.globalAlpha = 0.82;
   ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
+  ctx.globalAlpha = 1;
 
   // Next rocket sitting on this pad
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
@@ -682,11 +683,14 @@ function drawBackgroundPad() {
   let rocketMidY = ty + Math.round(th * 0.55);
   let rocketRightX = padX - 2;
 
-  const rocketX2 = 272;  // left edge of rocket image
   if (rocketImg) {
     const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
     const rh  = Math.round(cfg.h * sc);
     const rw  = Math.round(rocketImg.width * (rh / rocketImg.height));
+    // Scale the main-pad x offset relative to padX
+    const mainNozzleX = NOZZLE_X;  // main pad nozzle centre
+    const rocketOffsetFromNozzle = cfg.x - mainNozzleX;
+    const rocketX2 = padX + Math.round(rocketOffsetFromNozzle * sc) - 18;  // ← nudge left/right
     rocketTop = ty + Math.round(th * 0.32);
     rocketMidY = rocketTop + Math.round(rh * 0.5);
     rocketRightX = rocketX2 + rw;
@@ -694,7 +698,7 @@ function drawBackgroundPad() {
   }
 
   // ── Umbilicals — tower face → right side of rocket ──
-  const towerFaceX2 = padX + 10;
+  const towerFaceX2 = padX + Math.round(10 * sc);
   const rocketSkinX = rocketRightX;
   const umbColors = ['#ffffff', '#cc2222', '#ffffff'];
   [0.30, 0.50, 0.68].forEach((frac) => {
@@ -741,7 +745,7 @@ function drawBackgroundPad() {
   }
   ctx.globalAlpha = 1;
 
-  ctx.filter = 'none';
+
 
   // ── Flood lights — drawn inside save/restore so haze filter applies ──
   const sl2groundY = groundY - 11;
@@ -778,12 +782,14 @@ const sl2targetX = padX - 10;
     ctx.drawImage(IMG.floodlight, sl2rx - fw2/2, sl2groundY - fh2, fw2, fh2);
   }
 
-  // Haze overlay
-  const hazeGrad = ctx.createRadialGradient(padX, ty + th * 0.5, th * 0.1, padX, ty + th * 0.5, th * 0.75);
-  hazeGrad.addColorStop(0, 'rgba(140,170,200,0.10)');
-  hazeGrad.addColorStop(1, 'rgba(140,170,200,0)');
-  ctx.fillStyle = hazeGrad;
-  ctx.fillRect(tx - 20, ty - 10, tw + 40, th + 20);
+  // Haze overlay — day only (at night the rect edge is visible)
+  if (!isNight()) {
+    const hazeGrad = ctx.createRadialGradient(padX, ty + th * 0.5, th * 0.1, padX, ty + th * 0.5, th * 0.75);
+    hazeGrad.addColorStop(0, 'rgba(140,170,200,0.10)');
+    hazeGrad.addColorStop(1, 'rgba(140,170,200,0)');
+    ctx.fillStyle = hazeGrad;
+    ctx.fillRect(tx - 20, ty - 10, tw + 40, th + 20);
+  }
 
   ctx.restore();
 }
@@ -1750,7 +1756,7 @@ function drawMilestoneTimeline() {
 //  MAIN RENDER LOOP
 // ─────────────────────────────────────────────────────────────────────────────
 let lastFrame = 0;
-const TARGET_FPS = 30;
+const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
 function render(now) {
