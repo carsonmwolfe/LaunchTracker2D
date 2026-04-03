@@ -19,9 +19,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const ASSETS = {
   // Landscape / structures
-  vab:             'ground-VAB.png',  // Updated to new VAB
-  launchTower:     'ground-LaunchPad.png',  // This file contains both tower AND pad
+  vab:             'ground-VAB.png',
+  launchTower:     'ground-LaunchPad.png',
   launchPad:       'ground-LaunchPad.png',
+  floodlight:      'ground-floodlight.png',
   countdownClock:  'ground-countdownclock.png',  // New countdown clock display
   mlp:             'ground-MLP.png',
   rocket_falcon9:   'rocket-falcon9.png',
@@ -305,9 +306,20 @@ function drawPixelGrass() {
 // ─────────────────────────────────────────────────────────────────────────────
 function drawVAB() {
   if (!IMG.vab) return;
-  const h = 427;
+  // Slightly smaller + subtle haze to read as distant background
+  const h = 200;
   const w = Math.round(IMG.vab.width * (h / IMG.vab.height));
-  ctx.drawImage(IMG.vab, -64, 61, w, h);
+  const x = -15;
+  const groundY = 422;
+  const y = groundY - h;
+  ctx.save();
+  ctx.filter = 'opacity(88%) saturate(75%) brightness(92%)';
+  ctx.drawImage(IMG.vab, x, y, w, h);
+  ctx.filter = 'none';
+  // Light atmospheric haze
+  ctx.fillStyle = 'rgba(140,170,200,0.08)';
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,9 +327,9 @@ function drawVAB() {
 // ─────────────────────────────────────────────────────────────────────────────
 function drawLaunchTower() {
   if (IMG.launchTower) {
-    const h = 289;
+    const h = 250;
     const w = Math.round(IMG.launchTower.width * (h / IMG.launchTower.height));
-    ctx.drawImage(IMG.launchTower, 456, 141.1, w, h);
+    ctx.drawImage(IMG.launchTower, 465, 160, w, h);
   }
 }
 
@@ -325,7 +337,7 @@ function drawLaunchPad() {
   // Skip - the pad is already included in the tower image
   // Only draw if we have a separate pad asset AND no tower
   if (IMG.launchPad && !IMG.launchTower) {
-    ctx.drawImage(IMG.launchPad, 550, 320, 140, 40);
+    ctx.drawImage(IMG.launchPad, 550, 325, 140, 70);
   }
 }
 
@@ -428,35 +440,43 @@ function drawPond() {
 // ─────────────────────────────────────────────────────────────────────────────
 function drawSpotlights() {
   // Spotlight poles sit left and right of the pad, aim at the rocket centre
-  const groundY = PAD_Y_BASE + 7;
-  const poleH   = 30;
+  const groundY = PAD_Y_BASE + 22;
   const targetX = NOZZLE_X + 10;   // rocket centre
   const targetY = NOZZLE_Y - 40;
-  const lx      = targetX - 60;   // left pole
-  const rx      = targetX + 80;    // right pole
+  const lx      = targetX - 110;   // left pole
+  const rx      = targetX + 110;   // right pole
 
-  drawRect(lx + 4, groundY - poleH, 3, poleH, '#505050');
-  drawRect(rx + 4, groundY - poleH, 3, poleH, '#505050');
-  drawRect(lx,     groundY - poleH - 5, 12, 6, '#404040');
-  drawRect(rx,     groundY - poleH - 5, 12, 6, '#404040');
+  const fh = 40;
+  const fw = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh / IMG.floodlight.height)) : 12;
+  // Beam origin = centre of each PNG
+  const lCX  = lx + fw / 2;
+  const rCX  = rx + fw / 2;
+  const headY = groundY - fh / 2;  // vertically centred on image
+
   if (isNight()) {
+    // Beams from centre of PNG
     ctx.save();
     ctx.globalAlpha = 0.28;
-    const g1 = ctx.createLinearGradient(lx+6, groundY-poleH, targetX, targetY);
+    const g1 = ctx.createLinearGradient(lCX, headY, targetX, targetY);
     g1.addColorStop(0, '#ffffcc'); g1.addColorStop(1, 'rgba(255,255,180,0)');
     ctx.fillStyle = g1;
-    ctx.beginPath(); ctx.moveTo(lx+6, groundY-poleH); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(lx+8, groundY-poleH); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(lCX-4, headY); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(lCX+4, headY); ctx.fill();
     ctx.globalAlpha = 0.28;
-    const g2 = ctx.createLinearGradient(rx+6, groundY-poleH, targetX, targetY);
+    const g2 = ctx.createLinearGradient(rCX, headY, targetX, targetY);
     g2.addColorStop(0, '#ffffcc'); g2.addColorStop(1, 'rgba(255,255,180,0)');
     ctx.fillStyle = g2;
-    ctx.beginPath(); ctx.moveTo(rx+6, groundY-poleH); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(rx+8, groundY-poleH); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(rCX-4, headY); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(rCX+4, headY); ctx.fill();
     ctx.globalAlpha = 1; ctx.restore();
-    drawRect(lx+3, groundY-poleH-4, 6, 4, '#ffffcc');
-    drawRect(rx+3, groundY-poleH-4, 6, 4, '#ffffcc');
-  } else {
-    drawRect(lx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
-    drawRect(rx+3, groundY-poleH-4, 6, 4, '#2a2a2a');
+  }
+
+  // Floodlight images centred on lx/rx
+  if (IMG.floodlight) {
+    ctx.drawImage(IMG.floodlight, lx, groundY - fh, fw, fh);
+    ctx.save();
+    ctx.translate(rx + fw, groundY - fh);
+    ctx.scale(-1, 1);
+    ctx.drawImage(IMG.floodlight, 0, 0, fw, fh);
+    ctx.restore();
   }
 
   // ── Blinking aviation lights on right side of tower ───────────────────────
@@ -637,26 +657,134 @@ const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
 const NOZZLE_Y   = 280;
 
-function drawMLPRocket() {
-  // Draw the next rocket on the MLP — must be called BEFORE drawMLP() so MLP overlays it
+function drawBackgroundPad() {
+  if (!IMG.launchTower) return;
+
+  const sc      = 0.40;   // scale vs main pad
+  const groundY = 385;
+  const padX    = 300;    // centre X
+
+  const th = Math.round(289 * sc);
+  const tw = Math.round(IMG.launchTower.width * (th / IMG.launchTower.height));
+  const tx = padX - tw / 2;
+  const ty = groundY - th;
+
+  ctx.save();
+  ctx.filter = 'opacity(82%) saturate(60%) brightness(88%)';
+  ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
+
+  // Next rocket sitting on this pad
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
   const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey2  = getRocketAssetKey(vehicle2);
   const rocketImg  = IMG[assetKey2];
-  if (!rocketImg) return;
-  const cfg  = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).te;
-  const rw2  = Math.round(rocketImg.width * (cfg.h / rocketImg.height));
-  ctx.drawImage(rocketImg, cfg.x, cfg.y, rw2, cfg.h);
-}
+  let rocketTop = ty + Math.round(th * 0.32);
+  let rocketMidY = ty + Math.round(th * 0.55);
+  let rocketRightX = padX - 2;
 
-function drawMLP() {
-  if (!IMG.mlp) return;
-  const h = 78;
-  const w = Math.round(IMG.mlp.width * (h / IMG.mlp.height));
-  ctx.save();
-  ctx.translate(233, 348);
-  ctx.rotate(0.0021);
-  ctx.drawImage(IMG.mlp, -w / 2, -39, w, h);
+  const rocketX2 = 272;  // left edge of rocket image
+  if (rocketImg) {
+    const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
+    const rh  = Math.round(cfg.h * sc);
+    const rw  = Math.round(rocketImg.width * (rh / rocketImg.height));
+    rocketTop = ty + Math.round(th * 0.32);
+    rocketMidY = rocketTop + Math.round(rh * 0.5);
+    rocketRightX = rocketX2 + rw;
+    ctx.drawImage(rocketImg, rocketX2, rocketTop, rw, rh);
+  }
+
+  // ── Umbilicals — tower face → right side of rocket ──
+  const towerFaceX2 = padX + 10;
+  const rocketSkinX = rocketRightX;
+  const umbColors = ['#ffffff', '#cc2222', '#ffffff'];
+  [0.30, 0.50, 0.68].forEach((frac) => {
+    const armY = ty + Math.round(th * frac);
+    // Rigid arm beam
+    ctx.strokeStyle = '#777777';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(towerFaceX2, armY); ctx.lineTo(rocketSkinX, armY); ctx.stroke();
+    // Bracket at tower
+    ctx.fillStyle = '#555555';
+    ctx.fillRect(towerFaceX2, armY - 2, 3, 4);
+    // Connector at rocket skin
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(rocketSkinX - 2, armY - 2, 3, 4);
+    // Cable droop
+    umbColors.forEach((col, j) => {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rocketSkinX, armY + (j - 1));
+      ctx.quadraticCurveTo(rocketSkinX + 2, armY + 3 + (j - 1), rocketSkinX - 1, armY + 1 + (j - 1));
+      ctx.stroke();
+    });
+  });
+
+  // ── Vent smoke (same logic as main pad) ──
+  const ventX2 = 272 - 2;
+  const ventY2 = rocketMidY;
+  const f2 = state.smokeFrame;
+  for (let i = 0; i < 12; i++) {
+    const dist    = (f2 * 0.5 + i * 6) % 100;
+    const smx     = ventX2 - dist * sc;
+    const smy     = ventY2 + dist * 0.08 + (i % 3 - 1) * 2;
+    const opacity = 1 - dist / 100;
+    if (opacity > 0.08) {
+      const sz   = dist < 20 ? 4 + i % 3 : 4 + i % 3 + Math.floor(dist / 6);
+      const gray = dist < 20 ? 245 : 220;
+      ctx.globalAlpha = opacity * 0.7;
+      ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+      ctx.beginPath();
+      ctx.ellipse(smx, smy, sz * sc / 2, sz * sc / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.filter = 'none';
+
+  // ── Flood lights — drawn inside save/restore so haze filter applies ──
+  const sl2groundY = groundY - 11;
+const sl2targetX = padX - 10;
+  const sl2targetY = rocketMidY - 16;
+  const sl2lx      = sl2targetX - 30;
+  const sl2rx      = sl2targetX + 60;
+
+  if (isNight()) {
+    const fh2 = 18;
+    const fw2 = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh2 / IMG.floodlight.height)) : 8;
+    const sl2beamLX = sl2lx + fw2 / 2 - 9;   // ← left beam offset (+ = right, - = left)
+    const sl2beamRX = sl2rx + fw2 / 2 - 9;   // ← right beam offset
+    const sl2CX = sl2beamLX;
+    const sl2RCX = sl2beamRX;
+    const sl2headY = sl2groundY - fh2 / 2;
+    ctx.globalAlpha = 0.28;
+    const sg1 = ctx.createLinearGradient(sl2CX, sl2headY, sl2targetX, sl2targetY);
+    sg1.addColorStop(0, '#ffffcc'); sg1.addColorStop(1, 'rgba(255,255,180,0)');
+    ctx.fillStyle = sg1;
+    ctx.beginPath(); ctx.moveTo(sl2CX-3, sl2headY); ctx.lineTo(sl2targetX-8, sl2targetY); ctx.lineTo(sl2targetX+8, sl2targetY); ctx.lineTo(sl2CX+3, sl2headY); ctx.fill();
+    ctx.globalAlpha = 0.28;
+    const sg2 = ctx.createLinearGradient(sl2RCX, sl2headY, sl2targetX, sl2targetY);
+    sg2.addColorStop(0, '#ffffcc'); sg2.addColorStop(1, 'rgba(255,255,180,0)');
+    ctx.fillStyle = sg2;
+    ctx.beginPath(); ctx.moveTo(sl2RCX-3, sl2headY); ctx.lineTo(sl2targetX-8, sl2targetY); ctx.lineTo(sl2targetX+8, sl2targetY); ctx.lineTo(sl2RCX+3, sl2headY); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (IMG.floodlight) {
+    const fh2 = 18;
+    const fw2 = Math.round(IMG.floodlight.width * (fh2 / IMG.floodlight.height));
+    ctx.drawImage(IMG.floodlight, sl2lx - fw2/2, sl2groundY - fh2, fw2, fh2);
+    ctx.drawImage(IMG.floodlight, sl2rx - fw2/2, sl2groundY - fh2, fw2, fh2);
+  }
+
+  // Haze overlay
+  const hazeGrad = ctx.createRadialGradient(padX, ty + th * 0.5, th * 0.1, padX, ty + th * 0.5, th * 0.75);
+  hazeGrad.addColorStop(0, 'rgba(140,170,200,0.10)');
+  hazeGrad.addColorStop(1, 'rgba(140,170,200,0)');
+  ctx.fillStyle = hazeGrad;
+  ctx.fillRect(tx - 20, ty - 10, tw + 40, th + 20);
+
   ctx.restore();
 }
 
@@ -1408,7 +1536,7 @@ function drawWifiIcon() {
   
   // Arc 3 (large)
   ctx.beginPath();
-  ctx.arc(x, y + 18, 16, Math.PI * 1.15, Math.PI * 1.85);
+  ctx.arc(x, y + 18, 16, Math.PI * 1.15, Math.PI * 3);
   ctx.stroke();
 }
 
@@ -1656,8 +1784,7 @@ function render(now) {
   if (cond === 'fog') drawFog();
   drawVAB();
   // drawFences();
-  drawMLPRocket();      // ← Next rocket behind MLP
-  drawMLP();            // ← MLP over its rocket
+  drawBackgroundPad();  // ← Next rocket on distant pad
   drawRocket();         // ← Active pad rocket (behind tower)
   drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)

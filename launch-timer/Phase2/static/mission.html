@@ -483,6 +483,7 @@
     let angle=0, orbitType='LEO';
     let padLat=null, padLon=null;
 
+
     // orbit type → drawing parameters
     // frac: orbit radius as multiple of Earth visual radius R
     // type:'ellipse' → GTO/HEO: peri/apo in units of R, Earth at one focus
@@ -519,63 +520,49 @@
       return [CX+R*d*Math.sin(lonr), CY-R*d*Math.cos(lonr)];
     }
 
-    // ── Draw Earth globe (reused by both scenes) ──────────────────────────────
-    function drawEarth(cx, cy, re) {
-      // Atmosphere glow
-      for(let r=re+1;r<=re+6;r+=2){
-        ectx.strokeStyle=`rgba(30,80,160,${0.09-(r-re)*0.01})`;
-        ectx.lineWidth=3;
-        ectx.beginPath();ectx.arc(cx,cy,r,0,Math.PI*2);ectx.stroke();
-      }
-      // Ocean
-      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);
-      ectx.fillStyle='#0a2040';ectx.fill();
+    // Earth PNGs
+    const earthTopImg  = new Image(); earthTopImg.src  = '/static/assets/earthtop.png';
+    const earthSideImg = new Image(); earthSideImg.src = '/static/assets/earthside.png';
+    const earthBackImg = new Image(); earthBackImg.src = '/static/assets/earthback.png';
 
+    // ── Draw Earth globe ──────────────────────────────────────────────────────
+    // useSide=true → side view, false → top-down. img passed explicitly.
+    function drawEarth(cx, cy, re, useSide, img) {
+      if (!img) img = useSide ? earthSideImg : earthTopImg;
+
+      // Clip to circle and draw PNG (cover, maintain aspect ratio)
       ectx.save();
-      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);ectx.clip();
-
-      // Grid lines
-      ectx.setLineDash([2,3]);
-      [30,60].forEach(lat=>{
-        const d=(90-lat)/90;
-        ectx.strokeStyle='rgba(30,80,140,0.2)';ectx.lineWidth=0.8;
-        ectx.beginPath();ectx.arc(cx,cy,re*d,0,Math.PI*2);ectx.stroke();
-      });
-      for(let lo=0;lo<360;lo+=30){
-        const loR=lo*Math.PI/180;
-        ectx.strokeStyle='rgba(30,80,140,0.15)';ectx.lineWidth=0.8;
-        ectx.beginPath();ectx.moveTo(cx,cy);
-        ectx.lineTo(cx+re*Math.sin(loR),cy-re*Math.cos(loR));ectx.stroke();
+      ectx.beginPath(); ectx.arc(cx, cy, re, 0, Math.PI*2); ectx.clip();
+      if (img.complete && img.naturalWidth > 0) {
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        const scale = Math.max((re*5)/iw, (re*2.3)/ih);  // 2.3 fills globe to clip edge (tune if needed)
+        const dw = iw*scale, dh = ih*scale;
+        ectx.drawImage(img, cx-dw/2, cy-dh/2, dw, dh);
+      } else {
+        ectx.fillStyle = '#061428';
+        ectx.fillRect(cx-re, cy-re, re*2, re*2);
       }
-      ectx.setLineDash([]);
-
-      // Continents (north-polar projection centred on cx,cy)
-      const _proj=(lat,lon)=>{const d=(90-lat)/90,lr=lon*Math.PI/180;return[cx+re*d*Math.sin(lr),cy-re*d*Math.cos(lr)];};
-      ectx.fillStyle='#1e5020';
-      [
-        [[72,-140],[76,-95],[72,-75],[62,-62],[50,-62],[38,-72],[28,-90],[32,-118],[44,-126],[58,-132],[68,-140]],
-        [[84,-30],[80,-18],[74,-18],[70,-28],[72,-42],[78,-48],[82,-44]],
-        [[72,14],[68,28],[58,24],[46,10],[44,2],[50,-4],[56,4],[62,8],[68,16]],
-        [[72,40],[68,80],[64,110],[68,140],[72,165],[80,145],[82,100],[80,60],[76,44]],
-        [[65,50],[60,60],[50,68],[40,60],[35,44],[42,36],[55,40]],
-        [[55,100],[48,120],[38,130],[28,118],[25,100],[30,85],[42,82],[52,92]],
-        [[38,10],[34,36],[22,44],[8,42],[0,32],[4,14],[14,-2],[26,-4],[36,2]],
-      ].forEach(pts=>{
-        ectx.beginPath();
-        pts.forEach(([la,lo],i)=>{const[x,y]=_proj(la,lo);i===0?ectx.moveTo(x,y):ectx.lineTo(x,y);});
-        ectx.closePath();ectx.fill();
-      });
-      [[36,138,4,8,-0.4],[65,-20,5,4,0],[56,38,3,3,0]].forEach(([la,lo,rx,ry,rot])=>{
-        const[x,y]=_proj(la,lo);ectx.beginPath();ectx.ellipse(x,y,rx*(re/R),ry*(re/R),rot,0,Math.PI*2);ectx.fill();
-      });
-      // Ice cap
-      ectx.fillStyle='rgba(180,220,255,0.55)';
-      ectx.beginPath();ectx.arc(cx,cy,re*0.10,0,Math.PI*2);ectx.fill();
       ectx.restore();
 
-      // Border
-      ectx.beginPath();ectx.arc(cx,cy,re,0,Math.PI*2);
-      ectx.strokeStyle='rgba(74,158,222,0.35)';ectx.lineWidth=2;ectx.stroke();
+      // Atmosphere glow — drawn AFTER PNG so it's visible on top
+      const glowLayers = 8;        // ← number of glow layers
+      const glowSpread = 8;        // ← px per layer (total spread = glowLayers * glowSpread)
+      const glowOpacity = 0.22;    // ← peak opacity
+      for (let i = 0; i < glowLayers; i++) {
+        const gr = re + 3 + i*glowSpread;
+        const ga = ectx.createRadialGradient(cx,cy,re,cx,cy,gr);
+        ga.addColorStop(0, `rgba(80,160,255,${glowOpacity - i*(glowOpacity/glowLayers)})`);
+        ga.addColorStop(1, 'rgba(80,160,255,0)');
+        ectx.fillStyle = ga;
+        ectx.beginPath();
+        ectx.arc(cx,cy,gr,0,Math.PI*2);
+        ectx.arc(cx,cy,re,0,Math.PI*2,true);
+        ectx.fill();
+      }
+
+      // Rim
+      ectx.beginPath(); ectx.arc(cx,cy,re,0,Math.PI*2);
+      ectx.strokeStyle = 'rgba(100,180,255,0.35)'; ectx.lineWidth = 2; ectx.stroke();
     }
 
     // ── Stars background ──────────────────────────────────────────────────────
@@ -689,7 +676,7 @@
       const eg=ectx.createRadialGradient(ex,ey,Re*0.5,ex,ey,Re*2.0);
       eg.addColorStop(0,'rgba(30,80,160,0.20)');eg.addColorStop(1,'rgba(30,80,160,0)');
       ectx.fillStyle=eg;ectx.beginPath();ectx.arc(ex,ey,Re*2.0,0,Math.PI*2);ectx.fill();
-      drawEarth(ex, ey, Re);
+      drawEarth(ex, ey, Re, false);
 
       // ── Moon ──────────────────────────────────────────────────────────────
       ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);
@@ -769,7 +756,7 @@
       if (u.includes('GEOSTATIONARY') || u.includes('GEO')) return ORBIT_DEFS['GEO'];
       if (u.includes('MEDIUM') || u.includes('MEO')) return ORBIT_DEFS['MEO'];
       if (u.includes('SUN-SYNC') || u.includes('SUN SYNC') || u.includes('SSO')) return ORBIT_DEFS['SSO'];
-      if (u.includes('POLAR')) return ORBIT_DEFS['POLAR'];
+      if (u.includes('POLAR') || u === 'PO') return ORBIT_DEFS['POLAR'];
       if (u.includes('SUBORBITAL') || u.includes('SUB')) return ORBIT_DEFS['SUB'];
       return ORBIT_DEFS['LEO'];
     }
@@ -788,60 +775,72 @@
         return;
       }
 
-      // Earth-centric view
-      drawEarth(CX, CY, R);
+      const useSide = (def.polar || def.inclined);
+      const earthR = R * 0.90;  // ← adjust to resize Earth
+
+      // Pick Earth PNG: Eastern Hemisphere (lon > 30) → earthback, else earthside/earthtop
+      const useBack = useSide && padLon !== null && padLon > 30;
+      const earthImg = useSide ? (useBack ? earthBackImg : earthSideImg) : earthTopImg;
+      // Center longitude of each side PNG (for launch dot projection)
+      const sideCenter = useBack ? 88 : -20;  // earthback center lon (tune to move dot), earthside≈-20°W
 
       if(def.type==='ellipse'){
+        drawEarth(CX, CY, earthR, useSide, earthImg);
         drawEllipticalOrbit(def);
       } else {
-        // Circular / inclined / polar / arc
         const orb_r = R * def.frac;
-        ectx.strokeStyle=def.color+'88'; ectx.lineWidth=1.5;
-        ectx.setLineDash(def.dash);
-        if(def.inclined){
-          ectx.save();
-          ectx.beginPath();ectx.arc(CX,CY,orb_r*1.1,0,Math.PI*2);ectx.clip();
-          ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
-          ectx.beginPath();ectx.ellipse(0,0,orb_r*0.5,orb_r,0,0,Math.PI*2);ectx.stroke();
-          ectx.restore();ectx.restore();
-        } else if(def.polar){
-          ectx.save();
-          ectx.beginPath();ectx.arc(CX,CY,orb_r*1.1,0,Math.PI*2);ectx.clip();
-          ectx.save();ectx.translate(CX,CY);
-          ectx.beginPath();ectx.ellipse(0,0,orb_r*0.15,orb_r,0,0,Math.PI*2);ectx.stroke();
-          ectx.restore();ectx.restore();
-        } else if(def.arc){
-          ectx.beginPath();ectx.arc(CX,CY,orb_r,-Math.PI*0.65,-Math.PI*0.35);ectx.stroke();
-        } else {
-          ectx.beginPath();ectx.arc(CX,CY,orb_r,0,Math.PI*2);ectx.stroke();
-        }
-        ectx.setLineDash([]);
 
-        // Spacecraft dot + trail
-        if(!def.arc){
-          let sx,sy;
-          if(def.inclined){
-            ectx.save();ectx.translate(CX,CY);ectx.rotate(0.4);
-            sx=orb_r*0.5*Math.cos(angle); sy=orb_r*Math.sin(angle);
+        if(useSide){
+          // ── Side-view orbit: split back/front around Earth for correct layering ──
+          const rx  = def.polar ? orb_r*0.15 : orb_r*0.5;
+          const rot = def.inclined ? 0.4 : 0;
+          const a   = angle - rot;
+          const sx  = rx  * Math.cos(a);
+          const sy  = orb_r * Math.sin(a);
+          // Show satellite when on front side OR outside the Earth disk
+          const behindEarth = Math.cos(a) < 0 && (sx*sx + sy*sy) < earthR*earthR;
+
+          // Back half — draw BEFORE Earth (dimmer)
+          ectx.save(); ectx.translate(CX,CY); if(rot) ectx.rotate(rot);
+          ectx.strokeStyle=def.color+'44'; ectx.lineWidth=1;
+          ectx.setLineDash(def.dash);
+          ectx.beginPath(); ectx.ellipse(0,0,rx,orb_r,0, Math.PI/2, Math.PI*1.5); ectx.stroke();
+          ectx.setLineDash([]); ectx.restore();
+
+          drawEarth(CX, CY, earthR, useSide, earthImg);
+
+          // Front half — draw AFTER Earth
+          ectx.save(); ectx.translate(CX,CY); if(rot) ectx.rotate(rot);
+          ectx.strokeStyle=def.color+'88'; ectx.lineWidth=1.5;
+          ectx.setLineDash(def.dash);
+          ectx.beginPath(); ectx.ellipse(0,0,rx,orb_r,0, -Math.PI/2, Math.PI/2); ectx.stroke();
+          ectx.setLineDash([]);
+
+          // Spacecraft — hide only when actually behind the Earth disk
+          if(!behindEarth){
             for(let t=7;t>=1;t--){
-              const ta=angle-t*0.07;
+              const ta=a-t*0.07;
               ectx.fillStyle=`rgba(${def.rgb},${0.05*t})`;
-              ectx.fillRect(orb_r*0.5*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
+              ectx.fillRect(rx*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
             }
-            ectx.fillStyle=def.color;ectx.fillRect(sx-3,sy-3,6,6);
-            ectx.restore();
-          } else if(def.polar){
-            ectx.save();ectx.translate(CX,CY);
-            sx=orb_r*0.15*Math.cos(angle); sy=orb_r*Math.sin(angle);
-            for(let t=7;t>=1;t--){
-              const ta=angle-t*0.07;
-              ectx.fillStyle=`rgba(${def.rgb},${0.05*t})`;
-              ectx.fillRect(orb_r*0.15*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
-            }
-            ectx.fillStyle=def.color;ectx.fillRect(sx-3,sy-3,6,6);
-            ectx.restore();
+            ectx.fillStyle=def.color; ectx.fillRect(sx-3,sy-3,6,6);
+          }
+          ectx.restore();
+
+        } else {
+          // ── Top-down orbit: Earth first, orbit/spacecraft always on top ──
+          drawEarth(CX, CY, earthR, useSide, earthImg);
+          ectx.strokeStyle=def.color+'88'; ectx.lineWidth=1.5;
+          ectx.setLineDash(def.dash);
+          if(def.arc){
+            ectx.beginPath();ectx.arc(CX,CY,orb_r,-Math.PI*0.65,-Math.PI*0.35);ectx.stroke();
           } else {
-            sx=CX+orb_r*Math.cos(angle); sy=CY+orb_r*Math.sin(angle);
+            ectx.beginPath();ectx.arc(CX,CY,orb_r,0,Math.PI*2);ectx.stroke();
+          }
+          ectx.setLineDash([]);
+
+          if(!def.arc){
+            const sx=CX+orb_r*Math.cos(angle), sy=CY+orb_r*Math.sin(angle);
             for(let t=8;t>=1;t--){
               const ta=angle-t*0.07;
               ectx.fillStyle=`rgba(${def.rgb},${0.06*t})`;
@@ -854,9 +853,22 @@
 
       // Launch site marker
       if(padLat!==null&&padLon!==null){
-        const[lsx,lsy]=proj(padLat,padLon);
-        const dist=Math.sqrt((lsx-CX)**2+(lsy-CY)**2);
-        if(dist<=R*0.97){
+        let lsx, lsy, visible;
+        if(useSide){
+          // Orthographic projection with center lat/lon matching each PNG's viewpoint
+          const sideCenterLat = useBack ? 15 : 5;  // ← tune if dot is too high/low
+          const dLon = (padLon - sideCenter) * Math.PI/180;
+          const latR  = padLat * Math.PI/180;
+          const φ0   = sideCenterLat * Math.PI/180;
+          lsx = CX + earthR * Math.cos(latR) * Math.sin(dLon);
+          lsy = CY - earthR * (Math.cos(φ0)*Math.sin(latR) - Math.sin(φ0)*Math.cos(latR)*Math.cos(dLon));
+          const depth = Math.cos(latR) * Math.cos(dLon);
+          visible = depth > 0.1;  // only show if on front hemisphere of PNG
+        } else {
+          [lsx,lsy] = proj(padLat,padLon);
+          visible = Math.sqrt((lsx-CX)**2+(lsy-CY)**2) <= R*0.97;
+        }
+        if(visible){
           if(Math.floor(angle*4)%2===0){
             ectx.strokeStyle='rgba(255,68,34,0.6)';ectx.lineWidth=1;
             ectx.beginPath();ectx.arc(lsx,lsy,5,0,Math.PI*2);ectx.stroke();
@@ -980,6 +992,11 @@
       let orbitAbbrev,orbitFull,inferred=false;
       if(base?.orbit_abbrev){orbitAbbrev=base.orbit_abbrev;orbitFull=base.orbit_name||orbitAbbrev;}
       else{const inf=inferOrbit(name,missionDesc,vehicle);orbitAbbrev=inf.abbrev;orbitFull=inf.name;inferred=true;}
+      // If orbit_abbrev is generic LEO but orbit_name is more descriptive, try to resolve from name
+      if(orbitAbbrev==='LEO'&&base?.orbit_name){
+        const better=resolveOrbitDef(base.orbit_name);
+        if(better!==ORBIT_DEFS['LEO'])orbitAbbrev=base.orbit_name;
+      }
       orbitType=orbitAbbrev;
 
       // Page title
