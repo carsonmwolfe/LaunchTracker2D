@@ -50,6 +50,7 @@ const ASSETS = {
   rocket_rfaone:       'rocket-RFAone.png',
   rocket_spectrum:     'rocket-Spectrum.png',
   rocket_tianlong:     'rocket-tianlong3.png',
+  moon:                'moon.png',
 };
 
 // Loaded Image objects (null = not yet loaded / unavailable)
@@ -97,11 +98,14 @@ let state = {
   // Smoke (pre-launch vent on pad)
   smokeFrame: 0,
 
-  // Clouds
+  // Clouds — y kept between 30–130 (tower top is ~160)
   clouds: [
-    { x: 150, y: 60 },
-    { x: 420, y: 90 },
-    { x: 650, y: 50 },
+    { x:  80, y:  35, size: 1.4 },
+    { x: 240, y: 125, size: 0.6 },
+    { x: 380, y:  65, size: 1.0 },
+    { x: 520, y: 115, size: 0.5 },
+    { x: 640, y:  45, size: 1.3 },
+    { x: 760, y:  90, size: 0.7 },
   ],
 
   // Birds
@@ -134,6 +138,218 @@ let state = {
 
   now: Date.now(),
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  OFFSCREEN CACHE — static layers rendered once, blitted each frame
+// ─────────────────────────────────────────────────────────────────────────────
+function makeOffscreen(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+// Grass + road — completely static, render once
+let _grassCache = null;
+function getGrassCache() {
+  if (_grassCache) return _grassCache;
+  _grassCache = makeOffscreen(W, H);
+  const g = _grassCache.getContext('2d');
+  // Grass base first
+  g.fillStyle = '#5a8c3a'; g.fillRect(0, 365, W, BAR_Y - 365);
+  // Road on top of grass
+  g.fillStyle = '#3a3a3a'; g.fillRect(0, ROAD_Y, W, 18);
+  g.fillStyle = '#5a5a5a'; g.fillRect(0, ROAD_Y, W, 2);
+  g.fillStyle = '#5a5a5a'; g.fillRect(0, ROAD_Y+16, W, 2);
+  g.fillStyle = '#6a6a3a';
+  for (let x = 0; x < W; x += 20) g.fillRect(x, ROAD_Y+8, 10, 2);
+  // Grass details
+  const rng = mulberry32(123);
+  const colors = ['#4a7c2a','#6a9c4a','#5a8c3a','#3a6c1a'];
+  for (let i = 0; i < 400; i++) {
+    const gx = rng() * W;
+    const gy = 368 + rng() * (BAR_Y - 368 - 20);
+    g.fillStyle = colors[Math.floor(rng() * 4)];
+    const style = Math.floor(rng() * 4);
+    if (style === 0)      { g.fillRect(gx, gy-3, 1, 3); }
+    else if (style === 1) { g.fillRect(gx, gy, 2, 3); }
+    else if (style === 2) { g.fillRect(gx, gy, 1, 1); }
+    else                  { g.fillRect(gx, gy-3, 1, 3); }
+  }
+  return _grassCache;
+}
+
+// Stars — static per night session, invalidated on sky phase change
+let _starsCache = null;
+let _starsSkyPhase = null;
+function getStarsCache() {
+  const phase = _getSkyPhase();
+  if (_starsCache && _starsSkyPhase === phase) return _starsCache;
+  _starsSkyPhase = phase;
+  if (phase !== 'night') { _starsCache = null; return null; }
+  _starsCache = makeOffscreen(W, H);
+  const g = _starsCache.getContext('2d');
+  g.fillStyle = '#ffffff';
+  const rng = mulberry32(42);
+  for (let i = 0; i < 60; i++) {
+    const sx = rng() * W;
+    const sy = rng() * 340;
+    const sz = rng() > 0.7 ? 2 : 1;
+    g.fillRect(sx, sy, sz, sz);
+  }
+  return _starsCache;
+}
+
+// Spotlight beams — static geometry, invalidated only on isNight() change
+let _spotlightCache = null;
+let _spotlightNight = null;
+function getSpotlightCache() {
+  const night = isNight();
+  if (_spotlightCache && _spotlightNight === night) return _spotlightCache;
+  _spotlightNight = night;
+  _spotlightCache = makeOffscreen(W, H);
+  const g = _spotlightCache.getContext('2d');
+
+  const groundY = PAD_Y_BASE + 22;
+  const targetX = NOZZLE_X + 10;
+  const targetY = NOZZLE_Y - 40;
+  const lx      = targetX - 110;
+  const rx      = targetX + 110;
+  const fh = 40;
+  const fw = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh / IMG.floodlight.height)) : 12;
+  const lCX = lx + fw / 2;
+  const rCX = rx + fw / 2;
+  const headY = groundY - fh / 2;
+
+  if (night) {
+    g.globalAlpha = 0.28;
+    const g1 = g.createLinearGradient(lCX, headY, targetX, targetY);
+    g1.addColorStop(0, '#ffffcc'); g1.addColorStop(1, 'rgba(255,255,180,0)');
+    g.fillStyle = g1;
+    g.beginPath(); g.moveTo(lCX-4, headY); g.lineTo(targetX-18, targetY); g.lineTo(targetX+18, targetY); g.lineTo(lCX+4, headY); g.fill();
+    const g2 = g.createLinearGradient(rCX, headY, targetX, targetY);
+    g2.addColorStop(0, '#ffffcc'); g2.addColorStop(1, 'rgba(255,255,180,0)');
+    g.fillStyle = g2;
+    g.beginPath(); g.moveTo(rCX-4, headY); g.lineTo(targetX-18, targetY); g.lineTo(targetX+18, targetY); g.lineTo(rCX+4, headY); g.fill();
+    g.globalAlpha = 1;
+  }
+
+  // Floodlight images
+  if (IMG.floodlight) {
+    g.drawImage(IMG.floodlight, lx, groundY - fh, fw, fh);
+    g.save();
+    g.translate(rx + fw, groundY - fh);
+    g.scale(-1, 1);
+    g.drawImage(IMG.floodlight, 0, 0, fw, fh);
+    g.restore();
+  }
+  return _spotlightCache;
+}
+
+// Pad 2 flood light beams — static geometry, invalidated on night change
+let _pad2BeamCache = null;
+let _pad2BeamNight = null;
+function getPad2BeamCache(sl2lx, sl2rx, sl2groundY, sl2targetX, sl2targetY) {
+  const night = isNight();
+  if (_pad2BeamCache && _pad2BeamNight === night) return _pad2BeamCache;
+  _pad2BeamNight = night;
+  _pad2BeamCache = makeOffscreen(W, H);
+  if (!night) return _pad2BeamCache;
+  const g = _pad2BeamCache.getContext('2d');
+  const fh2 = 18;
+  const fw2 = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh2 / IMG.floodlight.height)) : 8;
+  const sl2beamLX = sl2lx + fw2 / 2 - 9;
+  const sl2beamRX = sl2rx + fw2 / 2 - 9;
+  const sl2headY  = sl2groundY - fh2 / 2;
+  g.globalAlpha = 0.28;
+  const sg1 = g.createLinearGradient(sl2beamLX, sl2headY, sl2targetX, sl2targetY);
+  sg1.addColorStop(0, '#ffffcc'); sg1.addColorStop(1, 'rgba(255,255,180,0)');
+  g.fillStyle = sg1;
+  g.beginPath(); g.moveTo(sl2beamLX-3, sl2headY); g.lineTo(sl2targetX-8, sl2targetY); g.lineTo(sl2targetX+8, sl2targetY); g.lineTo(sl2beamLX+3, sl2headY); g.fill();
+  const sg2 = g.createLinearGradient(sl2beamRX, sl2headY, sl2targetX, sl2targetY);
+  sg2.addColorStop(0, '#ffffcc'); sg2.addColorStop(1, 'rgba(255,255,180,0)');
+  g.fillStyle = sg2;
+  g.beginPath(); g.moveTo(sl2beamRX-3, sl2headY); g.lineTo(sl2targetX-8, sl2targetY); g.lineTo(sl2targetX+8, sl2targetY); g.lineTo(sl2beamRX+3, sl2headY); g.fill();
+  g.globalAlpha = 1;
+  return _pad2BeamCache;
+}
+
+// Aviation light glow — cached per combined blink state of both towers
+let _aviCache = null;
+let _aviCacheKey = null;
+
+function _drawAviLight(g, x, y, blink, size=1) {
+  if (blink) {
+    const gl = g.createRadialGradient(x, y, 0, x, y, 8*size);
+    gl.addColorStop(0, 'rgba(255,255,255,0.9)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(x, y, 8*size, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(x, y, 3*size, 0, Math.PI*2); g.fill();
+  } else {
+    g.fillStyle = 'rgba(180,180,180,0.3)';
+    g.beginPath(); g.arc(x, y, 2*size, 0, Math.PI*2); g.fill();
+  }
+}
+
+function getAviCache(blink1, blink2) {
+  const key = `${blink1}|${blink2}`;
+  if (_aviCache && _aviCacheKey === key) return _aviCache;
+  _aviCacheKey = key;
+  _aviCache = makeOffscreen(W, H);
+  const g = _aviCache.getContext('2d');
+  // Main tower lights (size=1)
+  _drawAviLight(g, 562, 200, blink1, 1);
+  _drawAviLight(g, 562, 270, blink1, 1);
+  // Pad 2 tower lights — smaller to match distant scale
+  _drawAviLight(g, 307, 320, blink2, 0.45);
+  _drawAviLight(g, 307, 290, blink2, 0.45);  // ← adjust 0.45 to resize
+  return _aviCache;
+}
+
+// Cloud shape cache — keyed by color+size
+let _cloudCaches = {};
+function getCloudCache(col, size=1) {
+  const key = col + size;
+  if (_cloudCaches[key]) return _cloudCaches[key];
+  const bw = Math.round(96 * size), bh = Math.round(44 * size);
+  const cc = makeOffscreen(bw, bh);
+  const g = cc.getContext('2d');
+
+  const puffs = [
+    [14, 34, 14,  9],
+    [34, 30, 18, 12],
+    [58, 34, 14,  9],
+    [20, 24, 13, 11],
+    [46, 24, 13, 11],
+    [34, 16, 14, 12],
+    [24, 20, 10,  9],
+    [48, 20, 10,  9],
+  ];
+
+  // Shadow pass
+  g.globalAlpha = 0.18;
+  g.fillStyle = 'rgba(0,0,0,1)';
+  puffs.forEach(([x,y,rx,ry]) => {
+    g.beginPath(); g.ellipse(x*size+2, y*size+2, rx*size, ry*size, 0, 0, Math.PI*2); g.fill();
+  });
+
+  // Main cloud
+  g.globalAlpha = 1;
+  g.fillStyle = col;
+  puffs.forEach(([x,y,rx,ry]) => {
+    g.beginPath(); g.ellipse(x*size, y*size, rx*size, ry*size, 0, 0, Math.PI*2); g.fill();
+  });
+
+  // Highlight sheen
+  g.globalAlpha = 0.22;
+  g.fillStyle = 'rgba(255,255,255,1)';
+  [[28,14,10,7],[40,10,8,6]].forEach(([x,y,rx,ry]) => {
+    g.beginPath(); g.ellipse(x*size, y*size, rx*size, ry*size, 0, 0, Math.PI*2); g.fill();
+  });
+  g.globalAlpha = 1;
+
+  _cloudCaches[key] = cc;
+  return cc;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  HELPERS
@@ -239,27 +455,14 @@ function drawBackground() {
   ctx.fillStyle = colors.sky;
   ctx.fillRect(0, 0, W, 400);
 
-  // Stars (night only)
+  // Stars — cached offscreen canvas
   if (isNight() && !['cloudy','rain','thunderstorm','fog'].includes(state.weather.condition)) {
-    ctx.fillStyle = '#ffffff';
-    const rng = mulberry32(42);
-    for (let i = 0; i < 60; i++) {
-      const sx = rng() * W;
-      const sy = rng() * 340;
-      const sz = rng() > 0.7 ? 2 : 1;
-      ctx.fillRect(sx, sy, sz, sz);
-    }
+    const sc = getStarsCache();
+    if (sc) ctx.drawImage(sc, 0, 0);
   }
 
-  // Grass
-  ctx.fillStyle = '#5a8c3a';
-  ctx.fillRect(0, 365, W, BAR_Y - 365);
-
-  // Road
-  drawRoad();
-
-  // Pixel grass details
-  drawPixelGrass();
+  // Grass + road — cached offscreen canvas
+  ctx.drawImage(getGrassCache(), 0, 0);
 
   // Bottom info bar background
   ctx.fillStyle = 'rgba(8,8,18,0.97)';
@@ -304,6 +507,46 @@ function drawPixelGrass() {
 // ─────────────────────────────────────────────────────────────────────────────
 //  VAB
 // ─────────────────────────────────────────────────────────────────────────────
+function drawMoon() {
+  if (!IMG.moon) return;
+  if (!isNight()) return;
+  if (['cloudy','rain','thunderstorm','fog'].includes(state.weather.condition)) return;
+
+  const wx = state.weather;
+  const now = Date.now();
+
+  // Get sunset/sunrise ms
+  let srMs = null, ssMs = null;
+  if (wx.sunrise) try { srMs = new Date(wx.sunrise).getTime(); } catch(e) {}
+  if (wx.sunset)  try { ssMs = new Date(wx.sunset).getTime();  } catch(e) {}
+
+  let t = 0.5; // default: midnight position
+  if (srMs && ssMs) {
+    // Night spans sunset → (next) sunrise
+    const nightLen = (srMs + 86400000) - ssMs;
+    const intoNight = now - ssMs;
+    t = Math.max(0, Math.min(1, intoNight / nightLen));
+  }
+
+  // Arc: rises right, sets left, peaks at midnight
+  const moonSize = 28;
+  const mx = W * 0.85 - t * (W * 0.72);          // right to left
+  const my = 280 - Math.sin(t * Math.PI) * 230;   // arc height
+
+  // Only draw if above the grass line
+  if (my + moonSize > 360) return;
+
+  // Soft glow halo
+  const glow = ctx.createRadialGradient(mx, my, moonSize * 0.4, mx, my, moonSize * 1.8);
+  glow.addColorStop(0, 'rgba(220,220,180,0.18)');
+  glow.addColorStop(1, 'rgba(220,220,180,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(mx, my, moonSize * 1.8, 0, Math.PI*2); ctx.fill();
+
+  // Moon sprite
+  ctx.drawImage(IMG.moon, mx - moonSize, my - moonSize, moonSize * 2, moonSize * 2);
+}
+
 function drawVAB() {
   if (!IMG.vab) return;
   // Slightly smaller + subtle haze to read as distant background
@@ -439,75 +682,13 @@ function drawPond() {
 //  SPOTLIGHTS
 // ─────────────────────────────────────────────────────────────────────────────
 function drawSpotlights() {
-  // Spotlight poles sit left and right of the pad, aim at the rocket centre
-  const groundY = PAD_Y_BASE + 22;
-  const targetX = NOZZLE_X + 10;   // rocket centre
-  const targetY = NOZZLE_Y - 40;
-  const lx      = targetX - 110;   // left pole
-  const rx      = targetX + 110;   // right pole
+  // Spotlight beams + floodlight images — cached offscreen
+  ctx.drawImage(getSpotlightCache(), 0, 0);
 
-  const fh = 40;
-  const fw = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh / IMG.floodlight.height)) : 12;
-  // Beam origin = centre of each PNG
-  const lCX  = lx + fw / 2;
-  const rCX  = rx + fw / 2;
-  const headY = groundY - fh / 2;  // vertically centred on image
-
-  if (isNight()) {
-    // Beams from centre of PNG
-    ctx.save();
-    ctx.globalAlpha = 0.28;
-    const g1 = ctx.createLinearGradient(lCX, headY, targetX, targetY);
-    g1.addColorStop(0, '#ffffcc'); g1.addColorStop(1, 'rgba(255,255,180,0)');
-    ctx.fillStyle = g1;
-    ctx.beginPath(); ctx.moveTo(lCX-4, headY); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(lCX+4, headY); ctx.fill();
-    ctx.globalAlpha = 0.28;
-    const g2 = ctx.createLinearGradient(rCX, headY, targetX, targetY);
-    g2.addColorStop(0, '#ffffcc'); g2.addColorStop(1, 'rgba(255,255,180,0)');
-    ctx.fillStyle = g2;
-    ctx.beginPath(); ctx.moveTo(rCX-4, headY); ctx.lineTo(targetX-18, targetY); ctx.lineTo(targetX+18, targetY); ctx.lineTo(rCX+4, headY); ctx.fill();
-    ctx.globalAlpha = 1; ctx.restore();
-  }
-
-  // Floodlight images centred on lx/rx
-  if (IMG.floodlight) {
-    ctx.drawImage(IMG.floodlight, lx, groundY - fh, fw, fh);
-    ctx.save();
-    ctx.translate(rx + fw, groundY - fh);
-    ctx.scale(-1, 1);
-    ctx.drawImage(IMG.floodlight, 0, 0, fw, fh);
-    ctx.restore();
-  }
-
-  // ── Blinking aviation lights on right side of tower ───────────────────────
-  // Pulse on for 0.5s every 3s
-  const blink = (Date.now() % 3000) < 500;
-  const towerRightX = 562;  // right edge of launch tower
-  const light1Y = 185;      // upper light
-  const light2Y = 250;      // lower light
-  if (blink) {
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    // Glow
-    const gl1 = ctx.createRadialGradient(towerRightX, light1Y, 0, towerRightX, light1Y, 8);
-    gl1.addColorStop(0, 'rgba(255,255,255,0.9)'); gl1.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = gl1;
-    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 8, 0, Math.PI*2); ctx.fill();
-    const gl2 = ctx.createRadialGradient(towerRightX, light2Y, 0, towerRightX, light2Y, 8);
-    gl2.addColorStop(0, 'rgba(255,255,255,0.9)'); gl2.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = gl2;
-    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 8, 0, Math.PI*2); ctx.fill();
-    // Core dot
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 3, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  } else {
-    // Dim off-state
-    ctx.fillStyle = 'rgba(180,180,180,0.3)';
-    ctx.beginPath(); ctx.arc(towerRightX, light1Y, 2, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(towerRightX, light2Y, 2, 0, Math.PI*2); ctx.fill();
-  }
+  // Aviation lights — offset pad 2 by 1500ms so they don't sync
+  const blink1 = (Date.now() % 3000) < 500;
+  const blink2 = ((Date.now() + 1500) % 3000) < 500;
+  ctx.drawImage(getAviCache(blink1, blink2), 0, 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -515,11 +696,10 @@ function drawSpotlights() {
 // ─────────────────────────────────────────────────────────────────────────────
 function drawClouds() {
   const col = getSkyColors().cloud;
-  ctx.fillStyle = col;
   state.clouds.forEach(c => {
-    ctx.beginPath(); ctx.ellipse(c.x,    c.y+12, 12, 8, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(c.x+20, c.y+7,  12, 9, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(c.x+40, c.y+12, 12, 8, 0, 0, Math.PI*2); ctx.fill();
+    const size = c.size || 1;
+    const cc = getCloudCache(col, size);
+    ctx.drawImage(cc, c.x - 10, c.y);
   });
 }
 
@@ -626,32 +806,35 @@ function getRocketAssetKey(vehicle) {
   return 'rocket_generic';
 }
 
+// y is tuned per-rocket: nozzle must visually land at PAD_Y_BASE (359).
+// PNGs with transparent padding below the nozzle need y > PAD_Y_BASE-h so the
+// transparent region sinks below the ground line.
 const ROCKET_CONFIG = {
   rocket_falcon9:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
-  rocket_atlas:       { pad: { x: 469, y: 209, h: 162 }, te: { x: 167, y: 200, h: 162 } },
-  rocket_vulcan:      { pad: { x: 464, y: 170, h: 181 }, te: { x: 159, y: 164, h: 181 } },
-  rocket_electron:    { pad: { x: 483, y: 251, h: 116 }, te: { x: 180, y: 239, h: 116 } },
-  rocket_ng:          { pad: { x: 457, y: 170, h: 200 }, te: { x: 154, y: 161, h: 200 } },
-  rocket_kairos:      { pad: { x: 511, y: 234, h: 127 }, te: { x: 207, y: 224, h: 127 } },
-  rocket_longmarch:   { pad: { x: 471, y: 205, h: 156 }, te: { x: 167, y: 195, h: 156 } },
-  rocket_generic:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
-  rocket_firefly:     { pad: { x: 470, y: 210, h: 164 }, te: { x: 167, y: 203, h: 164 } },
-  rocket_starship:    { pad: { x: 445, y: 157, h: 228 }, te: { x: 143, y: 148, h: 228 } },
-  rocket_soyuz:       { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
-  rocket_soyuz5:      { pad: { x: 480, y: 219, h: 131 }, te: { x: 177, y: 209, h: 131 } },
-  rocket_ariane6:     { pad: { x: 472, y: 204, h: 146 }, te: { x: 173, y: 194, h: 146 } },
-  rocket_sls:         { pad: { x: 513, y: 177, h: 169 }, te: { x: 208, y: 170, h: 169 } },
-  rocket_gslv:        { pad: { x: 479, y: 215, h: 132 }, te: { x: 177, y: 206, h: 132 } },
-  rocket_longmarch12: { pad: { x: 470, y: 214, h: 155 }, te: { x: 170, y: 203, h: 155 } },
-  rocket_longmarch2d: { pad: { x: 474, y: 212, h: 147 }, te: { x: 173, y: 202, h: 147 } },
-  rocket_vegaC:       { pad: { x: 459, y: 186, h: 187 }, te: { x: 155, y: 176, h: 187 } },
-  rocket_jielong:     { pad: { x: 474, y: 220, h: 146 }, te: { x: 172, y: 209, h: 146 } },
-  rocket_falconheavy: { pad: { x: 479, y: 220, h: 116 }, te: { x: 179, y: 220, h: 116 } },
-  rocket_minotaur:    { pad: { x: 485, y: 235, h: 115 }, te: { x: 182, y: 225, h: 115 } },
-  rocket_neutron:     { pad: { x: 484, y: 232, h: 118 }, te: { x: 181, y: 220, h: 118 } },
-  rocket_rfaone:      { pad: { x: 484, y: 239, h: 124 }, te: { x: 180, y: 228, h: 124 } },
-  rocket_spectrum:    { pad: { x: 476, y: 219, h: 142 }, te: { x: 172, y: 209, h: 142 } },
-  rocket_tianlong:    { pad: { x: 478, y: 222, h: 136 }, te: { x: 174, y: 211, h: 136 } },
+  rocket_atlas:       { pad: { x: 469, y: 220, h: 162 }, te: { x: 167, y: 220, h: 162 } },
+  rocket_vulcan:      { pad: { x: 464, y: 178, h: 181 }, te: { x: 159, y: 178, h: 181 } },
+  rocket_electron:    { pad: { x: 483, y: 243, h: 116 }, te: { x: 180, y: 243, h: 116 } },
+  rocket_ng:          { pad: { x: 457, y: 159, h: 200 }, te: { x: 154, y: 159, h: 200 } },
+  rocket_kairos:      { pad: { x: 511, y: 232, h: 127 }, te: { x: 207, y: 232, h: 127 } },
+  rocket_longmarch:   { pad: { x: 471, y: 203, h: 156 }, te: { x: 167, y: 203, h: 156 } },
+  rocket_generic:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 204, h: 155 } },
+  rocket_firefly:     { pad: { x: 470, y: 195, h: 164 }, te: { x: 167, y: 195, h: 164 } },
+  rocket_starship:    { pad: { x: 445, y: 131, h: 228 }, te: { x: 143, y: 131, h: 228 } },
+  rocket_soyuz:       { pad: { x: 480, y: 228, h: 131 }, te: { x: 177, y: 228, h: 131 } },
+  rocket_soyuz5:      { pad: { x: 480, y: 228, h: 131 }, te: { x: 177, y: 228, h: 131 } },
+  rocket_ariane6:     { pad: { x: 472, y: 213, h: 146 }, te: { x: 173, y: 213, h: 146 } },
+  rocket_sls:         { pad: { x: 513, y: 190, h: 169 }, te: { x: 208, y: 190, h: 169 } },
+  rocket_gslv:        { pad: { x: 479, y: 227, h: 132 }, te: { x: 177, y: 227, h: 132 } },
+  rocket_longmarch12: { pad: { x: 470, y: 204, h: 155 }, te: { x: 170, y: 204, h: 155 } },
+  rocket_longmarch2d: { pad: { x: 474, y: 212, h: 147 }, te: { x: 173, y: 212, h: 147 } },
+  rocket_vegaC:       { pad: { x: 459, y: 172, h: 187 }, te: { x: 155, y: 172, h: 187 } },
+  rocket_jielong:     { pad: { x: 474, y: 213, h: 146 }, te: { x: 172, y: 213, h: 146 } },
+  rocket_falconheavy: { pad: { x: 479, y: 243, h: 116 }, te: { x: 179, y: 243, h: 116 } },
+  rocket_minotaur:    { pad: { x: 485, y: 244, h: 115 }, te: { x: 182, y: 244, h: 115 } },
+  rocket_neutron:     { pad: { x: 484, y: 241, h: 118 }, te: { x: 181, y: 241, h: 118 } },
+  rocket_rfaone:      { pad: { x: 484, y: 235, h: 124 }, te: { x: 180, y: 235, h: 124 } },
+  rocket_spectrum:    { pad: { x: 476, y: 217, h: 142 }, te: { x: 172, y: 217, h: 142 } },
+  rocket_tianlong:    { pad: { x: 478, y: 223, h: 136 }, te: { x: 174, y: 223, h: 136 } },
 };
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
@@ -725,7 +908,7 @@ function drawBackgroundPad() {
   });
 
   // ── Vent smoke (same logic as main pad) ──
-  const ventX2 = 272 - 2;
+  const ventX2 = 285;
   const ventY2 = rocketMidY;
   const f2 = state.smokeFrame;
   for (let i = 0; i < 12; i++) {
@@ -747,49 +930,29 @@ function drawBackgroundPad() {
 
 
 
-  // ── Flood lights — drawn inside save/restore so haze filter applies ──
+  // ── Flood lights ──
   const sl2groundY = groundY - 11;
-const sl2targetX = padX - 10;
+  const sl2targetX = padX - 10;
   const sl2targetY = rocketMidY - 16;
   const sl2lx      = sl2targetX - 30;
   const sl2rx      = sl2targetX + 60;
 
-  if (isNight()) {
-    const fh2 = 18;
-    const fw2 = IMG.floodlight ? Math.round(IMG.floodlight.width * (fh2 / IMG.floodlight.height)) : 8;
-    const sl2beamLX = sl2lx + fw2 / 2 - 9;   // ← left beam offset (+ = right, - = left)
-    const sl2beamRX = sl2rx + fw2 / 2 - 9;   // ← right beam offset
-    const sl2CX = sl2beamLX;
-    const sl2RCX = sl2beamRX;
-    const sl2headY = sl2groundY - fh2 / 2;
-    ctx.globalAlpha = 0.28;
-    const sg1 = ctx.createLinearGradient(sl2CX, sl2headY, sl2targetX, sl2targetY);
-    sg1.addColorStop(0, '#ffffcc'); sg1.addColorStop(1, 'rgba(255,255,180,0)');
-    ctx.fillStyle = sg1;
-    ctx.beginPath(); ctx.moveTo(sl2CX-3, sl2headY); ctx.lineTo(sl2targetX-8, sl2targetY); ctx.lineTo(sl2targetX+8, sl2targetY); ctx.lineTo(sl2CX+3, sl2headY); ctx.fill();
-    ctx.globalAlpha = 0.28;
-    const sg2 = ctx.createLinearGradient(sl2RCX, sl2headY, sl2targetX, sl2targetY);
-    sg2.addColorStop(0, '#ffffcc'); sg2.addColorStop(1, 'rgba(255,255,180,0)');
-    ctx.fillStyle = sg2;
-    ctx.beginPath(); ctx.moveTo(sl2RCX-3, sl2headY); ctx.lineTo(sl2targetX-8, sl2targetY); ctx.lineTo(sl2targetX+8, sl2targetY); ctx.lineTo(sl2RCX+3, sl2headY); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
+  // Beams — cached offscreen
+  ctx.drawImage(getPad2BeamCache(sl2lx, sl2rx, sl2groundY, sl2targetX, sl2targetY), 0, 0);
 
   if (IMG.floodlight) {
     const fh2 = 18;
     const fw2 = Math.round(IMG.floodlight.width * (fh2 / IMG.floodlight.height));
     ctx.drawImage(IMG.floodlight, sl2lx - fw2/2, sl2groundY - fh2, fw2, fh2);
-    ctx.drawImage(IMG.floodlight, sl2rx - fw2/2, sl2groundY - fh2, fw2, fh2);
+    ctx.save();
+    ctx.translate(sl2rx - fw2/2 + fw2, sl2groundY - fh2);
+    ctx.scale(-1, 1);
+    ctx.drawImage(IMG.floodlight, 0, 0, fw2, fh2);
+    ctx.restore();
   }
 
-  // Haze overlay — day only (at night the rect edge is visible)
-  if (!isNight()) {
-    const hazeGrad = ctx.createRadialGradient(padX, ty + th * 0.5, th * 0.1, padX, ty + th * 0.5, th * 0.75);
-    hazeGrad.addColorStop(0, 'rgba(140,170,200,0.10)');
-    hazeGrad.addColorStop(1, 'rgba(140,170,200,0)');
-    ctx.fillStyle = hazeGrad;
-    ctx.fillRect(tx - 20, ty - 10, tw + 40, th + 20);
-  }
+  // Haze overlay — day only (at night the rect edge is visible), skip on Pi (minor visual)
+  // (removed — was causing visible box at night and cheap to omit)
 
   ctx.restore();
 }
@@ -952,27 +1115,74 @@ function drawCountdown() {
   // Dark bar background
   ctx.fillStyle = 'rgba(20,20,28,0.88)';
   ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
-
-  // T-MINUS label
-  ctx.fillStyle='rgba(255,255,255,0.25)';
-  ctx.font='bold 7px Courier New'; ctx.textAlign='center';
-  ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
 
   if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
-    ctx.fillStyle='#ff4444'; ctx.shadowColor='#ff2200'; ctx.shadowBlur=10;
-    ctx.font='bold 30px Courier New'; ctx.textAlign='center';
-    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+BH/2+4);
-    ctx.shadowBlur=0;
+    // Glowing red border
+    ctx.shadowColor = '#ff3300'; ctx.shadowBlur = 12;
+    ctx.strokeStyle = 'rgba(255,68,34,0.7)'; ctx.lineWidth = 2;
+    ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // "LIFTOFF" header label
+    ctx.fillStyle = 'rgba(255,100,50,0.5)';
+    ctx.font = 'bold 6px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText('— LIFTOFF —', BX+TOTAL_W/2, BY+8);
+
+    // Big LAUNCHED text
+    ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#ff4422';
+    ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+36);
+    ctx.shadowBlur = 0;
+
+    // Mission name
+    const _lFull  = state.launchedMissionName || '';
+    const _lPipe  = _lFull.indexOf(' | ');
+    const _lShort = (_lPipe >= 0 ? _lFull.slice(_lPipe + 3) : _lFull).toUpperCase();
+    ctx.fillStyle = 'rgba(255,200,150,0.8)';
+    ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.save();
+    ctx.beginPath(); ctx.rect(BX-16, BY, TOTAL_W+32, 20); ctx.clip();
+    ctx.fillText(_lShort, BX+TOTAL_W/2, BY+50);
+    ctx.restore();
+
     if (state.postLaunchCooldown) {
       const remSec = Math.max(0, Math.floor((state.cooldownEndsAt - Date.now()) / 1000));
       const remM = Math.floor(remSec / 60), remS = remSec % 60;
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = 'bold 11px Courier New';
-      ctx.fillText('NEXT ROCKET ON STAND IN  ' + remM + ':' + String(remS).padStart(2,'0'), BX+TOTAL_W/2, BY+BH-4);
+
+      // Divider
+      ctx.strokeStyle = 'rgba(255,68,34,0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(BX, BY+56); ctx.lineTo(BX+TOTAL_W, BY+56); ctx.stroke();
+
+      // Next mission (if known)
+      if (state.nextMissionName) {
+        const _nFull  = state.nextMissionName;
+        const _nPipe  = _nFull.indexOf(' | ');
+        const _nShort = (_nPipe >= 0 ? _nFull.slice(_nPipe + 3) : _nFull).toUpperCase();
+        ctx.fillStyle = 'rgba(0,232,122,0.7)';
+        ctx.font = '5px "Press Start 2P"'; ctx.textAlign = 'center';
+        ctx.save();
+        ctx.beginPath(); ctx.rect(BX-16, BY+56, TOTAL_W+32, 14); ctx.clip();
+        ctx.fillText('NEXT  ›  ' + _nShort, BX+TOTAL_W/2, BY+66);
+        ctx.restore();
+      }
+
+      // Countdown
+      ctx.shadowColor = '#ffd93d'; ctx.shadowBlur = 6;
+      ctx.fillStyle = '#ffd93d';
+      ctx.font = '7px "Press Start 2P"'; ctx.textAlign = 'center';
+      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), BX+TOTAL_W/2, BY+82);
+      ctx.shadowBlur = 0;
     }
     return;
   }
+
+  // Normal countdown border + T-MINUS label
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1;
+  ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.font='bold 7px Courier New'; ctx.textAlign='center';
+  ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
   if (!cd) {
     ctx.fillStyle='#ffd93d'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
     ctx.fillText('LAUNCH TIME TBD', BX+TOTAL_W/2, BY+BH/2+10); return;
@@ -1019,7 +1229,7 @@ function drawCountdown() {
     ctx.shadowColor = digitColor;
     ctx.shadowBlur = 9;
     ctx.fillStyle = digitColor;
-    ctx.font='bold 32px Courier New';
+    ctx.font='24px "Press Start 2P"';
     ctx.textAlign='center';
     ctx.textBaseline='middle';
     ctx.fillText(String(vals[i]).padStart(2,'0'), sx + sw/2, sy + sh/2);
@@ -1027,8 +1237,8 @@ function drawCountdown() {
     ctx.shadowBlur=0;
 
     // Label
-    ctx.fillStyle='#4a7aaa'; ctx.font='bold 7px Courier New'; ctx.textAlign='center';
-    ctx.fillText(lbl, bx+BW/2, by+BH-3);
+    ctx.fillStyle='#4a7aaa'; ctx.font='bold 8px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillText(lbl, bx+BW/2, by+BH-4);
   });
 }
 
@@ -1041,7 +1251,9 @@ function updateInfoBar() {
 
   // Post-launch cooldown state
   if (state.postLaunchCooldown) {
-    document.getElementById('ib-name').textContent = 'LAUNCHED: ' + state.launchedMissionName;
+    const _lnFull = state.launchedMissionName || '—';
+    const _lnPipe = _lnFull.indexOf(' | ');
+    document.getElementById('ib-name').textContent = _lnPipe >= 0 ? _lnFull.slice(_lnPipe + 3) : _lnFull;
     document.getElementById('ib-badge').textContent = '✓';
     document.getElementById('ib-badge').className = 'go';
     document.getElementById('ib-sub').textContent = state.nextMissionName ? 'UPCOMING: ' + state.nextMissionName : '—';
@@ -1181,7 +1393,7 @@ function updateInfoBar() {
   }
     // Version + data age
   const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  document.getElementById('ib-ver').textContent = `v1.0.0 · data ${minAgo}m ago`;
+  document.getElementById('ib-ver').textContent = `v2.0.0 · data ${minAgo}m ago`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1315,8 +1527,12 @@ function updateLaunch() {
       state._lastLaunchT0       = _launched ? (_launched.t0 || null) : null;
       state._lastLaunchVehicle  = _launched ? (_launched.vehicle || '') : '';
       state.postLaunchCooldown  = true;
-      state.cooldownEndsAt      = Date.now() + 10 * 60 * 1000;
-      saveState(); // persist immediately so navigation away doesn't lose cooldown
+      if (state.testMode) {
+        state.cooldownEndsAt = Date.now() + 10 * 1000; // 10s for test only
+      } else {
+        state.cooldownEndsAt = Date.now() + 10 * 60 * 1000;
+        saveState(); // persist so navigation away doesn't lose cooldown
+      }
       // Invalidate cache then fetch fresh data from the single source
       const _afterLaunchFetch = () => fetch('/api/data').then(r => r.json()).then(data => {
         const all    = data.launches || [];
@@ -1334,8 +1550,14 @@ function updateLaunch() {
     }
   }
 
-  const flameX = NOZZLE_X;
-  const flameY = NOZZLE_Y + (state.rocketY - PAD_Y_BASE) + 8;
+  // Flame origin = centre-X of current rocket image, just below the nozzle
+  const _fVehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
+  const _fKey      = getRocketAssetKey(_fVehicle);
+  const _fCfg      = (ROCKET_CONFIG[_fKey] || ROCKET_CONFIG.rocket_generic).pad;
+  const _fImg      = IMG[_fKey];
+  const _fRw       = _fImg ? Math.round(_fImg.width * (_fCfg.h / _fImg.height)) : 50;
+  const flameX     = _fCfg.x + _fRw / 2;
+  const flameY     = state.rocketY + 1;
   if (state.flameIntensity > 0) {
     spawnFlameParticles(flameX, flameY, state.flameIntensity);
   }
@@ -1423,7 +1645,10 @@ async function fetchLaunches(afterLaunch=false) { return fetchData(afterLaunch);
 function updateClouds() {
   state.clouds.forEach(c => {
     c.x += 0.3;
-    if (c.x > 900) c.x = -60;
+    if (c.x > 900) {
+      c.x = -120;
+      c.y = 30 + Math.random() * 100;  // 30–130, stays above tower top (~160)
+    }
   });
 }
 
@@ -1618,15 +1843,26 @@ function drawLightning() {
   ctx.stroke();
 }
 
+// Fog puff — single cached offscreen, scrolled across screen
+let _fogPuff = null;
+function getFogPuff() {
+  if (_fogPuff) return _fogPuff;
+  _fogPuff = makeOffscreen(400, 160);
+  const g = _fogPuff.getContext('2d');
+  const grad = g.createRadialGradient(200, 80, 0, 200, 80, 200);
+  grad.addColorStop(0, 'rgba(200,210,220,0.18)');
+  grad.addColorStop(1, 'rgba(200,210,220,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 400, 160);
+  return _fogPuff;
+}
+
 function drawFog() {
   fogOffset = (fogOffset + 0.3) % W;
+  const puff = getFogPuff();
   for (let i = 0; i < 3; i++) {
-    const x = ((fogOffset + i * 280) % (W + 200)) - 100;
-    const grad = ctx.createRadialGradient(x, 340, 0, x, 340, 200);
-    grad.addColorStop(0, 'rgba(200,210,220,0.18)');
-    grad.addColorStop(1, 'rgba(200,210,220,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 260, W, 160);
+    const x = ((fogOffset + i * 280) % (W + 200)) - 300;
+    ctx.drawImage(puff, x, 260);
   }
 }
 
@@ -1694,7 +1930,7 @@ function drawMilestoneTimeline() {
           ctx.lineWidth = 4;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, fillY); ctx.stroke();
           // Green filled portion
-          ctx.strokeStyle = `rgba(0,232,122,${opacity*0.8})`;
+          ctx.strokeStyle = `rgba(0,232,122,${Math.min(1, opacity*1.3)})`;
           ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, fillY); ctx.stroke();
           // Gray remaining portion
@@ -1702,7 +1938,7 @@ function drawMilestoneTimeline() {
             ctx.strokeStyle = `rgba(0,0,0,0.5)`;
             ctx.lineWidth = 3;
             ctx.beginPath(); ctx.moveTo(dotX, fillY); ctx.lineTo(dotX, lineBot); ctx.stroke();
-            ctx.strokeStyle = `rgba(255,255,255,${opacity*0.25})`;
+            ctx.strokeStyle = `rgba(255,255,255,${opacity*0.5})`;
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(dotX, fillY); ctx.lineTo(dotX, lineBot); ctx.stroke();
           }
@@ -1710,7 +1946,7 @@ function drawMilestoneTimeline() {
           ctx.strokeStyle = `rgba(0,0,0,0.5)`;
           ctx.lineWidth = 3;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, lineBot); ctx.stroke();
-          ctx.strokeStyle = `rgba(255,255,255,${opacity*0.25})`;
+          ctx.strokeStyle = `rgba(255,255,255,${opacity*0.5})`;
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(dotX, lineTop); ctx.lineTo(dotX, lineBot); ctx.stroke();
         }
@@ -1746,7 +1982,7 @@ function drawMilestoneTimeline() {
     ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:isDone?`rgba(0,232,122,${opacity})`:`rgba(255,255,255,${opacity})`;
     ctx.fillText(m.label, dotX-12, y+3);
     ctx.font=`${ts}px Courier New`;
-    ctx.fillStyle=`rgba(255,255,255,${opacity*0.7})`;
+    ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:`rgba(0,232,122,${Math.min(1,opacity*1.1)})`;
     ctx.fillText(tStr(m.t), dotX-12, y+ls+4);
     ctx.shadowBlur = 0;
   });
@@ -1781,6 +2017,7 @@ function render(now) {
   ctx.clearRect(0, 0, W, H);
 
   drawBackground();
+  drawMoon();
   drawClouds();
 
   // Weather effects
@@ -1850,9 +2087,9 @@ function startPolling() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  TEST LAUNCH BUTTON
+//  TEST LAUNCH  (click rocket on pad to trigger)
 // ─────────────────────────────────────────────────────────────────────────────
-document.getElementById('btn-test').addEventListener('click', () => {
+function triggerTestLaunch() {
   if (state.isLaunching || state.testMode) return;
   const launch = currentLaunch();
   if (!launch) return;
@@ -1867,15 +2104,14 @@ document.getElementById('btn-test').addEventListener('click', () => {
     if (!state.rocketOffscreen) return;
     clearInterval(checkReset);
 
-    // Show cooldown for 10s in test mode (not 10 min)
     const launchedName = launch.name || '';
     state.launchedMissionName = launchedName;
-    state.nextMissionName     = launchedName;  // same mission coming back
-    state.nextMissionT0       = originalT0;    // real t0 = the "next" launch
+    state.nextMissionName     = launchedName;
+    state.nextMissionT0       = originalT0;
     state.postLaunchCooldown  = true;
-    state.cooldownEndsAt      = Date.now() + 10 * 1000; // 10 seconds for testing
+    state.cooldownEndsAt      = Date.now() + 10 * 1000;
 
-    // When cooldown ends, restore everything back to normal
+    const originalIdx = state.launches.indexOf(launch);
     const cooldownEnd = setInterval(() => {
       if (Date.now() < state.cooldownEndsAt) return;
       clearInterval(cooldownEnd);
@@ -1891,18 +2127,22 @@ document.getElementById('btn-test').addEventListener('click', () => {
       state.rocketY             = PAD_Y_BASE;
       state.flameParticles      = [];
       state.flameIntensity      = 0;
+      // Unbury so the queue doesn't advance permanently
+      if (launch.id) state.buriedLaunchIds = state.buriedLaunchIds.filter(id => id !== launch.id);
+      state.currentIdx = originalIdx >= 0 ? originalIdx : 0;
       console.log(`[${ts()}] TEST MODE complete — restored`);
     }, 500);
 
     console.log(`[${ts()}] TEST MODE rocket offscreen — cooldown demo started`);
   }, 200);
-});
+}
+
+document.getElementById('btn-test').addEventListener('click', triggerTestLaunch);
 
 canvas.addEventListener('click', function(e) {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-
 
   // Settings button tap zone — matches drawGearIcon: bx = W-94, by = 5, bw = 88, bh = 22
   if (x > W - 100 && x < W - 6 && y > 5 && y < 27) {
@@ -1914,6 +2154,18 @@ canvas.addEventListener('click', function(e) {
     const launch = currentLaunch();
     if (launch) {
       window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
+    }
+  }
+
+  // Rocket click → test launch
+  if (!state.isLaunching && !state.testMode && !state.postLaunchCooldown && !state.rocketOffscreen) {
+    const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
+    const assetKey = getRocketAssetKey(vehicle);
+    const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
+    const img      = IMG[assetKey];
+    const rw       = img ? Math.round(img.width * (cfg.h / img.height)) : 50;
+    if (x >= cfg.x - 4 && x <= cfg.x + rw + 4 && y >= cfg.y && y <= cfg.y + cfg.h) {
+      triggerTestLaunch();
     }
   }
 });

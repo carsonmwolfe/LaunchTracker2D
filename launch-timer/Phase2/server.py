@@ -96,7 +96,7 @@ _WMO_CONDITION = {
     95:'thunderstorm', 96:'thunderstorm', 99:'thunderstorm',
 }
 
-VERSION = 'v1.0.0'
+VERSION = 'v2.0.0'
 
 _weather_cache = {'data': None, 'fetched': 0}
 WEATHER_TTL = 900  # 15 min

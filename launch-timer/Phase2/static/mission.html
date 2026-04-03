@@ -524,6 +524,7 @@
     const earthTopImg  = new Image(); earthTopImg.src  = '/static/assets/earthtop.png';
     const earthSideImg = new Image(); earthSideImg.src = '/static/assets/earthside.png';
     const earthBackImg = new Image(); earthBackImg.src = '/static/assets/earthback.png';
+    const moonImg      = new Image(); moonImg.src      = '/static/assets/moon.png';
 
     // ── Draw Earth globe ──────────────────────────────────────────────────────
     // useSide=true → side view, false → top-down. img passed explicitly.
@@ -678,13 +679,20 @@
       ectx.fillStyle=eg;ectx.beginPath();ectx.arc(ex,ey,Re*2.0,0,Math.PI*2);ectx.fill();
       drawEarth(ex, ey, Re, false);
 
-      // ── Moon ──────────────────────────────────────────────────────────────
-      ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);
-      ectx.fillStyle='#555560';ectx.fill();
-      ectx.fillStyle='#484852';
-      [[mx-Rm*0.30,my-Rm*0.22,Rm*0.22],[mx+Rm*0.24,my+Rm*0.28,Rm*0.16],[mx-Rm*0.08,my+Rm*0.40,Rm*0.12]].forEach(([cx2,cy2,cr])=>{
-        ectx.beginPath();ectx.arc(cx2,cy2,cr,0,Math.PI*2);ectx.fill();
-      });
+      // ── Moon — use sprite PNG ─────────────────────────────────────────────
+      // Soft glow
+      const mg = ectx.createRadialGradient(mx,my,Rm*0.3,mx,my,Rm*2.2);
+      mg.addColorStop(0,'rgba(220,220,180,0.20)');mg.addColorStop(1,'rgba(220,220,180,0)');
+      ectx.fillStyle=mg;ectx.beginPath();ectx.arc(mx,my,Rm*2.2,0,Math.PI*2);ectx.fill();
+      // Clip + draw sprite
+      ectx.save();
+      ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);ectx.clip();
+      if(moonImg.complete&&moonImg.naturalWidth>0){
+        ectx.drawImage(moonImg,mx-Rm,my-Rm,Rm*2,Rm*2);
+      } else {
+        ectx.fillStyle='#555560';ectx.fill();
+      }
+      ectx.restore();
       ectx.strokeStyle='rgba(200,200,220,0.22)';ectx.lineWidth=1;
       ectx.beginPath();ectx.arc(mx,my,Rm,0,Math.PI*2);ectx.stroke();
 
