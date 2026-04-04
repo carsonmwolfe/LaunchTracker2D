@@ -9,7 +9,7 @@
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
 
 REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
-BRANCH="Phase2"
+BRANCH="Phase3"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 
 cd "$REPO_DIR" || { echo "$LOG_PREFIX ERROR: repo dir not found"; exit 1; }
