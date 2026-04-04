@@ -14,36 +14,36 @@ Cron setup (run: crontab -e on Pi):
 
 import smtplib
 import sys
-import os
 import subprocess
 import time
 import json
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
-UNIT_ID       = 'Unit-001'   # Change per Pi when shipping
+UNIT_ID       = 'Unit-001'
 FROM          = 'rangetrack551@gmail.com'
 TO            = 'rangetrack551@gmail.com'
 PASS_FILE     = '/home/pi/.rangetrack_gmail_pass'
 SERVER_SCRIPT = 'server.py'
 DATA_CACHE    = '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/data_cache.json'
-ALERT_STATE   = '/home/pi/.rangetrack_alert_state.json'  # tracks which alerts already fired
+ALERT_STATE   = '/home/pi/.rangetrack_alert_state.json'
 
-# Thresholds
-TEMP_ALERT_C      = 80.0   # °C
-LOS_ALERT_MINUTES = 15     # minutes since last API fetch
-DISK_ALERT_PCT    = 90     # % disk used
+TEMP_ALERT_C      = 80.0
+LOS_ALERT_MINUTES = 15
+DISK_ALERT_PCT    = 90
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-def send_email(subject, body):
+def send_email(subject, html):
     try:
         with open(PASS_FILE) as f:
             password = f.read().strip()
-        msg = MIMEText(body)
+        msg = MIMEMultipart('alternative')
         msg['Subject'] = f'[{UNIT_ID}] {subject}'
         msg['From']    = FROM
         msg['To']      = TO
+        msg.attach(MIMEText(html, 'html'))
         s = smtplib.SMTP('smtp.gmail.com', 587)
         s.starttls()
         s.login(FROM, password)
@@ -126,8 +126,7 @@ def get_last_fetch_age():
             data = json.load(f)
         fetched_at = data.get('fetched_at', 0)
         if fetched_at:
-            age_min = (time.time() - fetched_at) / 60
-            return round(age_min, 1)
+            return round((time.time() - fetched_at) / 60, 1)
     except:
         pass
     return None
@@ -147,43 +146,182 @@ def save_alert_state(state):
     except:
         pass
 
+# ── HTML Templates ────────────────────────────────────────────────────────────
+PIXEL_FONT = "font-family: 'Courier New', monospace;"
+
+def bar_html(pct, color):
+    filled = int(pct / 100 * 20)
+    empty  = 20 - filled
+    return (
+        f'<span style="color:{color};">{"█" * filled}</span>'
+        f'<span style="color:#1a2a1a;">{"█" * empty}</span>'
+        f' <span style="color:#aaa;">{pct}%</span>'
+    )
+
+def status_dot(ok):
+    return (
+        f'<span style="color:#00e87a;">&#9646; NOMINAL</span>' if ok
+        else f'<span style="color:#ff4422;">&#9646; OFFLINE</span>'
+    )
+
+def temp_color(t):
+    if t is None: return '#aaaaaa'
+    if t >= 80:   return '#ff4422'
+    if t >= 65:   return '#ffd93d'
+    return '#00e87a'
+
+def digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los):
+    tc    = temp_color(temp)
+    ts_   = ts()
+    cpu_  = cpu if cpu is not None else 0
+    mem_  = mem_pct if mem_pct is not None else 0
+    disk_ = disk_pct if disk_pct is not None else 0
+
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  body {{ background:#0a0e14; margin:0; padding:20px; {PIXEL_FONT} }}
+  .card {{ background:#0d1620; border:2px solid #00e87a; max-width:520px; margin:0 auto; padding:0; }}
+  .header {{ background:#00e87a; padding:12px 18px; }}
+  .header-title {{ color:#0a0e14; font-size:11px; letter-spacing:2px; margin:0; }}
+  .header-sub {{ color:#0a4a2a; font-size:7px; margin-top:4px; }}
+  .body {{ padding:18px; }}
+  .unit-row {{ display:flex; justify-content:space-between; border-bottom:1px solid #1a2a1a; padding-bottom:10px; margin-bottom:14px; }}
+  .unit-id {{ color:#ffd93d; font-size:9px; }}
+  .uptime {{ color:#4a9ede; font-size:7px; margin-top:4px; }}
+  .timestamp {{ color:#444; font-size:6px; text-align:right; }}
+  .section-label {{ color:#00e87a; font-size:6px; letter-spacing:3px; margin-bottom:10px; border-left:3px solid #00e87a; padding-left:8px; }}
+  .row {{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }}
+  .label {{ color:#4a9ede; font-size:7px; min-width:90px; }}
+  .value {{ color:#fff; font-size:7px; text-align:right; }}
+  .bar-row {{ margin-bottom:12px; }}
+  .bar-label {{ color:#4a9ede; font-size:7px; margin-bottom:4px; }}
+  .section {{ margin-bottom:18px; }}
+  .footer {{ border-top:1px solid #1a2a1a; padding:8px 18px; text-align:center; color:#1e3048; font-size:6px; }}
+  .scanline {{ background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px); position:fixed; top:0;left:0;right:0;bottom:0; pointer-events:none; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="header-title">&#9632; RANGETRACK OS</div>
+    <div class="header-sub">DAILY HEALTH REPORT // {ts_}</div>
+  </div>
+  <div class="body">
+
+    <div class="unit-row">
+      <div>
+        <div class="unit-id">&#9632; {UNIT_ID}</div>
+        <div class="uptime">UPTIME: {uptime}</div>
+      </div>
+      <div class="timestamp">{ts_}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">SYSTEM</div>
+
+      <div class="row">
+        <div class="label">CPU TEMP</div>
+        <div class="value" style="color:{tc};">{f'{temp:.1f}°C' if temp else '—'}</div>
+      </div>
+
+      <div class="bar-row">
+        <div class="bar-label">CPU LOAD</div>
+        {bar_html(int(cpu_), '#4a9ede')}
+      </div>
+
+      <div class="bar-row">
+        <div class="bar-label">MEMORY &nbsp;{f'{mem_u}MB / {mem_t}MB' if mem_u else '—'}</div>
+        {bar_html(int(mem_), '#ffd93d')}
+      </div>
+
+      <div class="bar-row">
+        <div class="bar-label">DISK &nbsp;&nbsp;&nbsp;{f'{disk_u} / {disk_t}' if disk_u else '—'}</div>
+        {bar_html(int(disk_), '#00e87a')}
+      </div>
+
+      <div class="row">
+        <div class="label">INTERNET</div>
+        <div class="value">{status_dot(internet)}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">APPLICATION</div>
+      <div class="row">
+        <div class="label">SERVER</div>
+        <div class="value">{status_dot(server)}</div>
+      </div>
+      <div class="row">
+        <div class="label">LAST API FETCH</div>
+        <div class="value" style="color:{'#00e87a' if los and los < 10 else '#ffd93d' if los and los < 20 else '#ff4422'};">
+          {f'{los} MIN AGO' if los is not None else '— UNKNOWN'}
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer">RANGETRACK OS v2.0 // {UNIT_ID} // AUTO HEALTH MONITOR</div>
+</div>
+</body>
+</html>
+"""
+
+def alert_html(alerts, resolved=False):
+    color  = '#00e87a' if resolved else '#ff4422'
+    title  = 'ALERT RESOLVED' if resolved else 'SYSTEM ALERT'
+    icon   = '&#10003;' if resolved else '&#9888;'
+    items  = ''.join(
+        f'<div style="border-left:3px solid {color}; padding:8px 12px; margin-bottom:8px; color:#fff; font-size:7px;">'
+        f'{icon} {a}</div>'
+        for a in alerts
+    )
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body {{ background:#0a0e14; margin:0; padding:20px; font-family:'Courier New',monospace; }}
+  .card {{ background:#0d1620; border:2px solid {color}; max-width:520px; margin:0 auto; }}
+  .header {{ background:{color}; padding:12px 18px; }}
+  .header-title {{ color:#0a0e14; font-size:11px; letter-spacing:2px; margin:0; }}
+  .header-sub {{ color:rgba(0,0,0,0.5); font-size:7px; margin-top:4px; }}
+  .body {{ padding:18px; }}
+  .footer {{ border-top:1px solid #1a2a1a; padding:8px 18px; text-align:center; color:#333; font-size:6px; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="header-title">&#9632; RANGETRACK OS — {title}</div>
+    <div class="header-sub">{UNIT_ID} // {ts()}</div>
+  </div>
+  <div class="body">
+    {items}
+  </div>
+  <div class="footer">RANGETRACK OS v2.0 // AUTO HEALTH MONITOR</div>
+</div>
+</body>
+</html>
+"""
+
 # ── Digest ────────────────────────────────────────────────────────────────────
 def send_digest():
-    temp     = get_temp()
-    cpu      = get_cpu_usage()
-    mem_u, mem_t, mem_pct = get_memory()
-    disk_u, disk_t, disk_pct = get_disk()
-    uptime   = get_uptime()
-    server   = is_server_running()
-    internet = has_internet()
-    los      = get_last_fetch_age()
-
-    temp_str   = f'{temp:.1f}°C' if temp is not None else 'unknown'
-    cpu_str    = f'{cpu}%' if cpu is not None else 'unknown'
-    mem_str    = f'{mem_u}MB / {mem_t}MB ({mem_pct}%)' if mem_u else 'unknown'
-    disk_str   = f'{disk_u} / {disk_t} ({disk_pct}%)' if disk_u else 'unknown'
-    server_str = '✓ Running' if server else '✗ OFFLINE'
-    net_str    = '✓ Connected' if internet else '✗ OFFLINE'
-    los_str    = f'{los} min ago' if los is not None else 'unknown'
-
-    body = f"""RangeTrack OS — Daily Health Report
-{ts()}
-
-UNIT:       {UNIT_ID}
-UPTIME:     {uptime}
-
-SYSTEM
-  CPU Temp: {temp_str}
-  CPU Load: {cpu_str}
-  Memory:   {mem_str}
-  Disk:     {disk_str}
-  Internet: {net_str}
-
-APP
-  Server:   {server_str}
-  Last API: {los_str}
-"""
-    send_email('Daily Health Report', body)
+    temp                      = get_temp()
+    cpu                       = get_cpu_usage()
+    mem_u, mem_t, mem_pct     = get_memory()
+    disk_u, disk_t, disk_pct  = get_disk()
+    uptime                    = get_uptime()
+    server                    = is_server_running()
+    internet                  = has_internet()
+    los                       = get_last_fetch_age()
+    html = digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los)
+    send_email('Daily Health Report', html)
 
 # ── Alert Check ───────────────────────────────────────────────────────────────
 def check_alerts():
@@ -191,7 +329,6 @@ def check_alerts():
     alerts  = []
     cleared = []
 
-    # Internet
     internet = has_internet()
     if not internet and not state.get('no_internet'):
         alerts.append('INTERNET LOST — Pi has no network connection.')
@@ -200,17 +337,15 @@ def check_alerts():
         cleared.append('Internet connection restored.')
         state['no_internet'] = False
 
-    # Temperature
     temp = get_temp()
     if temp is not None:
         if temp >= TEMP_ALERT_C and not state.get('high_temp'):
-            alerts.append(f'HIGH TEMP — CPU at {temp:.1f}°C (limit {TEMP_ALERT_C}°C).')
+            alerts.append(f'HIGH TEMP — CPU at {temp:.1f}C (limit {TEMP_ALERT_C}C).')
             state['high_temp'] = True
         elif temp < TEMP_ALERT_C and state.get('high_temp'):
-            cleared.append(f'Temperature back to normal ({temp:.1f}°C).')
+            cleared.append(f'Temperature back to normal ({temp:.1f}C).')
             state['high_temp'] = False
 
-    # Server
     server = is_server_running()
     if not server and not state.get('server_down'):
         alerts.append('SERVER CRASHED — server.py is not running.')
@@ -219,7 +354,6 @@ def check_alerts():
         cleared.append('Server is back online.')
         state['server_down'] = False
 
-    # LOS
     los = get_last_fetch_age()
     if los is not None:
         if los >= LOS_ALERT_MINUTES and not state.get('los'):
@@ -229,7 +363,6 @@ def check_alerts():
             cleared.append(f'API signal restored ({los:.0f} min ago).')
             state['los'] = False
 
-    # Disk
     _, _, disk_pct = get_disk()
     if disk_pct is not None:
         if disk_pct >= DISK_ALERT_PCT and not state.get('low_disk'):
@@ -242,12 +375,9 @@ def check_alerts():
     save_alert_state(state)
 
     if alerts:
-        body = f"RangeTrack OS — ALERT\n{ts()}\nUnit: {UNIT_ID}\n\n" + '\n'.join(f'⚠ {a}' for a in alerts)
-        send_email('ALERT', body)
-
+        send_email('ALERT', alert_html(alerts, resolved=False))
     if cleared:
-        body = f"RangeTrack OS — Resolved\n{ts()}\nUnit: {UNIT_ID}\n\n" + '\n'.join(f'✓ {c}' for c in cleared)
-        send_email('Alert Resolved', body)
+        send_email('Alert Resolved', alert_html(cleared, resolved=True))
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
@@ -257,4 +387,4 @@ if __name__ == '__main__':
     elif mode == 'check':
         check_alerts()
     else:
-        print(f'Usage: python3 health.py [digest|check]')
+        print('Usage: python3 health.py [digest|check]')
