@@ -1,21 +1,20 @@
 #!/bin/bash
 # Auto-updater: checks for new commits on GitHub once per hour via cron.
-# If changes are found, pulls, restarts the server, and sends a Gmail notification.
+# If changes are found, pulls and restarts the server.
+# Updates are included in the daily health digest (not sent immediately).
 #
-# SETUP (run once on Pi):
-#   chmod +x /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh
-#   crontab -e
-#   Add this line:
+# Cron setup (crontab -e on Pi):
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
 
 REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
 BRANCH="Phase3"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
+UPDATE_LOG="/home/pi/.rangetrack_updates.json"
 
 cd "$REPO_DIR" || { echo "$LOG_PREFIX ERROR: repo dir not found"; exit 1; }
 
 # Stash any local changes to settings/cache so pull doesn't conflict
-git stash -- data_cache.json settings.json 2>/dev/null
+git stash -- launch-timer/Phase2/settings.json 2>/dev/null
 
 # Fetch remote without merging
 git fetch origin "$BRANCH" --quiet
@@ -43,10 +42,24 @@ nohup python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
 echo "$LOG_PREFIX Server restarted (PID $SERVER_PID)"
 
-# Send Gmail notification
+# Log the update so the daily digest can include it
 SHORT=$(git log -1 --pretty="%s" 2>/dev/null)
-TIME=$(date '+%I:%M %p')
-MSG="RangeTrack OS updated at $TIME — $SHORT"
+TIME=$(date '+%Y-%m-%d %H:%M:%S')
+python3 - <<PYEOF
+import json, os
+log_file = '$UPDATE_LOG'
+entry = {'time': '$TIME', 'commit': '$SHORT', 'from': '$LOCAL', 'to': '$REMOTE'}
+try:
+    with open(log_file) as f:
+        updates = json.load(f)
+except:
+    updates = []
+updates.append(entry)
+# Keep last 10 only
+updates = updates[-10:]
+with open(log_file, 'w') as f:
+    json.dump(updates, f)
+print('Update logged.')
+PYEOF
 
-python3 /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/notify.py "$MSG"
-echo "$LOG_PREFIX Notification sent: $MSG"
+echo "$LOG_PREFIX Update logged: $SHORT"

@@ -17,6 +17,9 @@ import sys
 import subprocess
 import time
 import json
+import os
+import base64
+import tempfile
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -29,6 +32,7 @@ PASS_FILE     = '/home/pi/.rangetrack_gmail_pass'
 SERVER_SCRIPT = 'server.py'
 DATA_CACHE    = '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/data_cache.json'
 ALERT_STATE   = '/home/pi/.rangetrack_alert_state.json'
+UPDATE_LOG    = '/home/pi/.rangetrack_updates.json'
 
 TEMP_ALERT_C      = 80.0
 LOS_ALERT_MINUTES = 15
@@ -120,6 +124,66 @@ def has_internet():
     except:
         return False
 
+def take_screenshots():
+    """Capture index, launches, and mission pages via headless Chromium.
+    Returns dict of {label: base64_png_string} or empty dict on failure."""
+    pages = [
+        ('MAIN',     'http://localhost:5001/'),
+        ('LAUNCHES', 'http://localhost:5001/launches'),
+        ('MISSION',  'http://localhost:5001/mission'),
+    ]
+    results = {}
+    tmp_dir = tempfile.mkdtemp()
+    for label, url in pages:
+        out = os.path.join(tmp_dir, f'{label}.png')
+        try:
+            subprocess.run([
+                'chromium-browser',
+                '--headless',
+                '--no-sandbox',
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--window-size=800,480',
+                f'--screenshot={out}',
+                url
+            ], timeout=30, capture_output=True)
+            if os.path.exists(out):
+                with open(out, 'rb') as f:
+                    results[label] = base64.b64encode(f.read()).decode()
+                os.remove(out)
+        except Exception as e:
+            print(f'[{ts()}] Screenshot error ({label}): {e}')
+    try:
+        os.rmdir(tmp_dir)
+    except:
+        pass
+    return results
+
+def get_recent_updates():
+    try:
+        with open(UPDATE_LOG) as f:
+            updates = json.load(f)
+        # Only return updates from the last 24 hours
+        cutoff = time.time() - 86400
+        recent = []
+        for u in updates:
+            try:
+                t = datetime.strptime(u['time'], '%Y-%m-%d %H:%M:%S').timestamp()
+                if t > cutoff:
+                    recent.append(u)
+            except:
+                pass
+        return recent
+    except:
+        return []
+
+def clear_update_log():
+    try:
+        with open(UPDATE_LOG, 'w') as f:
+            json.dump([], f)
+    except:
+        pass
+
 def get_last_fetch_age():
     try:
         with open(DATA_CACHE) as f:
@@ -170,12 +234,44 @@ def temp_color(t):
     if t >= 65:   return '#ffd93d'
     return '#00e87a'
 
-def digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los):
+def digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los, updates, screenshots):
     tc    = temp_color(temp)
     ts_   = ts()
     cpu_  = cpu if cpu is not None else 0
     mem_  = mem_pct if mem_pct is not None else 0
     disk_ = disk_pct if disk_pct is not None else 0
+
+    if screenshots:
+        shots = ''.join(
+            f'<div style="margin-bottom:12px;">'
+            f'<div style="color:#4a9ede; font-size:6px; letter-spacing:2px; margin-bottom:4px;">{lbl}</div>'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%; border:1px solid #1a2a1a; display:block;">'
+            f'</div>'
+            for lbl, b64 in screenshots.items()
+        )
+        screenshots_section = f'''
+    <div class="section">
+      <div class="section-label">VISUAL CHECK</div>
+      {shots}
+    </div>'''
+    else:
+        screenshots_section = ''
+
+    if updates:
+        rows = ''.join(
+            f'<div style="border-left:3px solid #4a9ede; padding:6px 10px; margin-bottom:6px;">'
+            f'<div style="color:#ffd93d; font-size:6px;">{u["time"]}</div>'
+            f'<div style="color:#fff; font-size:7px; margin-top:3px;">{u["commit"]}</div>'
+            f'</div>'
+            for u in reversed(updates)
+        )
+        updates_section = f'''
+    <div class="section">
+      <div class="section-label">UPDATES ({len(updates)} IN LAST 24H)</div>
+      {rows}
+    </div>'''
+    else:
+        updates_section = ''
 
     return f"""
 <!DOCTYPE html>
@@ -265,6 +361,8 @@ def digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, upti
     </div>
 
   </div>
+  {screenshots_section}
+  {updates_section}
   <div class="footer">RANGETRACK OS v2.0 // {UNIT_ID} // AUTO HEALTH MONITOR</div>
 </div>
 </body>
@@ -320,8 +418,13 @@ def send_digest():
     server                    = is_server_running()
     internet                  = has_internet()
     los                       = get_last_fetch_age()
-    html = digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los)
+    updates                   = get_recent_updates()
+    print(f'[{ts()}] Taking screenshots...')
+    screenshots               = take_screenshots()
+    print(f'[{ts()}] Got {len(screenshots)} screenshots')
+    html = digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, uptime, server, internet, los, updates, screenshots)
     send_email('Daily Health Report', html)
+    clear_update_log()  # reset after digest so updates don't stack up
 
 # ── Alert Check ───────────────────────────────────────────────────────────────
 def check_alerts():
