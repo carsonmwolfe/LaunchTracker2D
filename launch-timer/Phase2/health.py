@@ -144,9 +144,10 @@ def take_screenshots():
                 '--disable-gpu',
                 '--disable-software-rasterizer',
                 '--window-size=800,480',
+                '--virtual-time-budget=5000',
                 f'--screenshot={out}',
                 url
-            ], timeout=30, capture_output=True)
+            ], timeout=45, capture_output=True)
             if os.path.exists(out):
                 with open(out, 'rb') as f:
                     results[label] = base64.b64encode(f.read()).decode()
