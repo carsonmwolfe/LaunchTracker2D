@@ -520,18 +520,25 @@ function drawMoon() {
   if (wx.sunrise) try { srMs = new Date(wx.sunrise).getTime(); } catch(e) {}
   if (wx.sunset)  try { ssMs = new Date(wx.sunset).getTime();  } catch(e) {}
 
-  let t = 0.5; // default: midnight position
+  let t;
   if (srMs && ssMs) {
     // Night spans sunset → (next) sunrise
     const nightLen = (srMs + 86400000) - ssMs;
     const intoNight = now - ssMs;
     t = Math.max(0, Math.min(1, intoNight / nightLen));
+  } else {
+    // Fallback: assume night runs 20:00–06:00 (10 hrs), derive t from local hour
+    const d = new Date(now);
+    const h = d.getHours() + d.getMinutes() / 60;
+    const nightStart = 20, nightEnd = 30; // 30 = 6:00 next day
+    const hWrapped = h < nightStart ? h + 24 : h;
+    t = Math.max(0, Math.min(1, (hWrapped - nightStart) / (nightEnd - nightStart)));
   }
 
   // Arc: rises right, sets left, peaks at midnight
   const moonSize = 28;
-  const mx = W * 0.85 - t * (W * 0.72);          // right to left
-  const my = 280 - Math.sin(t * Math.PI) * 230;   // arc height
+  const mx = W * 0.85 - t * (W * 0.72);
+  const my = 280 - Math.sin(t * Math.PI) * 230;
 
   // Only draw if above the grass line
   if (my + moonSize > 360) return;
@@ -543,8 +550,11 @@ function drawMoon() {
   ctx.fillStyle = glow;
   ctx.beginPath(); ctx.arc(mx, my, moonSize * 1.8, 0, Math.PI*2); ctx.fill();
 
-  // Moon sprite
+  // Moon sprite — clip to circle to avoid squish from non-square PNGs
+  ctx.save();
+  ctx.beginPath(); ctx.arc(mx, my, moonSize, 0, Math.PI * 2); ctx.clip();
   ctx.drawImage(IMG.moon, mx - moonSize, my - moonSize, moonSize * 2, moonSize * 2);
+  ctx.restore();
 }
 
 function drawVAB() {
@@ -559,9 +569,11 @@ function drawVAB() {
   ctx.globalAlpha = 0.88;
   ctx.drawImage(IMG.vab, x, y, w, h);
   ctx.globalAlpha = 1;
-  // Light atmospheric haze
-  ctx.fillStyle = 'rgba(140,170,200,0.08)';
-  ctx.fillRect(x, y, w, h);
+  // Light atmospheric haze — day only (at night it creates a visible bright box)
+  if (!isNight()) {
+    ctx.fillStyle = 'rgba(140,170,200,0.08)';
+    ctx.fillRect(x, y, w, h);
+  }
   ctx.restore();
 }
 
@@ -852,33 +864,38 @@ function drawBackgroundPad() {
   const tx = padX - tw / 2;
   const ty = groundY - th;
 
-  ctx.save();
-  ctx.globalAlpha = 0.82;
-  ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
-  ctx.globalAlpha = 1;
-
-  // Next rocket sitting on this pad
+  // Next rocket sitting on this pad — only show if there IS a next queued launch
   const nextLaunch = state.launches[state.currentIdx + 1] || null;
-  const vehicle2   = (nextLaunch ? nextLaunch.vehicle : null) || (currentLaunch() ? currentLaunch().vehicle : null) || '';
-  const assetKey2  = getRocketAssetKey(vehicle2);
-  const rocketImg  = IMG[assetKey2];
+  const vehicle2   = nextLaunch ? (nextLaunch.vehicle || '') : '';
+  const assetKey2  = vehicle2 ? getRocketAssetKey(vehicle2) : null;
+  const rocketImg  = assetKey2 ? IMG[assetKey2] : null;
   let rocketTop = ty + Math.round(th * 0.32);
   let rocketMidY = ty + Math.round(th * 0.55);
   let rocketRightX = padX - 2;
 
-  if (rocketImg) {
+  if (rocketImg && vehicle2) {
     const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
     const rh  = Math.round(cfg.h * sc);
     const rw  = Math.round(rocketImg.width * (rh / rocketImg.height));
-    // Scale the main-pad x offset relative to padX
-    const mainNozzleX = NOZZLE_X;  // main pad nozzle centre
+    const mainNozzleX = NOZZLE_X;
     const rocketOffsetFromNozzle = cfg.x - mainNozzleX;
-    const rocketX2 = padX + Math.round(rocketOffsetFromNozzle * sc) - 18;  // ← nudge left/right
-    rocketTop = ty + Math.round(th * 0.32);
+    const rocketX2 = padX + Math.round(rocketOffsetFromNozzle * sc) - 18;
+    // Pin rocket bottom to the pad ground line (not the road below it)
+    const pad2GroundY = 360;
+    rocketTop = pad2GroundY - rh;
     rocketMidY = rocketTop + Math.round(rh * 0.5);
     rocketRightX = rocketX2 + rw;
+    // Draw rocket FIRST so tower structure renders in front of it
+    ctx.globalAlpha = 0.82;
     ctx.drawImage(rocketImg, rocketX2, rocketTop, rw, rh);
+    ctx.globalAlpha = 1;
   }
+
+  // Tower drawn AFTER rocket so it occludes the rocket correctly
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
+  ctx.globalAlpha = 1;
 
   // ── Umbilicals — tower face → right side of rocket ──
   const towerFaceX2 = padX + Math.round(10 * sc);
@@ -1603,6 +1620,12 @@ async function fetchData(afterLaunch=false) {
     state.settings    = data.settings || state.settings;
     state.lastFetchAt = Date.now();
 
+    // Prune buriedLaunchIds: remove any ID that no longer appears in the
+    // fresh launch list (it already launched or was removed by the API).
+    // This prevents stale test-launch IDs from permanently skipping real missions.
+    const freshIds = new Set(newLaunches.map(l => l.id));
+    state.buriedLaunchIds = state.buriedLaunchIds.filter(id => freshIds.has(id));
+
     if (afterLaunch) {
       const newLaunch = state.launches.find(l => !state.buriedLaunchIds.includes(l.id)) || state.launches[0];
       state.currentIdx      = newLaunch ? state.launches.indexOf(newLaunch) : 0;
@@ -2210,7 +2233,8 @@ function restoreState() {
       state.launchComplete      = true;
       state.launchTriggered     = true;
     }
-    if (Array.isArray(saved.buriedLaunchIds)) state.buriedLaunchIds = saved.buriedLaunchIds;
+    // Do NOT restore buriedLaunchIds — they are pruned against fresh API data
+    // on the first fetchData() call, so stale test-launch IDs can't persist across reboots.
   } catch(e) {}
 }
 

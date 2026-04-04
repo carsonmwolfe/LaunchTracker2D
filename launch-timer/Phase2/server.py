@@ -222,7 +222,7 @@ _TBD_NAMES = {'unknown', 'tbd', 'to be determined', 'to be confirmed', 'n/a', ''
 _DONE_STATUSES = {'launch successful', 'launch failure', 'partial failure'}
 
 def _is_valid(launch):
-    """Return False if this launch should be skipped (TBD vehicle, no time, or already launched)."""
+    """Return False if this launch should be skipped (TBD vehicle, no time, past t0, or already launched)."""
     vehicle = (launch.get('vehicle') or '').strip().lower()
     t0      = (launch.get('t0') or '').strip()
     status  = (launch.get('status') or '').strip().lower()
@@ -232,6 +232,13 @@ def _is_valid(launch):
         return False
     if any(s in status for s in _DONE_STATUSES):
         return False
+    # Drop launches whose T-0 has passed by more than 1 hour (API may not have updated status yet)
+    try:
+        t0_dt = datetime.fromisoformat(t0.replace('Z', '+00:00'))
+        if t0_dt < datetime.now(timezone.utc) - timedelta(hours=1):
+            return False
+    except Exception:
+        pass
     return True
 
 
