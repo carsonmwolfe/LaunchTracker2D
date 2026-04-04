@@ -128,13 +128,13 @@ def take_screenshots():
     """Capture index, launches, and mission pages via headless Chromium.
     Returns dict of {label: base64_png_string} or empty dict on failure."""
     pages = [
-        ('MAIN',     'http://localhost:5001/'),
-        ('LAUNCHES', 'http://localhost:5001/launches'),
-        ('MISSION',  'http://localhost:5001/mission'),
+        ('MAIN',     'http://localhost:5001/',          45),
+        ('LAUNCHES', 'http://localhost:5001/launches',  45),
+        ('MISSION',  'http://localhost:5001/mission',   90),
     ]
     results = {}
     tmp_dir = tempfile.mkdtemp()
-    for label, url in pages:
+    for label, url, timeout in pages:
         out = os.path.join(tmp_dir, f'{label}.png')
         try:
             subprocess.run([
@@ -144,10 +144,10 @@ def take_screenshots():
                 '--disable-gpu',
                 '--disable-software-rasterizer',
                 '--window-size=800,480',
-                '--virtual-time-budget=5000',
+                '--virtual-time-budget=3000',
                 f'--screenshot={out}',
                 url
-            ], timeout=45, capture_output=True)
+            ], timeout=timeout, capture_output=True)
             if os.path.exists(out):
                 with open(out, 'rb') as f:
                     results[label] = base64.b64encode(f.read()).decode()
