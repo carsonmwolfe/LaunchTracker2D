@@ -158,6 +158,7 @@ def take_screenshots():
                 '--disable-software-rasterizer',
                 '--disable-dev-shm-usage',
                 '--window-size=800,480',
+                '--virtual-time-budget=6000',
                 f'--screenshot={out}',
                 url
             ], timeout=timeout, capture_output=True)
