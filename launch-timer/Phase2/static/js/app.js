@@ -575,16 +575,23 @@ function drawVAB() {
   const x = -15;
   const groundY = 422;
   const y = groundY - h;
-  ctx.save();
-  ctx.globalAlpha = 0.88;
-  ctx.drawImage(IMG.vab, x, y, w, h);
-  ctx.globalAlpha = 1;
-  // Light atmospheric haze — clear/cloudy day only (night and rain darken sky enough to show the box)
+  // Alpha varies by condition to push VAB into the background
   const _cond = state.weather.condition;
-  if (!isNight() && !['rain','light_rain','thunderstorm','fog'].includes(_cond)) {
-    ctx.fillStyle = 'rgba(140,170,200,0.08)';
-    ctx.fillRect(x, y, w, h);
+  let _vabAlpha;
+  if (['rain','light_rain','thunderstorm'].includes(_cond)) {
+    _vabAlpha = 0.55; // fade heavily into stormy sky
+  } else if (_cond === 'cloudy') {
+    _vabAlpha = 0.70;
+  } else if (_cond === 'fog') {
+    _vabAlpha = 0.45;
+  } else if (isNight()) {
+    _vabAlpha = 0.72;
+  } else {
+    _vabAlpha = 0.88; // clear day — original
   }
+  ctx.save();
+  ctx.globalAlpha = _vabAlpha;
+  ctx.drawImage(IMG.vab, x, y, w, h);
   ctx.restore();
 }
 
