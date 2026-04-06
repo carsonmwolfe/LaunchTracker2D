@@ -579,8 +579,9 @@ function drawVAB() {
   ctx.globalAlpha = 0.88;
   ctx.drawImage(IMG.vab, x, y, w, h);
   ctx.globalAlpha = 1;
-  // Light atmospheric haze — day only (at night it creates a visible bright box)
-  if (!isNight()) {
+  // Light atmospheric haze — clear/cloudy day only (night and rain darken sky enough to show the box)
+  const _cond = state.weather.condition;
+  if (!isNight() && !['rain','light_rain','thunderstorm','fog'].includes(_cond)) {
     ctx.fillStyle = 'rgba(140,170,200,0.08)';
     ctx.fillRect(x, y, w, h);
   }
