@@ -463,7 +463,11 @@ def index():
 
 @app.route('/static/<path:path>')
 def serve_static(path):
-    return send_from_directory(os.path.join(BASE_DIR, 'static'), path)
+    resp = send_from_directory(os.path.join(BASE_DIR, 'static'), path)
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @app.route('/mission')
 def mission_page():
