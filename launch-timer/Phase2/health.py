@@ -142,9 +142,8 @@ def take_screenshots():
     mission_id = get_current_launch_id()
     mission_url = f'http://localhost:5001/mission?id={mission_id}' if mission_id else 'http://localhost:5001/mission'
     pages = [
-        ('MAIN',     'http://localhost:5001/',   '--virtual-time-budget=5000', 60),
-        ('LAUNCHES', 'http://localhost:5001/launches', '--virtual-time-budget=3000', 45),
-        ('MISSION',  mission_url,                '--virtual-time-budget=5000', 90),
+        ('LAUNCHES', 'http://localhost:5001/launches', '--virtual-time-budget=4000', 90),
+        ('MISSION',  mission_url,                      '--virtual-time-budget=5000', 90),
     ]
     results = {}
     tmp_dir = tempfile.mkdtemp()
@@ -157,7 +156,6 @@ def take_screenshots():
                 '--no-sandbox',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
-                '--run-all-compositor-stages-before-draw',
                 '--window-size=800,480',
                 vt_flag,
                 f'--screenshot={out}',
