@@ -142,12 +142,12 @@ def take_screenshots():
     mission_id = get_current_launch_id()
     mission_url = f'http://localhost:5001/mission?id={mission_id}' if mission_id else 'http://localhost:5001/mission'
     pages = [
-        ('LAUNCHES', 'http://localhost:5001/launches', '--virtual-time-budget=4000', 90),
-        ('MISSION',  mission_url,                      '--virtual-time-budget=5000', 90),
+        ('LAUNCHES', 'http://localhost:5001/launches', 30),
+        ('MISSION',  mission_url,                      30),
     ]
     results = {}
     tmp_dir = tempfile.mkdtemp()
-    for label, url, vt_flag, timeout in pages:
+    for label, url, timeout in pages:
         out = os.path.join(tmp_dir, f'{label}.png')
         try:
             subprocess.run([
@@ -156,8 +156,8 @@ def take_screenshots():
                 '--no-sandbox',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
+                '--disable-dev-shm-usage',
                 '--window-size=800,480',
-                vt_flag,
                 f'--screenshot={out}',
                 url
             ], timeout=timeout, capture_output=True)
