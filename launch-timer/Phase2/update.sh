@@ -45,17 +45,22 @@ echo "$LOG_PREFIX Server restarted (PID $SERVER_PID)"
 # Log the update so the daily digest can include it
 SHORT=$(git log -1 --pretty="%s" 2>/dev/null)
 TIME=$(date '+%Y-%m-%d %H:%M:%S')
-python3 - <<PYEOF
+COMMIT_MSG="$SHORT" COMMIT_TIME="$TIME" COMMIT_FROM="$LOCAL" COMMIT_TO="$REMOTE" \
+python3 - <<'PYEOF'
 import json, os
-log_file = '$UPDATE_LOG'
-entry = {'time': '$TIME', 'commit': '$SHORT', 'from': '$LOCAL', 'to': '$REMOTE'}
+log_file = os.environ['HOME'] + '/.rangetrack_updates.json'
+entry = {
+    'time':   os.environ.get('COMMIT_TIME', ''),
+    'commit': os.environ.get('COMMIT_MSG',  ''),
+    'from':   os.environ.get('COMMIT_FROM', ''),
+    'to':     os.environ.get('COMMIT_TO',   ''),
+}
 try:
     with open(log_file) as f:
         updates = json.load(f)
 except:
     updates = []
 updates.append(entry)
-# Keep last 10 only
 updates = updates[-10:]
 with open(log_file, 'w') as f:
     json.dump(updates, f)
