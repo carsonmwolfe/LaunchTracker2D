@@ -909,6 +909,9 @@
         return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+(useLocal?' LOCAL':' UTC');
       }catch(e){return'—';}
     }
+    const _escDiv = document.createElement('div');
+    function escHtml(s) { _escDiv.textContent = String(s ?? ''); return _escDiv.innerHTML; }
+
     function fmtDate(iso){if(!iso)return'—';try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}catch(e){return'—';}}
     function shorten(s){return(s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC').replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC').replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB').replace("People's Republic of China",'China');}
     function getRocketImageUrl(vehicle){
@@ -1069,11 +1072,11 @@
       // Key-block hero (pinned above scroll)
       const kbEl=document.getElementById('key-block');
       if(kbEl){
-        kbEl.innerHTML=`<div class="key-vehicle">${vehicle}</div><div class="key-sub">${provider}<br>${shorten(location)}</div>`;
+        kbEl.innerHTML=`<div class="key-vehicle">${escHtml(vehicle)}</div><div class="key-sub">${escHtml(provider)}<br>${escHtml(shorten(location))}</div>`;
         kbEl.style.display='block';
       }
       // Info rows (secondary data only — vehicle/provider/location are in key-block)
-      function row(key,val,cls=''){if(!val||val==='—'||val==='Unknown')return'';return`<div class="info-row"><div class="ikey">${key}</div><div class="ival ${cls}">${val}</div></div>`;}
+      function row(key,val,cls=''){if(!val||val==='—'||val==='Unknown')return'';return`<div class="info-row"><div class="ikey">${escHtml(key)}</div><div class="ival ${cls}">${escHtml(val)}</div></div>`;}
       document.getElementById('info-scroll').innerHTML=[
         row('TYPE',missionType,''),
         row('DESTINATION',orbitFull,'green'),
@@ -1093,12 +1096,12 @@
         // Show booster manifest
         detailBlock.innerHTML=`
           <div class="block-hdr"><div class="phdr-dot" style="background:#ffd93d;width:5px;height:5px;"></div><span style="font-size:5px;color:#ffd93d;">> BOOSTER MANIFEST</span></div>
-          <div class="booster-id">${boosterSerial}<span class="booster-flight">FLIGHT ${flightNum||'?'}</span></div>
+          <div class="booster-id">${escHtml(boosterSerial)}<span class="booster-flight">FLIGHT ${escHtml(flightNum||'?')}</span></div>
           <div class="detail-grid">
-            ${lastFlight?`<div class="detail-stat"><div class="ds-lbl">LAST FLOWN</div><div class="ds-val">${fmtDate(lastFlight).toUpperCase()}</div></div>`:''}
-            ${turnaroundDays?`<div class="detail-stat"><div class="ds-lbl">TURNAROUND</div><div class="ds-val yellow">${turnaroundDays} DAYS</div></div>`:''}
-            ${prevMission?`<div class="detail-stat"><div class="ds-lbl">LAST MISSION</div><div class="ds-val">${prevMission.split('|').pop().trim().slice(0,18)}</div></div>`:''}
-            ${recoveryVessel?`<div class="detail-stat"><div class="ds-lbl">RECOVERY</div><div class="ds-val green">${recoveryVessel.slice(0,14).toUpperCase()}</div></div>`:''}
+            ${lastFlight?`<div class="detail-stat"><div class="ds-lbl">LAST FLOWN</div><div class="ds-val">${escHtml(fmtDate(lastFlight).toUpperCase())}</div></div>`:''}
+            ${turnaroundDays?`<div class="detail-stat"><div class="ds-lbl">TURNAROUND</div><div class="ds-val yellow">${Number(turnaroundDays)} DAYS</div></div>`:''}
+            ${prevMission?`<div class="detail-stat"><div class="ds-lbl">LAST MISSION</div><div class="ds-val">${escHtml(prevMission.split('|').pop().trim().slice(0,18))}</div></div>`:''}
+            ${recoveryVessel?`<div class="detail-stat"><div class="ds-lbl">RECOVERY</div><div class="ds-val green">${escHtml(recoveryVessel.slice(0,14).toUpperCase())}</div></div>`:''}
           </div>
           <div class="booster-status">
             <div class="bs-badge go">GO</div>
@@ -1112,12 +1115,12 @@
         detailBlock.innerHTML=`
           <div class="block-hdr"><div class="phdr-dot" style="background:#4a9ede;width:5px;height:5px;"></div><span style="font-size:5px;color:#4a9ede;">> LAUNCH SITE INTEL</span></div>
           <div class="detail-grid">
-            <div class="detail-stat"><div class="ds-lbl">PAD</div><div class="ds-val">${shorten(padName)}</div></div>
-            <div class="detail-stat"><div class="ds-lbl">COMPLEX</div><div class="ds-val">${shorten(location).slice(0,16)}</div></div>
-            ${padLat?`<div class="detail-stat"><div class="ds-lbl">LATITUDE</div><div class="ds-val">${padLat.toFixed(2)}°N</div></div>`:''}
-            ${padLon?`<div class="detail-stat"><div class="ds-lbl">LONGITUDE</div><div class="ds-val">${padLon.toFixed(2)}°W</div></div>`:''}
-            <div class="detail-stat"><div class="ds-lbl">TOTAL LAUNCHES</div><div class="ds-val green">${totalPad}</div></div>
-            ${lastUpdated?`<div class="detail-stat"><div class="ds-lbl">DATA UPDATED</div><div class="ds-val">${fmtDate(lastUpdated).toUpperCase()}</div></div>`:''}
+            <div class="detail-stat"><div class="ds-lbl">PAD</div><div class="ds-val">${escHtml(shorten(padName))}</div></div>
+            <div class="detail-stat"><div class="ds-lbl">COMPLEX</div><div class="ds-val">${escHtml(shorten(location).slice(0,16))}</div></div>
+            ${padLat?`<div class="detail-stat"><div class="ds-lbl">LATITUDE</div><div class="ds-val">${Number(padLat).toFixed(2)}°N</div></div>`:''}
+            ${padLon?`<div class="detail-stat"><div class="ds-lbl">LONGITUDE</div><div class="ds-val">${Number(padLon).toFixed(2)}°W</div></div>`:''}
+            <div class="detail-stat"><div class="ds-lbl">TOTAL LAUNCHES</div><div class="ds-val green">${escHtml(totalPad)}</div></div>
+            ${lastUpdated?`<div class="detail-stat"><div class="ds-lbl">DATA UPDATED</div><div class="ds-val">${escHtml(fmtDate(lastUpdated).toUpperCase())}</div></div>`:''}
           </div>`;
         detailBlock.style.display='block';
       }
@@ -1159,7 +1162,7 @@
       if(vl.includes('starship')||vl.includes('sls'))tags.push('SUPER HEAVY');
       if(vl.includes('heavy'))tags.push('HEAVY LIFT');
       tags.push(orbitAbbrev);
-      document.getElementById('rocket-tags').innerHTML=tags.map(t=>`<span class="rkt-tag">${t}</span>`).join('');
+      document.getElementById('rocket-tags').innerHTML=tags.map(t=>`<span class="rkt-tag">${escHtml(t)}</span>`).join('');
 
       // Milestones
       renderMilestones(vehicle, t0);

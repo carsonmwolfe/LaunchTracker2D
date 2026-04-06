@@ -268,6 +268,12 @@
   </div>
 
   <script>
+    const _esc = document.createElement('div');
+    function escHtml(s) {
+      _esc.textContent = String(s ?? '');
+      return _esc.innerHTML;
+    }
+
     function fmtDate(iso) {
       if (!iso) return '—';
       try { return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).toUpperCase(); }
@@ -329,26 +335,32 @@
       const row = document.getElementById('upcoming-row');
       const upcoming = launches.filter(l => !l.t0 || new Date(l.t0) > new Date());
       if (!upcoming.length) { row.innerHTML='<div class="loading-msg">NO UPCOMING LAUNCHES</div>'; return; }
-      row.innerHTML = upcoming.slice(0,5).map(l => {
+      const cards = upcoming.slice(0,5).map(l => {
         const sl  = (l.status||'').toLowerCase();
         const cls = sl.includes('go')?'go':sl.includes('hold')?'hold':'tbd';
         const ac  = sl.includes('go')?'#00e87a':sl.includes('hold')?'#ff4422':'#ffd93d';
         const sc  = cls;
         const st  = sl.includes('go')?'GO':sl.includes('hold')?'HOLD':'TBD';
         const cd  = countdown(l.t0);
-        const veh = (l.vehicle||'').replace('Block 5','').replace('Falcon ','F').trim();
+        const veh = escHtml((l.vehicle||'').replace('Block 5','').replace('Falcon ','F').trim());
         const nm  = l.name||'TBD';
-        return `<div class="launch-card ${cls}" onclick="goMission(${l.id},'${nm.replace(/'/g,"\\'")}')">
+        const nmShort = escHtml(nm.length>18 ? nm.slice(0,16)+'…' : nm);
+        const padTxt  = escHtml(shorten(l.pad||l.location||'').slice(0,14));
+        return `<div class="launch-card ${cls}" data-lid="${Number(l.id)||0}" data-lname="${escHtml(nm)}">
           <div class="lc-accent" style="background:${ac};"></div>
           <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div></div>
-          <div class="lc-name">${nm.length>18?nm.slice(0,16)+'…':nm}</div>
+          <div class="lc-name">${nmShort}</div>
           <div class="lc-vehicle">${veh}</div>
           <div class="lc-bottom">
-            <div class="lc-pad">${shorten(l.pad||l.location||'').slice(0,14)}</div>
-            <div class="lc-countdown ${cd.cls}" data-id="${l.id||''}" data-t0="${l.t0||''}">${cd.str}</div>
+            <div class="lc-pad">${padTxt}</div>
+            <div class="lc-countdown ${cd.cls}" data-id="${Number(l.id)||0}" data-t0="${escHtml(l.t0||'')}">${escHtml(cd.str)}</div>
           </div>
         </div>`;
-      }).join('');
+      });
+      row.innerHTML = cards.join('');
+      row.querySelectorAll('.launch-card[data-lid]').forEach(card => {
+        card.addEventListener('click', () => goMission(Number(card.dataset.lid), card.dataset.lname));
+      });
       row.querySelectorAll('[data-id]').forEach(el => { const id=el.getAttribute('data-id'); const t0=el.getAttribute('data-t0'); if(id&&t0) cdEls[id]={el,t0}; });
       document.getElementById('ss-upcoming').textContent = upcoming.length;
       if (upcoming[0]?.t0) document.getElementById('ss-next').textContent = countdown(upcoming[0].t0).str;
@@ -379,9 +391,9 @@
       document.getElementById('lb-rows').innerHTML = sorted.map(([name,count],i)=>`
         <div class="lb-row">
           <div class="lb-rank ${rCls[i]}">${i+1}</div>
-          <div class="lb-name">${name}</div>
+          <div class="lb-name">${escHtml(name)}</div>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(count/max*100)}%;background:${rCol[i]};"></div></div>
-          <div class="lb-count">${count}</div>
+          <div class="lb-count">${Number(count)}</div>
         </div>`).join('');
     }
 
@@ -390,13 +402,15 @@
       const list = document.getElementById('events-list');
       if (!events.length) { list.innerHTML='<div class="loading-msg">NO EVENTS</div>'; return; }
       list.innerHTML = events.slice(0,5).map(e => {
-        const ic  = eventIcon(e.type?.name||'');
-        const loc = (e.location||'').replace('International Space Station','ISS').slice(0,22);
+        const ic   = eventIcon(e.type?.name||'');
+        const loc  = escHtml((e.location||'').replace('International Space Station','ISS').slice(0,22));
+        const name = escHtml(e.name||'Unknown Event');
+        const type = escHtml((e.type?.name||'EVENT').toUpperCase());
         return `<div class="event-row">
           <div class="event-icon ${ic.cls}">${ic.char}</div>
           <div class="event-info">
-            <div class="event-name">${e.name||'Unknown Event'}</div>
-            <div class="event-type">${(e.type?.name||'EVENT').toUpperCase()}</div>
+            <div class="event-name">${name}</div>
+            <div class="event-type">${type}</div>
             <div class="event-loc">${loc}</div>
           </div>
           <div class="event-date">

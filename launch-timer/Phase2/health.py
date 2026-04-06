@@ -124,17 +124,31 @@ def has_internet():
     except:
         return False
 
+def get_current_launch_id():
+    """Try to get the first upcoming launch ID from the data cache for the mission screenshot."""
+    try:
+        with open(DATA_CACHE) as f:
+            data = json.load(f)
+        launches = data.get('launches', [])
+        if launches:
+            return launches[0].get('id')
+    except:
+        pass
+    return None
+
 def take_screenshots():
     """Capture index, launches, and mission pages via headless Chromium.
     Returns dict of {label: base64_png_string} or empty dict on failure."""
+    mission_id = get_current_launch_id()
+    mission_url = f'http://localhost:5001/mission?id={mission_id}' if mission_id else 'http://localhost:5001/mission'
     pages = [
-        ('MAIN',     'http://localhost:5001/',          45),
-        ('LAUNCHES', 'http://localhost:5001/launches',  45),
-        ('MISSION',  'http://localhost:5001/mission',   90),
+        ('MAIN',     'http://localhost:5001/',   '--virtual-time-budget=5000', 60),
+        ('LAUNCHES', 'http://localhost:5001/launches', '--virtual-time-budget=3000', 45),
+        ('MISSION',  mission_url,                '--virtual-time-budget=5000', 90),
     ]
     results = {}
     tmp_dir = tempfile.mkdtemp()
-    for label, url, timeout in pages:
+    for label, url, vt_flag, timeout in pages:
         out = os.path.join(tmp_dir, f'{label}.png')
         try:
             subprocess.run([
@@ -143,17 +157,23 @@ def take_screenshots():
                 '--no-sandbox',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
+                '--run-all-compositor-stages-before-draw',
                 '--window-size=800,480',
-                '--virtual-time-budget=3000',
+                vt_flag,
                 f'--screenshot={out}',
                 url
             ], timeout=timeout, capture_output=True)
-            if os.path.exists(out):
+            if os.path.exists(out) and os.path.getsize(out) > 10000:
                 with open(out, 'rb') as f:
                     results[label] = base64.b64encode(f.read()).decode()
                 os.remove(out)
+            else:
+                print(f'[{ts()}] Screenshot too small or missing ({label}) — page may not have rendered')
+                try: os.remove(out)
+                except: pass
         except Exception as e:
             print(f'[{ts()}] Screenshot error ({label}): {e}')
+        time.sleep(2)  # let chromium fully exit before next launch
     try:
         os.rmdir(tmp_dir)
     except:

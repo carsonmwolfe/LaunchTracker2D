@@ -544,16 +544,19 @@ function drawMoon() {
   if (my + moonSize > 360) return;
 
   // Soft glow halo
-  const glow = ctx.createRadialGradient(mx, my, moonSize * 0.4, mx, my, moonSize * 1.8);
-  glow.addColorStop(0, 'rgba(220,220,180,0.18)');
+  const glow = ctx.createRadialGradient(mx, my, moonSize * 0.6, mx, my, moonSize * 1);
+  glow.addColorStop(0, 'rgba(220,220,180,0.15)');
   glow.addColorStop(1, 'rgba(220,220,180,0)');
   ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(mx, my, moonSize * 1.8, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx, my, moonSize * 1.25, 0, Math.PI*2); ctx.fill();
 
-  // Moon sprite — clip to circle to avoid squish from non-square PNGs
+  // Moon sprite — clip to circle, preserve PNG aspect ratio
   ctx.save();
   ctx.beginPath(); ctx.arc(mx, my, moonSize, 0, Math.PI * 2); ctx.clip();
-  ctx.drawImage(IMG.moon, mx - moonSize, my - moonSize, moonSize * 2, moonSize * 2);
+  const mAspect = IMG.moon.width / IMG.moon.height;
+  const mDw = mAspect >= 1 ? moonSize * 2 : moonSize * 2 * mAspect;
+  const mDh = mAspect >= 1 ? moonSize * 2 / mAspect : moonSize * 2;
+  ctx.drawImage(IMG.moon, mx - mDw / 2, my - mDh / 2, mDw, mDh);
   ctx.restore();
 }
 
@@ -797,7 +800,8 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('ariane'))    return 'rocket_ariane6';
   if (v.includes('sls') || v.includes('space launch system')) return 'rocket_sls';
   if (v.includes('gslv') || v.includes('geosynchronous')) return 'rocket_gslv';
-  if (v.includes('falcon'))    return 'rocket_falcon9';
+  if (v.includes('falcon heavy'))  return 'rocket_falconheavy';
+  if (v.includes('falcon'))        return 'rocket_falcon9';
   if (v.includes('firefly') || v.includes('alpha'))  return 'rocket_firefly';
   if (v.includes('atlas'))                             return 'rocket_atlas';
   if (v.includes('vulcan'))                            return 'rocket_vulcan';
@@ -809,7 +813,6 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('long march') || v.includes('longmarch') || v.includes('chang zheng')) return 'rocket_longmarch';
   if (v.includes('vega'))                                                               return 'rocket_vegaC';
   if (v.includes('jielong') || v.includes('smart dragon'))                              return 'rocket_jielong';
-  if (v.includes('falcon heavy'))                                                        return 'rocket_falconheavy';
   if (v.includes('minotaur'))                                                            return 'rocket_minotaur';
   if (v.includes('neutron'))                                                             return 'rocket_neutron';
   if (v.includes('rfa') || v.includes('rfa one'))                                       return 'rocket_rfaone';
@@ -822,7 +825,7 @@ function getRocketAssetKey(vehicle) {
 // PNGs with transparent padding below the nozzle need y > PAD_Y_BASE-h so the
 // transparent region sinks below the ground line.
 const ROCKET_CONFIG = {
-  rocket_falcon9:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 203, h: 155 } },
+  rocket_falcon9:     { pad: { x: 440, y: 220, h: 155, fx: -32 }, te: { x: 128, y: 203, h: 155 } },
   rocket_atlas:       { pad: { x: 469, y: 220, h: 162 }, te: { x: 167, y: 220, h: 162 } },
   rocket_vulcan:      { pad: { x: 464, y: 178, h: 181 }, te: { x: 159, y: 178, h: 181 } },
   rocket_electron:    { pad: { x: 483, y: 243, h: 116 }, te: { x: 180, y: 243, h: 116 } },
@@ -1573,7 +1576,7 @@ function updateLaunch() {
   const _fCfg      = (ROCKET_CONFIG[_fKey] || ROCKET_CONFIG.rocket_generic).pad;
   const _fImg      = IMG[_fKey];
   const _fRw       = _fImg ? Math.round(_fImg.width * (_fCfg.h / _fImg.height)) : 50;
-  const flameX     = _fCfg.x + _fRw / 2;
+  const flameX     = _fCfg.x + _fRw / 2 + (_fCfg.fx || 0);
   const flameY     = state.rocketY + 1;
   if (state.flameIntensity > 0) {
     spawnFlameParticles(flameX, flameY, state.flameIntensity);
@@ -2094,7 +2097,7 @@ function startPolling() {
     }
   }, 5 * 60 * 1000);
 
-  // Canvas snapshot for launches page
+  // Canvas snapshot for launches page (every 30s — Pi performance)
   setInterval(() => {
     try {
       fetch('/api/snapshot', {
@@ -2103,7 +2106,7 @@ function startPolling() {
         body: JSON.stringify({ data: canvas.toDataURL('image/jpeg', 0.6) })
       });
     } catch(e) {}
-  }, 500);
+  }, 30 * 1000);
 
   // Update HTML info bar every second
   setInterval(updateInfoBar, 1000);
