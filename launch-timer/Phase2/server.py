@@ -430,7 +430,7 @@ def _auto_brightness():
                 now  = datetime.now()
                 sr   = datetime.fromisoformat(sunrise)
                 ss   = datetime.fromisoformat(sunset)
-                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 20, 45 * 60
+                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60  # NIGHT_MIN=51 ≈ 20%
                 after_sr  = (now - sr).total_seconds()
                 before_ss = (ss - now).total_seconds()
                 if after_sr < 0 or before_ss < 0:
@@ -643,7 +643,7 @@ def api_settings():
 
 @app.route('/api/settings/brightness', methods=['POST'])
 def set_brightness():
-    val    = max(5, min(100, int((request.get_json() or {}).get('value', 40))))
+    val    = max(20, min(100, int((request.get_json() or {}).get('value', 40))))
     mapped = int(val * 2.55)
     try:
         subprocess.run(
