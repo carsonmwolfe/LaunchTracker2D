@@ -163,9 +163,14 @@ def take_screenshots():
                 url
             ], timeout=timeout, capture_output=True)
             if os.path.exists(out) and os.path.getsize(out) > 10000:
-                with open(out, 'rb') as f:
-                    results[label] = base64.b64encode(f.read()).decode()
-                os.remove(out)
+                # Cap at 800KB raw to avoid Gmail attachment limits
+                if os.path.getsize(out) > 800 * 1024:
+                    print(f'[{ts()}] Screenshot too large ({label}), skipping')
+                    os.remove(out)
+                else:
+                    with open(out, 'rb') as f:
+                        results[label] = base64.b64encode(f.read()).decode()
+                    os.remove(out)
             else:
                 print(f'[{ts()}] Screenshot too small or missing ({label}) — page may not have rendered')
                 try: os.remove(out)

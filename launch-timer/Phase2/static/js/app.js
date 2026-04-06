@@ -305,11 +305,17 @@ function getAviCache(blink1, blink2) {
   return _aviCache;
 }
 
-// Cloud shape cache — keyed by color+size
+// Cloud shape cache — keyed by color+size, max 16 entries
+const MAX_CLOUD_CACHE = 16;
 let _cloudCaches = {};
+let _cloudCacheKeys = [];
 function getCloudCache(col, size=1) {
   const key = col + size;
   if (_cloudCaches[key]) return _cloudCaches[key];
+  if (_cloudCacheKeys.length >= MAX_CLOUD_CACHE) {
+    const evict = _cloudCacheKeys.shift();
+    delete _cloudCaches[evict];
+  }
   const bw = Math.round(96 * size), bh = Math.round(44 * size);
   const cc = makeOffscreen(bw, bh);
   const g = cc.getContext('2d');
@@ -348,6 +354,7 @@ function getCloudCache(col, size=1) {
   g.globalAlpha = 1;
 
   _cloudCaches[key] = cc;
+  _cloudCacheKeys.push(key);
   return cc;
 }
 
@@ -1083,8 +1090,10 @@ const FLAME_COLORS = {
   outer: ['#ff6600','#ff4400','#dd2200','#aa1100'],
 };
 
+const MAX_FLAME_PARTICLES = 120;
 function spawnFlameParticles(flameX, flameY, intensity) {
-  const n = Math.floor(20 * intensity);
+  if (state.flameParticles.length >= MAX_FLAME_PARTICLES) return;
+  const n = Math.min(Math.floor(20 * intensity), MAX_FLAME_PARTICLES - state.flameParticles.length);
   for(let i=0;i<n;i++){
     state.flameParticles.push({
       x:   flameX + (Math.random()-0.5)*16,
@@ -1296,8 +1305,10 @@ function updateInfoBar() {
   const pipeIdx  = fullName.indexOf(' | ');
   const missionName = pipeIdx >= 0 ? fullName.slice(pipeIdx + 3) : fullName;
   const nameEl = document.getElementById('ib-name');
-  nameEl.textContent = missionName;
-  nameEl.style.fontSize = missionName.length > 24 ? '10px' : missionName.length > 16 ? '12px' : '14px';
+  // Truncate to fit: Press Start 2P at 10px ≈ 7px/char, name area ~280px wide ≈ 40 chars max
+  const nameDisplay = missionName.length > 38 ? missionName.slice(0, 36) + '…' : missionName;
+  nameEl.textContent = nameDisplay;
+  nameEl.style.fontSize = nameDisplay.length > 24 ? '10px' : nameDisplay.length > 16 ? '12px' : '14px';
 
   // Badge
   const badge = document.getElementById('ib-badge');
@@ -1396,7 +1407,8 @@ function updateInfoBar() {
         const openMs  = new Date(winOpen).getTime();
         const t0Ms    = new Date(t0).getTime();
         const closeMs = new Date(winClose).getTime();
-        const pct = Math.min(100, Math.max(0, (t0Ms - openMs) / (closeMs - openMs) * 100));
+        const _span = closeMs - openMs;
+        const pct = _span > 0 ? Math.min(100, Math.max(0, (t0Ms - openMs) / _span * 100)) : 50;
         dotEl.style.left = pct + '%';
       }
     }
@@ -1489,7 +1501,7 @@ function checkLaunchTrigger() {
     // Fetch latest launches to determine the next mission
     fetch('/api/launches').then(r => r.json()).then(data => {
       const all = data.launches || [];
-      const next = all.find(l => l.id !== launch.id) || all[1] || all[0];
+      const next = all.find(l => l.id !== launch.id && l.t0 && new Date(l.t0) > new Date()) || null;
       state.nextMissionName = next ? (next.name || '') : '';
       state.nextMissionT0   = next ? (next.t0 || null) : null;
     }).catch(() => {});
@@ -1551,7 +1563,7 @@ function updateLaunch() {
         state.cooldownEndsAt = Date.now() + 10 * 1000; // 10s for test only
       } else {
         state.cooldownEndsAt = Date.now() + 10 * 60 * 1000;
-        saveState(); // persist so navigation away doesn't lose cooldown
+        markStateDirty();
       }
       // Invalidate cache then fetch fresh data from the single source
       const _afterLaunchFetch = () => fetch('/api/data').then(r => r.json()).then(data => {
@@ -2071,7 +2083,16 @@ function render(now) {
   drawGearIcon();
   drawNoSignal();
   if (state.notification) drawNotification();
-  } catch(e) { console.error('[render]', e); }
+  } catch(e) {
+    console.error('[render]', e);
+    // Show error on screen so Pi kiosk user knows something is wrong
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, H - 30, W, 30);
+    ctx.fillStyle = '#ff4422';
+    ctx.font = '7px "Press Start 2P"';
+    ctx.textAlign = 'left';
+    ctx.fillText('RENDER ERR: ' + String(e.message || e).slice(0, 80), 8, H - 10);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2179,7 +2200,7 @@ canvas.addEventListener('click', function(e) {
   if (x > 0 && x < 400 && y > BAR_Y && y < BAR_Y + 35) {
     const launch = currentLaunch();
     if (launch) {
-      window.location = `http://localhost:5001/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
+      window.location = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
     }
   }
 
@@ -2199,7 +2220,12 @@ canvas.addEventListener('click', function(e) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  STATE PERSISTENCE — survive page navigation
 // ─────────────────────────────────────────────────────────────────────────────
+let _stateDirty = false;
+function markStateDirty() { _stateDirty = true; }
+
 function saveState() {
+  if (!_stateDirty) return;
+  _stateDirty = false;
   try {
     localStorage.setItem('lt_state', JSON.stringify({
       postLaunchCooldown:  state.postLaunchCooldown,

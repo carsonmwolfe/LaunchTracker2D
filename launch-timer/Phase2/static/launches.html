@@ -212,7 +212,7 @@
   <div class="scanlines"></div>
 
   <div class="topbar">
-    <button class="back-btn" onclick="window.location='http://localhost:5001'">← BACK</button>
+    <button class="back-btn" onclick="window.location='/'">← BACK</button>
     <div class="top-sqs">
       <div class="top-sq" style="background:#00e87a;"></div>
       <div class="top-sq" style="background:#4a9ede;"></div>
@@ -333,7 +333,7 @@
     // ── Render upcoming ───────────────────────────────────────────────────────
     function renderUpcoming(launches) {
       const row = document.getElementById('upcoming-row');
-      const upcoming = launches.filter(l => !l.t0 || new Date(l.t0) > new Date());
+      const upcoming = launches.filter(l => l.t0 && new Date(l.t0) > new Date());
       if (!upcoming.length) { row.innerHTML='<div class="loading-msg">NO UPCOMING LAUNCHES</div>'; return; }
       const cards = upcoming.slice(0,5).map(l => {
         const sl  = (l.status||'').toLowerCase();
@@ -358,6 +358,8 @@
         </div>`;
       });
       row.innerHTML = cards.join('');
+      // Clear stale DOM refs before repopulating to prevent memory leak
+      Object.keys(cdEls).forEach(k => delete cdEls[k]);
       row.querySelectorAll('.launch-card[data-lid]').forEach(card => {
         card.addEventListener('click', () => goMission(Number(card.dataset.lid), card.dataset.lname));
       });

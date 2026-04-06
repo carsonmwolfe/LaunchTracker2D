@@ -3,66 +3,257 @@
 <head>
   <meta name="viewport" content="width=800, initial-scale=1">
   <title>WiFi Setup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0a0a1e; color: #fff; font-family: 'Courier New', monospace; width: 800px; height: 480px; overflow: hidden; display: flex; flex-direction: column; padding: 10px; }
-    h1 { color: #00e87a; font-size: 14px; text-align: center; margin-bottom: 4px; }
-    .networks { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; max-height: 52px; overflow-y: auto; }
-    .network { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 11px; }
-    .network.selected { background: rgba(0,232,122,0.15); border-color: #00e87a; color: #00e87a; }
-    .fields { display: flex; gap: 8px; margin-bottom: 6px; }
-    .field { flex: 1; }
-    .field label { font-size: 8px; color: rgba(255,255,255,0.4); display: block; margin-bottom: 2px; }
-    .field input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 3px; padding: 5px 8px; color: #fff; font-family: 'Courier New', monospace; font-size: 12px; }
-    .field input.active { border-color: #00e87a; }
-    .keyboard { flex: 1; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
-    .kb-row { display: flex; gap: 3px; justify-content: center; flex: 1; }
-    .kb-key { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 3px; color: #fff; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer; flex: 1; text-align: center; max-width: 56px; }
-    .kb-key:active { background: rgba(0,232,122,0.2); border-color: #00e87a; }
-    .kb-key.wide { flex: 2; max-width: 80px; }
-    .kb-key.space { flex: 8; max-width: 320px; }
-    .kb-key.action { background: rgba(0,232,122,0.15); border-color: #00e87a; color: #00e87a; }
-    .kb-key.toggled { background: rgba(255,211,61,0.2); border-color: #ffd93d; color: #ffd93d; }
-    .bottom { display: flex; gap: 8px; height: 36px; }
-    .btn { flex: 1; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; cursor: pointer; border: none; }
-    .btn-connect { background: #00e87a; color: #0a0a1e; }
-    .btn-connect:disabled { background: rgba(0,232,122,0.3); cursor: not-allowed; }
-    .btn-back { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; }
-    .btn-back:hover { background: rgba(0,232,122,0.18); }
-    .status { font-size: 10px; text-align: center; height: 14px; margin-top: 2px; color: #ffd93d; }
-    .status.success { color: #00e87a; }
-    .status.error { color: #ff4422; }
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px; height: 480px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 36px; flex-shrink: 0;
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 4px 8px; cursor: pointer;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .top-current { font-size: 5px; color: #ffd93d; background: #0a1a10; border: 2px solid #ffd93d; padding: 3px 7px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+    /* BODY */
+    .body { flex: 1; display: flex; overflow: hidden; }
+
+    /* LEFT */
+    .left-col {
+      width: 280px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-right: 3px solid #1a2030;
+    }
+
+    .phdr {
+      font-size: 6px; color: #00e87a;
+      background: #0d1620; padding: 5px 8px;
+      border-bottom: 2px solid #1a2030;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+
+    /* Network list */
+    .networks-list {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 6px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .network {
+      background: #080c12;
+      border: 2px solid #1a2030;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 7px; color: rgba(255,255,255,0.7);
+      display: flex; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+    .network:hover { background: #0d1220; border-color: rgba(0,232,122,0.3); }
+    .network.selected { background: #0a1a10; border-color: #00e87a; color: #00e87a; }
+    .network.current-net { border-color: rgba(255,211,61,0.5); }
+    .network-signal { font-size: 7px; flex-shrink: 0; color: #4a9ede; }
+    .network-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .network-lock { font-size: 6px; color: rgba(255,211,61,0.6); flex-shrink: 0; }
+    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; padding: 16px 8px; }
+
+    /* Fields */
+    .fields-block { flex-shrink: 0; border-top: 2px solid #1a2030; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .field-row { display: flex; flex-direction: column; gap: 3px; }
+    .field-label-row { display: flex; justify-content: space-between; align-items: center; }
+    .field-label { font-size: 5px; color: #4a9ede; letter-spacing: 1px; }
+    .field-clear { font-size: 5px; color: rgba(255,68,34,0.6); cursor: pointer; background: none; border: none; font-family: 'Press Start 2P', monospace; padding: 0; }
+    .field-clear:hover { color: #ff4422; }
+    .field-input {
+      background: #080c12;
+      border: 2px solid #1a2030;
+      padding: 5px 8px;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      width: 100%;
+      cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .field-input.active { border-color: #00e87a; color: #00e87a; }
+    .field-placeholder { color: rgba(255,255,255,0.2); font-size: 7px; }
+    .field-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .show-toggle { font-size: 6px; color: rgba(255,255,255,0.3); cursor: pointer; flex-shrink: 0; padding-left: 4px; user-select: none; }
+    .show-toggle:hover { color: #ffd93d; }
+
+    /* Buttons */
+    .action-row { display: flex; gap: 6px; flex-shrink: 0; padding: 0 8px 8px; }
+    .btn {
+      flex: 1; padding: 8px 4px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; cursor: pointer; border: none;
+      text-align: center;
+    }
+    .btn-connect { background: #00e87a; color: #0a0e14; }
+    .btn-connect:disabled { background: rgba(0,232,122,0.25); color: rgba(0,50,20,0.6); cursor: not-allowed; }
+    .btn-scan { background: #0a1a10; border: 2px solid #4a9ede; color: #4a9ede; }
+    .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Status */
+    .status-bar {
+      flex-shrink: 0;
+      background: #0d1620; border-top: 2px solid #1a2030;
+      padding: 5px 8px; font-size: 6px; height: 22px;
+      color: #ffd93d; letter-spacing: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .status-bar.success { color: #00e87a; }
+    .status-bar.error   { color: #ff4422; }
+
+    /* RIGHT — keyboard */
+    .right-col {
+      flex: 1;
+      display: flex; flex-direction: column;
+      padding: 8px; gap: 4px;
+    }
+    .kb-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0; padding: 0 2px 4px;
+      border-bottom: 1px solid #1a2030;
+      margin-bottom: 2px;
+    }
+    .kb-active-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; }
+    .kb-charcount { font-size: 5px; color: rgba(255,255,255,0.25); }
+
+    .keyboard { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .kb-row { display: flex; gap: 4px; flex: 1; }
+    .kb-key {
+      background: #0d1620;
+      border: 2px solid #1a2030;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      cursor: pointer;
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .kb-key:active { background: #1a2030; border-color: #00e87a; }
+    .kb-key.wide  { flex: 2; }
+    .kb-key.space { flex: 6; }
+    .kb-key.action { background: #0a1a10; border-color: #00e87a; color: #00e87a; }
+    .kb-key.toggled { background: rgba(255,211,61,0.1); border-color: #ffd93d; color: #ffd93d; }
   </style>
 </head>
 <body>
-  <h1>WiFi Setup</h1>
-  <div class="networks" id="networks"><span style="color:rgba(255,255,255,0.3);font-size:11px">Scanning...</span></div>
-  <div class="fields">
-    <div class="field">
-      <label>NETWORK (SSID)</label>
-      <input type="text" id="ssid" placeholder="Network name" onfocus="setActive('ssid')" readonly />
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" id="btn-back" onclick="window.location='/settings'">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
     </div>
-    <div class="field">
-      <label>PASSWORD</label>
-      <input type="text" id="password" placeholder="Password" onfocus="setActive('password')" readonly />
+    <div class="top-title-wrap">
+      <div class="top-title">WIFI SETUP</div>
+      <div class="top-sub">// NETWORK CONFIGURATION //</div>
     </div>
+    <div class="top-current" id="top-current" style="display:none;">CONNECTED: —</div>
   </div>
-  <div class="keyboard">
-    <div class="kb-row" id="row1"></div>
-    <div class="kb-row" id="row2"></div>
-    <div class="kb-row" id="row3"></div>
-    <div class="kb-row" id="row4"></div>
+
+  <div class="body">
+
+    <!-- LEFT -->
+    <div class="left-col">
+      <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> AVAILABLE NETWORKS</div>
+      <div class="networks-list" id="networks">
+        <div class="scan-msg">SCANNING...</div>
+      </div>
+
+      <div class="fields-block">
+        <div class="field-row">
+          <div class="field-label-row">
+            <div class="field-label">SSID</div>
+            <button class="field-clear" onclick="clearField('ssid')">CLR</button>
+          </div>
+          <div class="field-input" id="ssid-display" onclick="setActive('ssid')">
+            <span class="field-val field-placeholder" id="ssid-val">SELECT NETWORK</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-label-row">
+            <div class="field-label">PASSWORD</div>
+            <button class="field-clear" onclick="clearField('password')">CLR</button>
+          </div>
+          <div class="field-input active" id="password-display" onclick="setActive('password')">
+            <span class="field-val field-placeholder" id="password-val">ENTER PASSWORD</span>
+            <span class="show-toggle" id="show-toggle" onclick="event.stopPropagation();toggleShow()">SHOW</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-scan" id="btn-scan" onclick="scanNetworks()">↺ SCAN</button>
+        <button class="btn btn-connect" id="btn-connect" onclick="connect()">CONNECT</button>
+      </div>
+
+      <div class="status-bar" id="status"></div>
+    </div>
+
+    <!-- RIGHT: keyboard -->
+    <div class="right-col">
+      <div class="kb-header">
+        <div class="kb-active-label" id="kb-label">EDITING: PASSWORD</div>
+        <div class="kb-charcount" id="kb-charcount"></div>
+      </div>
+      <div class="keyboard">
+        <div class="kb-row" id="row1"></div>
+        <div class="kb-row" id="row2"></div>
+        <div class="kb-row" id="row3"></div>
+        <div class="kb-row" id="row4"></div>
+        <div class="kb-row" id="row5"></div>
+      </div>
+    </div>
+
   </div>
-  <div class="bottom">
-    <button class="btn btn-back" id="btn-back" onclick="window.location='http://localhost:5001/settings'">← BACK</button>
-    <button class="btn btn-connect" id="btn-connect" onclick="connect()">CONNECT</button>
-  </div>
-  <div class="status" id="status"></div>
+
+  <input type="text" id="ssid" style="display:none">
+  <input type="text" id="password" style="display:none">
 
   <script>
     let activeField = 'password';
     let shifted = false;
     let symbols = false;
+    let showPassword = false;
+
+    const escHtml = (() => {
+      const d = document.createElement('div');
+      return s => { d.textContent = String(s ?? ''); return d.innerHTML; };
+    })();
 
     const letterRows = [
       ['1','2','3','4','5','6','7','8','9','0'],
@@ -79,91 +270,142 @@
 
     function setActive(id) {
       activeField = id;
-      document.querySelectorAll('.field input').forEach(i => i.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      document.getElementById('ssid-display').classList.toggle('active', id === 'ssid');
+      document.getElementById('password-display').classList.toggle('active', id === 'password');
+      document.getElementById('kb-label').textContent = 'EDITING: ' + (id === 'ssid' ? 'SSID' : 'PASSWORD');
+      updateCharCount();
     }
 
+    function updateDisplay(id) {
+      const val = document.getElementById(id).value;
+      const valEl = document.getElementById(id + '-val');
+      if (!val) {
+        valEl.textContent = id === 'ssid' ? 'SELECT NETWORK' : 'ENTER PASSWORD';
+        valEl.classList.add('field-placeholder');
+      } else {
+        valEl.classList.remove('field-placeholder');
+        valEl.textContent = (id === 'password' && !showPassword) ? '•'.repeat(val.length) : val;
+      }
+      updateCharCount();
+    }
+
+    function updateCharCount() {
+      const val = document.getElementById(activeField).value;
+      const el = document.getElementById('kb-charcount');
+      el.textContent = val.length ? val.length + ' CHARS' : '';
+    }
+
+    function clearField(id) {
+      document.getElementById(id).value = '';
+      updateDisplay(id);
+      setActive(id);
+      // Deselect network if clearing SSID
+      if (id === 'ssid') {
+        document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+      }
+    }
+
+    function toggleShow() {
+      showPassword = !showPassword;
+      document.getElementById('show-toggle').textContent = showPassword ? 'HIDE' : 'SHOW';
+      document.getElementById('show-toggle').style.color = showPassword ? '#ffd93d' : '';
+      updateDisplay('password');
+    }
+
+    // Keyboard: only rebuild on mode change, update text on shift
     function buildKeyboard() {
       const rows = symbols ? symbolRows : letterRows;
-      const rowIds = ['row1','row2','row3','row4'];
-      rowIds.forEach((id, i) => {
-        const el = document.getElementById(id);
+      // Rows 1-4: pure letter/number keys, uniform size
+      ['row1','row2','row3','row4'].forEach((rowId, i) => {
+        const el = document.getElementById(rowId);
         el.innerHTML = '';
-        const row = rows[i] || [];
-        row.forEach(k => {
+        (rows[i] || []).forEach(k => {
           const btn = document.createElement('button');
           btn.className = 'kb-key';
           btn.textContent = (!symbols && shifted) ? k.toUpperCase() : k;
           btn.addEventListener('click', () => typeKey(btn.textContent));
           el.appendChild(btn);
         });
-        if (i === 3) {
-          const symBtn = document.createElement('button');
-          symBtn.className = 'kb-key wide' + (symbols ? ' toggled' : '');
-          symBtn.textContent = symbols ? 'ABC' : '!@#';
-          symBtn.addEventListener('click', toggleSymbols);
-          el.prepend(symBtn);
+      });
+      // Row 5: action keys only — SYM | SHIFT | SPACE | DEL
+      const r5 = document.getElementById('row5');
+      r5.innerHTML = '';
+      const sym = document.createElement('button');
+      sym.className = 'kb-key wide' + (symbols ? ' toggled' : '');
+      sym.textContent = symbols ? 'ABC' : '!@#';
+      sym.addEventListener('click', toggleSymbols);
+      r5.appendChild(sym);
+      if (!symbols) {
+        const shift = document.createElement('button');
+        shift.className = 'kb-key wide' + (shifted ? ' action' : '');
+        shift.textContent = 'SHIFT';
+        shift.addEventListener('click', toggleShift);
+        r5.appendChild(shift);
+      }
+      const space = document.createElement('button');
+      space.className = 'kb-key space';
+      space.textContent = 'SPACE';
+      space.addEventListener('click', () => typeKey(' '));
+      r5.appendChild(space);
+      const bksp = document.createElement('button');
+      bksp.className = 'kb-key wide action';
+      bksp.textContent = 'DEL';
+      bksp.addEventListener('click', backspace);
+      r5.appendChild(bksp);
+    }
 
-          if (!symbols) {
-            const shift = document.createElement('button');
-            shift.className = 'kb-key wide' + (shifted ? ' action' : '');
-            shift.textContent = '⇧';
-            shift.addEventListener('click', toggleShift);
-            el.prepend(shift);
-          }
-
-          const space = document.createElement('button');
-          space.className = 'kb-key space';
-          space.textContent = 'SPACE';
-          space.addEventListener('click', () => typeKey(' '));
-          el.appendChild(space);
-
-          const bksp = document.createElement('button');
-          bksp.className = 'kb-key wide action';
-          bksp.textContent = '⌫';
-          bksp.addEventListener('click', backspace);
-          el.appendChild(bksp);
+    function updateShiftDisplay() {
+      // Faster than full rebuild — just update letter key labels and shift button
+      document.querySelectorAll('#row2 .kb-key, #row3 .kb-key, #row4 .kb-key').forEach(btn => {
+        const t = btn.textContent;
+        if (t.length === 1 && t.match(/[a-z]/i)) {
+          btn.textContent = shifted ? t.toUpperCase() : t.toLowerCase();
         }
       });
+      const shiftBtn = document.querySelector('#row5 .kb-key.wide:not(.toggled)');
+      if (shiftBtn && shiftBtn.textContent === 'SHIFT') {
+        shiftBtn.className = 'kb-key wide' + (shifted ? ' action' : '');
+      }
     }
 
     function typeKey(k) {
       document.getElementById(activeField).value += k;
-      if (shifted && !symbols) { shifted = false; buildKeyboard(); }
+      updateDisplay(activeField);
+      if (shifted && !symbols) { shifted = false; updateShiftDisplay(); }
     }
 
     function backspace() {
       const el = document.getElementById(activeField);
       el.value = el.value.slice(0, -1);
+      updateDisplay(activeField);
     }
 
     function toggleShift() {
       shifted = !shifted;
-      buildKeyboard();
+      if (symbols) return;
+      updateShiftDisplay();
     }
 
-    function toggleSymbols() {
-      symbols = !symbols;
-      shifted = false;
-      buildKeyboard();
-    }
+    function toggleSymbols() { symbols = !symbols; shifted = false; buildKeyboard(); }
 
     function setStatus(msg, type) {
       const el = document.getElementById('status');
       el.textContent = msg;
-      el.className = 'status' + (type ? ' ' + type : '');
+      el.className = 'status-bar' + (type ? ' ' + type : '');
+    }
+
+    function setConnecting(busy) {
+      document.getElementById('btn-connect').disabled = busy;
+      document.getElementById('btn-scan').disabled = busy;
+      document.getElementById('btn-back').disabled = busy;
     }
 
     function connect() {
       const ssid = document.getElementById('ssid').value.trim();
       const password = document.getElementById('password').value;
-      if (!ssid) { setStatus('Please select or enter a network', 'error'); return; }
-
-      // Disable buttons while connecting
-      document.getElementById('btn-connect').disabled = true;
-      document.getElementById('btn-back').disabled = true;
-      setStatus('Testing connection... (up to 10s)', '');
-
+      if (!ssid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
+      setConnecting(true);
+      setStatus('CONNECTING TO ' + ssid.toUpperCase() + '...', '');
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,48 +414,103 @@
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
-          setStatus('Connected to ' + ssid + '! Returning...', 'success');
-          setTimeout(() => { window.location = 'http://localhost:5001'; }, 3000);
+          setStatus('CONNECTED — RETURNING TO HOME', 'success');
+          setTimeout(() => { window.location = '/'; }, 2500);
         } else {
-          setStatus('Failed: ' + (data.error || 'unknown error'), 'error');
-          document.getElementById('btn-connect').disabled = false;
-          document.getElementById('btn-back').disabled = false;
+          setStatus('FAILED: ' + (data.error || 'UNKNOWN ERROR').toUpperCase(), 'error');
+          setConnecting(false);
         }
       })
       .catch(() => {
-        // If fetch fails it may mean we switched networks — try returning anyway
-        setStatus('Connected! Returning...', 'success');
-        setTimeout(() => { window.location = 'http://localhost:5001'; }, 3000);
+        // Fetch failing likely means we switched networks successfully
+        setStatus('CONNECTED — RETURNING TO HOME', 'success');
+        setTimeout(() => { window.location = '/'; }, 2500);
+      });
+    }
+
+    function scanNetworks() {
+      const container = document.getElementById('networks');
+      container.innerHTML = '<div class="scan-msg">SCANNING...</div>';
+      document.getElementById('btn-scan').disabled = true;
+
+      // Also fetch current network for display
+      fetch('/api/wifi/current').then(r => r.json()).then(d => {
+        const cur = d.ssid || '';
+        if (cur) {
+          const el = document.getElementById('top-current');
+          el.textContent = 'CONNECTED: ' + cur.toUpperCase();
+          el.style.display = '';
+        }
+      }).catch(() => {});
+
+      fetch('/api/wifi/scan').then(r => r.json()).then(data => {
+        document.getElementById('btn-scan').disabled = false;
+        container.innerHTML = '';
+        if (!data.networks || !data.networks.length) {
+          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND — TAP SCAN</div>';
+          return;
+        }
+        // Get current SSID for highlight
+        fetch('/api/wifi/current').then(r => r.json()).then(d => {
+          const cur = (d.ssid || '').trim();
+          data.networks.forEach(ssid => {
+            const div = document.createElement('div');
+            const isCurrent = ssid === cur;
+            div.className = 'network' + (isCurrent ? ' current-net' : '');
+            // Safe: use textContent for SSID, not innerHTML
+            const sigEl = document.createElement('span');
+            sigEl.className = 'network-signal';
+            sigEl.textContent = '|||';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'network-name';
+            nameEl.textContent = ssid;
+            const lockEl = document.createElement('span');
+            lockEl.className = 'network-lock';
+            lockEl.textContent = isCurrent ? '[OK]' : '[+]';
+            div.appendChild(sigEl);
+            div.appendChild(nameEl);
+            div.appendChild(lockEl);
+            div.addEventListener('click', () => {
+              document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+              div.classList.add('selected');
+              document.getElementById('ssid').value = ssid;
+              updateDisplay('ssid');
+              setActive('password');
+              setStatus('SELECTED: ' + ssid.toUpperCase(), '');
+            });
+            container.appendChild(div);
+          });
+        }).catch(() => {
+          // Render without current highlight if /current fails
+          data.networks.forEach(ssid => {
+            const div = document.createElement('div');
+            div.className = 'network';
+            const sigEl = document.createElement('span');
+            sigEl.className = 'network-signal'; sigEl.textContent = '|||';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'network-name'; nameEl.textContent = ssid;
+            const lockEl = document.createElement('span');
+            lockEl.className = 'network-lock'; lockEl.textContent = '[+]';
+            div.appendChild(sigEl); div.appendChild(nameEl); div.appendChild(lockEl);
+            div.addEventListener('click', () => {
+              document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+              div.classList.add('selected');
+              document.getElementById('ssid').value = ssid;
+              updateDisplay('ssid');
+              setActive('password');
+              setStatus('SELECTED: ' + ssid.toUpperCase(), '');
+            });
+            container.appendChild(div);
+          });
+        });
+      }).catch(() => {
+        document.getElementById('btn-scan').disabled = false;
+        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN TO RETRY</div>';
       });
     }
 
     setActive('password');
     buildKeyboard();
-
-    function scanNetworks() {
-      const container = document.getElementById('networks');
-      container.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-size:11px">Scanning...</span>';
-      fetch('/api/wifi/scan').then(r => r.json()).then(data => {
-        container.innerHTML = '';
-        if (!data.networks.length) {
-          container.innerHTML = '<span style="color:rgba(255,255,255,0.3);font-size:11px">No networks found —</span> <button onclick="scanNetworks()" style="background:none;border:none;color:#4a9ede;font-family:\'Courier New\',monospace;font-size:11px;cursor:pointer;padding:0 4px;">Retry</button>';
-          return;
-        }
-        data.networks.forEach(ssid => {
-          const div = document.createElement('div');
-          div.className = 'network';
-          div.textContent = ssid;
-          div.addEventListener('click', () => {
-            document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
-            div.classList.add('selected');
-            document.getElementById('ssid').value = ssid;
-            setActive('password');
-          });
-          container.appendChild(div);
-        });
-      });
-    }
-
     scanNetworks();
   </script>
 </body>

@@ -518,15 +518,19 @@ def api_data():
             pass
     orbital_year = len(past_year)
 
+    # Pre-compute provider counts once instead of O(n*m) per launch
+    provider_counts = {}
+    for y in past_year:
+        name = (y.get('launch_service_provider') or {}).get('name', '')
+        if name:
+            provider_counts[name] = provider_counts.get(name, 0) + 1
+
     enriched = []
     for launch in launches:
         l        = dict(launch)
         provider = l.get('provider', '')
         l['orbital_year'] = orbital_year
-        l['agency_year']  = sum(
-            1 for y in past_year
-            if (y.get('launch_service_provider') or {}).get('name', '') == provider
-        )
+        l['agency_year']  = provider_counts.get(provider, 0)
         enriched.append(l)
 
     return jsonify({
@@ -709,6 +713,18 @@ def wifi_scan():
         return jsonify({'networks': networks})
     except Exception as e:
         return jsonify({'networks': [], 'error': str(e)})
+
+@app.route('/api/wifi/current')
+def wifi_current():
+    try:
+        result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
+                                capture_output=True, text=True)
+        for line in result.stdout.split('\n'):
+            if line.startswith('ssid='):
+                return jsonify({'ssid': line.split('=', 1)[1].strip()})
+        return jsonify({'ssid': ''})
+    except Exception:
+        return jsonify({'ssid': ''})
 
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():

@@ -237,7 +237,7 @@
   <div class="scanlines"></div>
 
   <div class="topbar">
-    <button class="back-btn" onclick="window.location='http://localhost:5001'">← BACK</button>
+    <button class="back-btn" onclick="window.location='/'">← BACK</button>
     <div class="top-sqs">
       <div class="top-sq" style="background:#00e87a;"></div>
       <div class="top-sq" style="background:#4a9ede;"></div>
@@ -977,8 +977,8 @@
       const provider=base?.provider||'—';
       const padName=base?.pad||'—';
       const location=base?.location||'—';
-      padLat=base?.pad_lat?parseFloat(base.pad_lat):null;
-      padLon=base?.pad_lon?parseFloat(base.pad_lon):null;
+      const _pLat = parseFloat(base?.pad_lat); padLat = isFinite(_pLat) ? _pLat : null;
+      const _pLon = parseFloat(base?.pad_lon); padLon = isFinite(_pLon) ? _pLon : null;
       const missionType=base?.mission_type||'—';
       const missionDesc=base?.mission_desc||'';
       const program=base?.program||'—';
@@ -1051,7 +1051,8 @@
       // Window bar
       if(winOpen&&winClose&&t0){
         const openMs=new Date(winOpen).getTime(),closeMs=new Date(winClose).getTime(),t0Ms=new Date(t0).getTime();
-        const t0Pct=Math.round(Math.max(5,Math.min(95,((t0Ms-openMs)/(closeMs-openMs))*100)));
+        const _winSpan = closeMs - openMs;
+        const t0Pct=_winSpan > 0 ? Math.round(Math.max(5,Math.min(95,((t0Ms-openMs)/_winSpan)*100))) : 50;
         document.getElementById('dot-t0').style.left=t0Pct+'%';
         document.getElementById('win-open-str').textContent=fmtUTC(winOpen, useLocal)+' OPEN';
         document.getElementById('win-close-str').textContent='CLOSE '+fmtUTC(winClose, useLocal);
@@ -1147,7 +1148,15 @@
 }
         else if(wx.cloud_cover>80||wx.wind_speed>25){goPill.textContent='MONITOR';goPill.className='go-px monitor';goText.textContent='Weather conditions marginal';}
         else{goPill.textContent='GO';goPill.className='go-px';goText.textContent='No weather concerns reported';}
-      }catch(e){document.getElementById('wx-wrap').style.display='block';document.getElementById('go-text').textContent='Weather unavailable';}
+      }catch(e){
+        document.getElementById('wx-temp').textContent='—';
+        document.getElementById('wx-wind').textContent='—';
+        document.getElementById('wx-cloud').textContent='—';
+        document.getElementById('wx-precip').textContent='—';
+        document.getElementById('wx-wrap').style.display='block';
+        document.getElementById('go-pill').textContent='—';
+        document.getElementById('go-text').textContent='Weather unavailable';
+      }
 
       // Rocket image
       const imgEl=document.getElementById('rocket-img');
