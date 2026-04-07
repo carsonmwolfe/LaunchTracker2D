@@ -16,7 +16,7 @@ import json
 import subprocess
 import base64
 from datetime import datetime, timezone, timedelta
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, redirect
 import os
 import sys
 import logging
@@ -41,7 +41,7 @@ def _load_settings():
         with open(SETTINGS_FILE) as f:
             return json.load(f)
     except Exception:
-        return {'brightness': 40, 'temp_unit': 'f', 'site': 'all', 'time_format': 'utc'}
+        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': ''}
 
 def _save_settings(data):
     try:
@@ -459,6 +459,8 @@ threading.Thread(target=_auto_brightness, daemon=True).start()
 
 @app.route('/')
 def index():
+    if not os.path.exists(SETTINGS_FILE):
+        return redirect('/settings?setup=1')
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'index.html')
 
 @app.route('/static/<path:path>')
@@ -666,7 +668,8 @@ def api_device():
         mac = open('/sys/class/net/wlan0/address').read().strip()
     except Exception:
         mac = '??:??:??:??:??:??'
-    unit_id = 'LT-' + mac.replace(':', '')[-4:].upper()
+    auto_id = 'LT-' + mac.replace(':', '')[-4:].upper()
+    unit_id = _load_settings().get('unit_id', '').strip() or auto_id
     lat, lon = _get_location()
     return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'lat': lat, 'lon': lon})
 
@@ -740,8 +743,11 @@ def wifi_connect():
             ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
             capture_output=True, text=True)
         net_id = result.stdout.strip()
-        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid',     f'"{ssid}"'],     check=True)
-        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk',      f'"{password}"'], check=True)
+        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True)
+        if password:
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True)
+        else:
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'key_mgmt', 'NONE'], check=True)
         subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'select_network', net_id],          check=True)
         time.sleep(8)
         status    = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
@@ -749,11 +755,14 @@ def wifi_connect():
         connected = (f'ssid={ssid}' in status.stdout and
                      'wpa_state=COMPLETED' in status.stdout)
         if connected:
+            if password:
+                net_block = f'    ssid="{ssid}"\n    psk="{password}"\n    key_mgmt=WPA-PSK\n'
+            else:
+                net_block = f'    ssid="{ssid}"\n    key_mgmt=NONE\n'
             clean_config = (
                 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
                 'update_config=1\ncountry=US\n\n'
-                f'network={{\n    ssid="{ssid}"\n    psk="{password}"\n'
-                '    key_mgmt=WPA-PSK\n}\n'
+                f'network={{\n{net_block}}}\n'
             )
             with open('/tmp/wpa_supplicant.conf', 'w') as f:
                 f.write(clean_config)

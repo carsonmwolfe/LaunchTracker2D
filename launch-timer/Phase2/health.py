@@ -25,7 +25,22 @@ from email.mime.text import MIMEText
 from datetime import datetime
 
 # ── Config ────────────────────────────────────────────────────────────────────
-UNIT_ID       = 'Unit-001'
+def _get_unit_id():
+    settings_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
+    try:
+        with open(settings_file) as f:
+            uid = json.load(f).get('unit_id', '').strip()
+            if uid:
+                return uid
+    except Exception:
+        pass
+    try:
+        mac = open('/sys/class/net/wlan0/address').read().strip()
+        return 'LT-' + mac.replace(':', '')[-4:].upper()
+    except Exception:
+        return 'Unit-001'
+
+UNIT_ID       = _get_unit_id()
 FROM          = 'rangetrack551@gmail.com'
 TO            = 'rangetrack551@gmail.com'
 PASS_FILE     = '/home/pi/.rangetrack_gmail_pass'
@@ -115,6 +130,28 @@ def is_server_running():
         return result.returncode == 0
     except:
         return False
+
+def restart_server():
+    try:
+        phase2 = os.path.dirname(os.path.abspath(__file__))
+        subprocess.run(['pkill', '-f', SERVER_SCRIPT], capture_output=True)
+        time.sleep(2)
+        subprocess.Popen(
+            ['python3', SERVER_SCRIPT],
+            cwd=phase2,
+            stdout=open('/home/pi/server.log', 'a'),
+            stderr=subprocess.STDOUT
+        )
+        print(f'[{ts()}] Server restarted.')
+    except Exception as e:
+        print(f'[{ts()}] Failed to restart server: {e}')
+
+def get_local_ip():
+    try:
+        result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+        return result.stdout.strip().split()[0]
+    except:
+        return 'unknown'
 
 def has_internet():
     try:
@@ -338,6 +375,7 @@ def digest_html(temp, cpu, mem_u, mem_t, mem_pct, disk_u, disk_t, disk_pct, upti
       <div>
         <div class="unit-id">&#9632; {UNIT_ID}</div>
         <div class="uptime">UPTIME: {uptime}</div>
+        <div class="uptime" style="color:#00e87a;margin-top:2px;">IP: {get_local_ip()}</div>
       </div>
       <div class="timestamp">{ts_}</div>
     </div>
@@ -476,7 +514,8 @@ def check_alerts():
 
     server = is_server_running()
     if not server and not state.get('server_down'):
-        alerts.append('SERVER CRASHED — server.py is not running.')
+        restart_server()
+        alerts.append('SERVER CRASHED — auto-restarted server.py.')
         state['server_down'] = True
     elif server and state.get('server_down'):
         cleared.append('Server is back online.')

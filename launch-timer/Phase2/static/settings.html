@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=800, initial-scale=1">
   <title>Settings</title>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");font-display:swap;}</style>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
     * { cursor: none !important; }
@@ -80,7 +80,16 @@
       background: #0a0e14; overflow: hidden;
       border-right: 3px solid #1a2030;
     }
-    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; }
+    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; }
+    .setting-cell.full { grid-column: 1 / -1; border-right: none; }
+    .unit-id-input {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px; background: #080c12;
+      border: 2px solid #1a2030; color: #ffd93d;
+      padding: 6px 10px; width: 100%; outline: none;
+      letter-spacing: 0.06em;
+    }
+    .unit-id-input:focus { border-color: #ffd93d; }
     .setting-cell {
       padding: 14px 16px;
       border-bottom: 2px solid #1a2030;
@@ -114,6 +123,20 @@
       height: 4px;
     }
     .slider-val { font-size: 10px; color: #ffd93d; width: 36px; text-align: right; flex-shrink: 0; }
+
+    /* First-run banner */
+    .setup-banner {
+      display: none; flex-shrink: 0;
+      background: #1a0a00; border-bottom: 3px solid #ff9933;
+      padding: 8px 14px; gap: 10px; align-items: center;
+    }
+    .setup-banner.visible { display: flex; }
+    .setup-banner-text { font-size: 7px; color: #ff9933; line-height: 1.8; flex: 1; }
+    .setup-wifi-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; background: #ff9933; color: #0a0e14;
+      border: none; padding: 7px 12px; cursor: pointer; flex-shrink: 0; white-space: nowrap;
+    }
 
     /* ACTIONS */
     .actions {
@@ -194,6 +217,11 @@
     <div class="save-indicator" id="save-indicator" style="visibility:hidden;">✓ SAVED</div>
   </div>
 
+  <div class="setup-banner" id="setup-banner">
+    <div class="setup-banner-text">FIRST TIME SETUP — CONNECT TO WIFI TO GET LAUNCH DATA AND UPDATES.</div>
+    <button class="setup-wifi-btn" onclick="goWifi()">▶ SETUP WIFI</button>
+  </div>
+
   <div class="body">
 
     <!-- LEFT: device info -->
@@ -224,12 +252,19 @@
       <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> CONFIGURATION</div>
       <div class="settings-grid">
 
+        <!-- Unit ID — hidden from customers, only shown if pre-configured -->
+        <div class="setting-cell full" id="unit-id-cell" style="display:none;">
+          <div class="s-label">UNIT ID</div>
+          <div class="s-sub">Identifies this unit in health reports</div>
+          <input class="unit-id-input" id="unit-id-input" type="text" maxlength="20" placeholder="e.g. CAPE-01" spellcheck="false">
+        </div>
+
         <!-- Brightness -->
         <div class="setting-cell">
           <div class="s-label">BRIGHTNESS</div>
           <div class="s-sub">Screen backlight level</div>
           <div class="slider-row">
-            <input type="range" min="5" max="100" value="40" step="1" id="brightness-slider">
+            <input type="range" min="20" max="100" value="40" step="1" id="brightness-slider">
             <div class="slider-val" id="brightness-val">40%</div>
           </div>
         </div>
@@ -312,7 +347,12 @@
   </div>
 
   <script>
-    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'utc' };
+    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'' };
+
+    // Show first-run banner if redirected from home with ?setup=1
+    if (new URLSearchParams(window.location.search).get('setup') === '1') {
+      document.getElementById('setup-banner').classList.add('visible');
+    }
     let saveTimer = null;
 
     function showSaved() {
@@ -341,6 +381,10 @@
       document.getElementById('site-cape').classList.toggle('active', settings.site === 'cape');
       document.getElementById('time-utc').classList.toggle('active',   settings.time_format === 'utc');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
+      const uid = settings.unit_id || '';
+      document.getElementById('unit-id-input').value = uid;
+      // Only show Unit ID cell if pre-configured (Carson sets before shipping)
+      document.getElementById('unit-id-cell').style.display = uid ? '' : 'none';
     }
 
     async function loadSettings() {
@@ -381,9 +425,15 @@
       saveSettings();
     }
 
-    function goBack()      { window.location = 'http://localhost:5001'; }
+    document.getElementById('unit-id-input').addEventListener('change', function() {
+      settings.unit_id = this.value.trim().toUpperCase();
+      this.value = settings.unit_id;
+      saveSettings();
+    });
+
+    function goBack()      { window.location = '/'; }
     function restartPage() { window.location.reload(); }
-    function goWifi()      { window.location = 'http://localhost:5001/wifi'; }
+    function goWifi()      { window.location = '/wifi'; }
     function rebootPi() {
       if (confirm('Reboot the Pi?')) {
         fetch('/api/reboot', { method: 'POST' }).catch(() => {});
@@ -436,7 +486,7 @@
     // Clock
     function updateClock() {
       document.getElementById('ss-time').textContent =
-        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' UTC';
+        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
     }
     updateClock();
     setInterval(updateClock, 1000);

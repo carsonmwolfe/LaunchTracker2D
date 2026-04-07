@@ -81,7 +81,7 @@ let state = {
   launches:    [],
   currentIdx:  0,
   weather:     { condition: 'clear', temp_f: 75, wind_speed: 10, wind_dir: 'E', cloud_cover: 0, label: 'Clear sky' },
-  settings:    { temp_unit: 'f', time_format: 'utc' },
+  settings:    { temp_unit: 'f', time_format: 'local' },
   // Countdown / launch
   launchTriggered: false,     // ← THE FIX: set true at T-0, reset on new mission
   isLaunching:     false,
@@ -2278,6 +2278,8 @@ function restoreState() {
 //  BOOT
 // ─────────────────────────────────────────────────────────────────────────────
 (async function boot() {
+  // Wait for Press Start 2P to load before first render so canvas text isn't wrong font
+  try { await document.fonts.load('10px "Press Start 2P"'); } catch(e) {}
   await loadAssets();
   spawnBirds();
   spawnCars();
