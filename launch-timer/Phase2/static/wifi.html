@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=800, initial-scale=1">
   <title>WiFi Setup</title>
-  <style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");font-display:swap;}</style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
     body {
@@ -50,13 +50,14 @@
     .left-col {
       width: 280px; flex-shrink: 0;
       display: flex; flex-direction: column;
-      border-right: 3px solid #1a2030;
+      border-right: 3px solid #2a3a50;
+      background: #0e1520;
     }
 
     .phdr {
       font-size: 6px; color: #00e87a;
-      background: #0d1620; padding: 5px 8px;
-      border-bottom: 2px solid #1a2030;
+      background: #141e2e; padding: 5px 8px;
+      border-bottom: 2px solid #2a3a50;
       display: flex; align-items: center; gap: 5px;
       flex-shrink: 0;
     }
@@ -69,34 +70,34 @@
       display: flex; flex-direction: column; gap: 4px;
     }
     .network {
-      background: #111927;
-      border: 2px solid #2a3a50;
-      padding: 6px 8px;
+      background: #1a2535;
+      border: 2px solid #344558;
+      padding: 7px 8px;
       cursor: pointer;
-      font-size: 7px; color: rgba(255,255,255,0.9);
+      font-size: 7px; color: #ffffff;
       display: flex; align-items: center; gap: 6px;
       flex-shrink: 0;
     }
-    .network:hover { background: #162030; border-color: rgba(0,232,122,0.4); }
-    .network.selected { background: #0a1a10; border-color: #00e87a; color: #00e87a; }
-    .network.current-net { border-color: rgba(255,211,61,0.6); }
-    .network-signal { font-size: 7px; flex-shrink: 0; color: #4a9ede; }
+    .network:hover { background: #1f2e42; border-color: rgba(0,232,122,0.6); }
+    .network.selected { background: #0a1f10; border-color: #00e87a; color: #00e87a; }
+    .network.current-net { border-color: #ffd93d; }
+    .network-signal { font-size: 7px; flex-shrink: 0; color: #6ab4f8; }
     .network-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .network-lock { font-size: 6px; color: rgba(255,211,61,0.6); flex-shrink: 0; }
-    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; padding: 16px 8px; }
+    .network-lock { font-size: 6px; color: #ffd93d; flex-shrink: 0; }
+    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.5); text-align: center; padding: 16px 8px; }
 
     /* Fields */
-    .fields-block { flex-shrink: 0; border-top: 2px solid #1a2030; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .fields-block { flex-shrink: 0; border-top: 2px solid #2a3a50; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: #0e1520; }
     .field-row { display: flex; flex-direction: column; gap: 3px; }
     .field-label-row { display: flex; justify-content: space-between; align-items: center; }
     .field-label { font-size: 6px; color: #6ab4f8; letter-spacing: 1px; }
-    .field-clear { font-size: 5px; color: rgba(255,68,34,0.6); cursor: pointer; background: none; border: none; font-family: 'Press Start 2P', monospace; padding: 0; }
+    .field-clear { font-size: 5px; color: #ff6644; cursor: pointer; background: none; border: none; font-family: 'Press Start 2P', monospace; padding: 0; }
     .field-clear:hover { color: #ff4422; }
     .field-input {
-      background: #111927;
-      border: 2px solid #2a3a50;
-      padding: 6px 8px;
-      color: #e8eef8;
+      background: #1a2535;
+      border: 2px solid #344558;
+      padding: 7px 8px;
+      color: #ffffff;
       font-family: 'Press Start 2P', monospace;
       font-size: 8px;
       width: 100%;
@@ -104,29 +105,29 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       display: flex; align-items: center; justify-content: space-between;
     }
-    .field-input.active { border-color: #00e87a; color: #00e87a; background: #0d1f12; }
-    .field-placeholder { color: rgba(255,255,255,0.35); font-size: 7px; }
+    .field-input.active { border-color: #00e87a; color: #00e87a; background: #0a1f12; }
+    .field-placeholder { color: rgba(255,255,255,0.45); font-size: 7px; }
     .field-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .show-toggle { font-size: 6px; color: rgba(255,255,255,0.3); cursor: pointer; flex-shrink: 0; padding-left: 4px; user-select: none; }
+    .show-toggle { font-size: 6px; color: rgba(255,255,255,0.5); cursor: pointer; flex-shrink: 0; padding-left: 4px; user-select: none; }
     .show-toggle:hover { color: #ffd93d; }
 
     /* Buttons */
     .action-row { display: flex; gap: 6px; flex-shrink: 0; padding: 0 8px 8px; }
     .btn {
-      flex: 1; padding: 8px 4px;
+      flex: 1; padding: 9px 4px;
       font-family: 'Press Start 2P', monospace;
       font-size: 7px; cursor: pointer; border: none;
       text-align: center;
     }
-    .btn-connect { background: #00e87a; color: #0a0e14; }
-    .btn-connect:disabled { background: rgba(0,232,122,0.25); color: rgba(0,50,20,0.6); cursor: not-allowed; }
-    .btn-scan { background: #0a1a10; border: 2px solid #4a9ede; color: #4a9ede; }
+    .btn-connect { background: #00e87a; color: #050a07; }
+    .btn-connect:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
+    .btn-scan { background: #141e2e; border: 2px solid #6ab4f8; color: #6ab4f8; }
     .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Status */
     .status-bar {
       flex-shrink: 0;
-      background: #0d1620; border-top: 2px solid #1a2030;
+      background: #141e2e; border-top: 2px solid #2a3a50;
       padding: 5px 8px; font-size: 6px; height: 22px;
       color: #ffd93d; letter-spacing: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
