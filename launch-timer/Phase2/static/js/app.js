@@ -923,13 +923,13 @@ function drawBackgroundPad() {
 
   // ── Umbilicals (scaled to bg pad) ──
   if (rocketImg && vehicle2) {
-    const cfg2     = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
-    const rh2      = Math.round(cfg2.h * sc);
-    const rw2      = Math.round(rocketImg.width * (rh2 / rocketImg.height));
-    const rocketX2 = padX + Math.round((cfg2.x - NOZZLE_X) * sc) - 18;
-    const rRightX  = rocketX2 + rw2 * 0.55;  // right edge of rocket body
-    const tFaceX   = rRightX + Math.round(8 * sc);  // tower face
-    const rTop     = pad2GroundY - rh2;
+    const cfg2    = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
+    const rh2     = Math.round(cfg2.h * sc);
+    const rTop    = pad2GroundY - rh2;
+    // Mirror main pad logic: rocketRightX = NOZZLE_X+8, towerFaceX = NOZZLE_X+28
+    // Use padX as this pad's nozzle equivalent, scaled by sc
+    const rRightX = padX + Math.round(8 * sc);
+    const tFaceX  = padX + Math.round(28 * sc);
     [0.18, 0.44, 0.67].forEach((frac) => {
       const armY = Math.round(rTop + rh2 * frac);
       ctx.strokeStyle = '#777777';
