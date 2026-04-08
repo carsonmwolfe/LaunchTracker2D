@@ -32,6 +32,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
 LL2_BASE      = 'https://ll.thespacedevs.com/2.3.0'
 LL2_TIMEOUT   = 15
+RELAY_URL     = 'http://45.55.245.193'  # DO relay — Pi fetches from here instead of LL2 directly
 
 
 # ── Settings ──────────────────────────────────────────────────────────────────
@@ -293,7 +294,27 @@ def _save_cache():
 _load_cache()
 
 def _fetch_upcoming():
-    """Fetch upcoming launches from LL2, normalize, filter TBD ones out."""
+    """Fetch upcoming launches — tries DO relay first, falls back to LL2 directly."""
+    try:
+        relay_url = f'{RELAY_URL}/api/launches'
+        r = requests.get(relay_url, timeout=8)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list) and len(results) > 0:
+                launches = []
+                skipped  = 0
+                for item in results:
+                    norm = _normalize_launch(item)
+                    if not _is_valid(norm):
+                        skipped += 1
+                        continue
+                    launches.append(norm)
+                    if len(launches) >= 5:
+                        break
+                print(f'[{_ts()}] Relay: {len(launches)} launches (fallback=off)')
+                return launches
+    except Exception as e:
+        print(f'[{_ts()}] Relay unavailable ({e}) — falling back to LL2')
     try:
         url = f'{LL2_BASE}/launches/upcoming/?limit=10&ordering=net&format=json'
         r   = requests.get(url, timeout=LL2_TIMEOUT)
@@ -415,7 +436,30 @@ def _background_thread():
             _weather_cache['data']    = data
             _weather_cache['fetched'] = now
 
+def _ping_relay():
+    """Ping the DO relay every 5 minutes so the dashboard can track this unit."""
+    while True:
+        try:
+            settings = _load_settings()
+            try:
+                mac = open('/sys/class/net/wlan0/address').read().strip()
+            except Exception:
+                mac = '??:??:??:??:??:??'
+            unit_id  = settings.get('unit_id', '') or ('LT-' + mac.replace(':', '')[-4:].upper())
+            wx       = _weather_cache.get('data') or {}
+            requests.post(f'{RELAY_URL}/api/unit/ping', json={
+                'unit_id':   unit_id,
+                'version':   VERSION,
+                'site':      settings.get('site', 'cape'),
+                'condition': wx.get('condition', ''),
+                'temp_f':    wx.get('temp_f', 0),
+            }, timeout=5)
+        except Exception:
+            pass
+        time.sleep(300)
+
 threading.Thread(target=_background_thread, daemon=True).start()
+threading.Thread(target=_ping_relay, daemon=True).start()
 
 
 # ── Auto brightness ───────────────────────────────────────────────────────────
