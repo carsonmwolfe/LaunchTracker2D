@@ -898,20 +898,19 @@ function drawBackgroundPad() {
   let rocketTop = ty + Math.round(th * 0.32);
   let rocketMidY = ty + Math.round(th * 0.55);
   const pad2GroundY = 360;
+  let bg_rocketX2 = null, bg_rh = null, bg_rw = null;
 
   if (rocketImg && vehicle2) {
     const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
-    const rh  = Math.round(cfg.h * sc);
-    const rw  = Math.round(rocketImg.width * (rh / rocketImg.height));
-    const mainNozzleX = NOZZLE_X;
-    const rocketOffsetFromNozzle = cfg.x - mainNozzleX;
-    const rocketX2 = padX + Math.round(rocketOffsetFromNozzle * sc) - 18;
-    rocketTop = pad2GroundY - rh;
-    rocketMidY = rocketTop + Math.round(rh * 0.5);
+    bg_rh  = Math.round(cfg.h * sc);
+    bg_rw  = Math.round(rocketImg.width * (bg_rh / rocketImg.height));
+    bg_rocketX2 = padX + Math.round((cfg.x - NOZZLE_X) * sc) - 18;
+    rocketTop = pad2GroundY - bg_rh;
+    rocketMidY = rocketTop + Math.round(bg_rh * 0.5);
 
     // Draw rocket FIRST so tower structure renders in front of it
     ctx.globalAlpha = 0.82;
-    ctx.drawImage(rocketImg, rocketX2, rocketTop, rw, rh);
+    ctx.drawImage(rocketImg, bg_rocketX2, rocketTop, bg_rw, bg_rh);
     ctx.globalAlpha = 1;
   }
 
@@ -922,16 +921,13 @@ function drawBackgroundPad() {
   ctx.globalAlpha = 1;
 
   // ── Umbilicals (scaled to bg pad) ──
-  if (rocketImg && vehicle2) {
-    const cfg2    = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
-    const rh2     = Math.round(cfg2.h * sc);
-    const rTop    = pad2GroundY - rh2;
-    // Mirror main pad logic: rocketRightX = NOZZLE_X+8, towerFaceX = NOZZLE_X+28
-    // Use padX as this pad's nozzle equivalent, scaled by sc
-    const rRightX = padX + Math.round(8 * sc);
-    const tFaceX  = padX + Math.round(28 * sc);
+  if (bg_rocketX2 !== null) {
+    const rTop    = pad2GroundY - bg_rh;
+    // Right edge of rocket body, tower face just to the right of it
+    const rRightX = bg_rocketX2 + Math.round(bg_rw * 0.7);
+    const tFaceX  = rRightX + 3;
     [0.18, 0.44, 0.67].forEach((frac) => {
-      const armY = Math.round(rTop + rh2 * frac);
+      const armY = Math.round(rTop + bg_rh * frac);
       ctx.strokeStyle = '#777777';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(tFaceX, armY); ctx.lineTo(rRightX, armY); ctx.stroke();
