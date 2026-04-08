@@ -909,7 +909,7 @@ function drawBackgroundPad() {
     const pad2GroundY = 360;
     rocketTop = pad2GroundY - rh;
     rocketMidY = rocketTop + Math.round(rh * 0.5);
-    rocketRightX = rocketX2 + rw;
+
     // Draw rocket FIRST so tower structure renders in front of it
     ctx.globalAlpha = 0.82;
     ctx.drawImage(rocketImg, rocketX2, rocketTop, rw, rh);
