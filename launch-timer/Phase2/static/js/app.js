@@ -897,7 +897,6 @@ function drawBackgroundPad() {
   const rocketImg  = assetKey2 ? IMG[assetKey2] : null;
   let rocketTop = ty + Math.round(th * 0.32);
   let rocketMidY = ty + Math.round(th * 0.55);
-  let rocketRightX = padX - 2;
 
   if (rocketImg && vehicle2) {
     const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
@@ -923,32 +922,7 @@ function drawBackgroundPad() {
   ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
   ctx.globalAlpha = 1;
 
-  // ── Umbilicals — tower face → right side of rocket ──
-  const towerFaceX2 = padX + Math.round(10 * sc);
-  const rocketSkinX = rocketRightX;
-  const umbColors = ['#ffffff', '#cc2222', '#ffffff'];
-  [0.30, 0.50, 0.68].forEach((frac) => {
-    const armY = ty + Math.round(th * frac);
-    // Rigid arm beam
-    ctx.strokeStyle = '#777777';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(towerFaceX2, armY); ctx.lineTo(rocketSkinX, armY); ctx.stroke();
-    // Bracket at tower
-    ctx.fillStyle = '#555555';
-    ctx.fillRect(towerFaceX2, armY - 2, 3, 4);
-    // Connector at rocket skin
-    ctx.fillStyle = '#aaaaaa';
-    ctx.fillRect(rocketSkinX - 2, armY - 2, 3, 4);
-    // Cable droop
-    umbColors.forEach((col, j) => {
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rocketSkinX, armY + (j - 1));
-      ctx.quadraticCurveTo(rocketSkinX + 2, armY + 3 + (j - 1), rocketSkinX - 1, armY + 1 + (j - 1));
-      ctx.stroke();
-    });
-  });
+  // Umbilicals removed from background pad
 
   // ── Vent smoke (same logic as main pad) ──
   const ventX2 = 285;
@@ -2085,7 +2059,7 @@ function render(now) {
   // drawFences();
   drawBackgroundPad();  // ← Next rocket on distant pad
   drawRocket();         // ← Active pad rocket (behind tower)
-  // drawUmbilicals();  // removed — umbilicals disabled
+  drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
   
