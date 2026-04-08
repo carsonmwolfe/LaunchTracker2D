@@ -897,6 +897,7 @@ function drawBackgroundPad() {
   const rocketImg  = assetKey2 ? IMG[assetKey2] : null;
   let rocketTop = ty + Math.round(th * 0.32);
   let rocketMidY = ty + Math.round(th * 0.55);
+  const pad2GroundY = 360;
 
   if (rocketImg && vehicle2) {
     const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
@@ -905,8 +906,6 @@ function drawBackgroundPad() {
     const mainNozzleX = NOZZLE_X;
     const rocketOffsetFromNozzle = cfg.x - mainNozzleX;
     const rocketX2 = padX + Math.round(rocketOffsetFromNozzle * sc) - 18;
-    // Pin rocket bottom to the pad ground line (not the road below it)
-    const pad2GroundY = 360;
     rocketTop = pad2GroundY - rh;
     rocketMidY = rocketTop + Math.round(rh * 0.5);
 
@@ -922,7 +921,26 @@ function drawBackgroundPad() {
   ctx.drawImage(IMG.launchTower, tx, ty, tw, th);
   ctx.globalAlpha = 1;
 
-  // Umbilicals removed from background pad
+  // ── Umbilicals (scaled to bg pad) ──
+  if (rocketImg && vehicle2) {
+    const cfg2     = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
+    const rh2      = Math.round(cfg2.h * sc);
+    const rw2      = Math.round(rocketImg.width * (rh2 / rocketImg.height));
+    const rocketX2 = padX + Math.round((cfg2.x - NOZZLE_X) * sc) - 18;
+    const rRightX  = rocketX2 + rw2 * 0.55;  // right edge of rocket body
+    const tFaceX   = rRightX + Math.round(8 * sc);  // tower face
+    const rTop     = pad2GroundY - rh2;
+    [0.18, 0.44, 0.67].forEach((frac) => {
+      const armY = Math.round(rTop + rh2 * frac);
+      ctx.strokeStyle = '#777777';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(tFaceX, armY); ctx.lineTo(rRightX, armY); ctx.stroke();
+      ctx.fillStyle = '#555555';
+      ctx.fillRect(tFaceX, armY - 2, 2, 4);
+      ctx.fillStyle = '#aaaaaa';
+      ctx.fillRect(rRightX - 1, armY - 2, 2, 4);
+    });
+  }
 
   // ── Vent smoke (same logic as main pad) ──
   const ventX2 = 285;
