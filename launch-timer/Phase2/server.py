@@ -316,7 +316,7 @@ def _fetch_upcoming():
     except Exception as e:
         print(f'[{_ts()}] Relay unavailable ({e}) — falling back to LL2')
     try:
-        url = f'{LL2_BASE}/launches/upcoming/?limit=10&ordering=net&format=json'
+        url = f'{LL2_BASE}/launches/upcoming/?limit=10&ordering=net&format=json&hide_recent_previous=true'
         r   = requests.get(url, timeout=LL2_TIMEOUT)
         if r.status_code == 429:
             print(f'[{_ts()}] LL2 rate limited — keeping cached launches')
