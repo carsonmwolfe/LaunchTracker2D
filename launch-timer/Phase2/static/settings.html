@@ -80,8 +80,9 @@
       background: #0a0e14; overflow: hidden;
       border-right: 3px solid #1a2030;
     }
-    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; }
+    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr; overflow: hidden; }
     .setting-cell.full { grid-column: 1 / -1; border-right: none; }
+    .setting-cell.top-full { grid-column: 1 / -1; border-right: none; }
     .unit-id-input {
       font-family: 'Press Start 2P', monospace;
       font-size: 9px; background: #080c12;
@@ -91,16 +92,16 @@
     }
     .unit-id-input:focus { border-color: #ffd93d; }
     .setting-cell {
-      padding: 14px 16px;
+      padding: 10px 14px;
       border-bottom: 2px solid #1a2030;
       border-right: 2px solid #1a2030;
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 6px;
     }
-    .setting-cell:nth-child(even) { border-right: none; }
-    .setting-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .setting-cell:last-child { border-right: none; }
+    .setting-cell.bot { border-bottom: none; }
     .s-label { font-size: 9px; color: #4a9ede; letter-spacing: 0.06em; }
-    .s-sub { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 2px; line-height: 1.8; }
-    .s-control { display: flex; gap: 5px; margin-top: 4px; }
+    .s-sub { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 1px; line-height: 1.8; }
+    .s-control { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
 
     /* Toggle buttons */
     .tog {
@@ -259,8 +260,8 @@
           <input class="unit-id-input" id="unit-id-input" type="text" maxlength="20" placeholder="e.g. CAPE-01" spellcheck="false">
         </div>
 
-        <!-- Brightness -->
-        <div class="setting-cell">
+        <!-- Brightness — full width top row -->
+        <div class="setting-cell top-full">
           <div class="s-label">BRIGHTNESS</div>
           <div class="s-sub">Screen backlight level</div>
           <div class="slider-row">
@@ -270,9 +271,9 @@
         </div>
 
         <!-- Temperature -->
-        <div class="setting-cell">
+        <div class="setting-cell bot">
           <div class="s-label">TEMPERATURE</div>
-          <div class="s-sub">Weather display units</div>
+          <div class="s-sub">Weather units</div>
           <div class="s-control">
             <button class="tog" id="unit-f" onclick="setTempUnit('f')">°F</button>
             <button class="tog" id="unit-c" onclick="setTempUnit('c')">°C</button>
@@ -280,9 +281,9 @@
         </div>
 
         <!-- Time format -->
-        <div class="setting-cell">
+        <div class="setting-cell bot">
           <div class="s-label">TIME FORMAT</div>
-          <div class="s-sub">Countdown &amp; sky cycle timezone</div>
+          <div class="s-sub">Clock &amp; sky timezone</div>
           <div class="s-control">
             <button class="tog" id="time-utc"   onclick="setTimeFormat('utc')">UTC</button>
             <button class="tog" id="time-site"  onclick="setTimeFormat('site')">SITE</button>
@@ -291,9 +292,9 @@
         </div>
 
         <!-- Launch site -->
-        <div class="setting-cell">
+        <div class="setting-cell bot">
           <div class="s-label">LAUNCH SITE</div>
-          <div class="s-sub">Filter launches by location</div>
+          <div class="s-sub">Filter by location</div>
           <div class="s-control" style="flex-direction:column;gap:4px;">
             <button class="tog blue" id="site-cape" onclick="setSite('cape')">CAPE CANAVERAL</button>
             <button class="tog disabled" disabled>VANDENBERG · SOON</button>
