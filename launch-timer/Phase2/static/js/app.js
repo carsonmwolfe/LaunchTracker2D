@@ -2085,7 +2085,7 @@ function render(now) {
   // drawFences();
   drawBackgroundPad();  // ← Next rocket on distant pad
   drawRocket();         // ← Active pad rocket (behind tower)
-  drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
+  // drawUmbilicals();  // removed — umbilicals disabled
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
   
