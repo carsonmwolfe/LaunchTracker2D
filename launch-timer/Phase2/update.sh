@@ -27,6 +27,10 @@ fi
 echo "$LOG_PREFIX New commits found — resetting to origin ($LOCAL → $REMOTE)"
 git reset --hard "origin/$BRANCH"
 
+# Clear Chromium cache so all pages get fresh content (not just the currently open one)
+rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null
+echo "$LOG_PREFIX Chromium cache cleared"
+
 # Restart server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null
@@ -35,6 +39,11 @@ cd launch-timer/Phase2
 nohup python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
 echo "$LOG_PREFIX Server restarted (PID $SERVER_PID)"
+
+# Reload Chromium so the current page picks up changes immediately
+sleep 3
+DISPLAY=:0 xdotool key ctrl+shift+r 2>/dev/null
+echo "$LOG_PREFIX Chromium reloaded"
 
 # Log the update so the daily digest can include it
 SHORT=$(git log -1 --pretty="%s" 2>/dev/null)
