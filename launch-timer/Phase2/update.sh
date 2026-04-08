@@ -13,12 +13,6 @@ UPDATE_LOG="/home/pi/.rangetrack_updates.json"
 
 cd "$REPO_DIR" || { echo "$LOG_PREFIX ERROR: repo dir not found"; exit 1; }
 
-# Stash any local changes so pull doesn't conflict
-STASHED=0
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    git stash && STASHED=1
-fi
-
 # Fetch remote without merging
 git fetch origin "$BRANCH" --quiet
 
@@ -30,11 +24,8 @@ if [ "$LOCAL" = "$REMOTE" ]; then
     exit 0
 fi
 
-echo "$LOG_PREFIX New commits found — pulling ($LOCAL → $REMOTE)"
-git pull origin "$BRANCH" --quiet
-
-# Restore stashed local files
-if [ "$STASHED" = "1" ]; then git stash pop 2>/dev/null; fi
+echo "$LOG_PREFIX New commits found — resetting to origin ($LOCAL → $REMOTE)"
+git reset --hard "origin/$BRANCH"
 
 # Restart server
 echo "$LOG_PREFIX Restarting server..."
