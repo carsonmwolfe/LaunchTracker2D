@@ -84,7 +84,8 @@ echo "$LOG_PREFIX Chromium cache cleared"
 # Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null
-sleep 2
+sudo fuser -k 5001/tcp 2>/dev/null
+sleep 3
 cd "$REPO_DIR/launch-timer/Phase2" || exit 1
 nohup python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
