@@ -1,7 +1,6 @@
 #!/bin/bash
-# Auto-updater: checks for new commits on GitHub once per hour via cron.
-# If changes are found, pulls and restarts the server.
-# Updates are included in the daily health digest (not sent immediately).
+# Auto-updater for RangeTrack OS
+# Runs hourly via cron. Pulls latest from GitHub, restarts server, clears cache.
 #
 # Cron setup (crontab -e on Pi):
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
@@ -11,44 +10,102 @@ BRANCH="Phase3"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 UPDATE_LOG="/home/pi/.rangetrack_updates.json"
 
-cd "$REPO_DIR" || { echo "$LOG_PREFIX ERROR: repo dir not found"; exit 1; }
+# ── Sanity checks ──────────────────────────────────────────────────────────────
 
-# Fetch remote without merging
-git fetch origin "$BRANCH" --quiet
+if [ ! -d "$REPO_DIR/.git" ]; then
+    echo "$LOG_PREFIX ERROR: $REPO_DIR is not a git repo — aborting"
+    exit 1
+fi
+
+cd "$REPO_DIR" || { echo "$LOG_PREFIX ERROR: cannot cd to $REPO_DIR"; exit 1; }
+
+# Check git is working
+if ! git status --short > /dev/null 2>&1; then
+    echo "$LOG_PREFIX ERROR: git not working in $REPO_DIR — aborting"
+    exit 1
+fi
+
+# Check we are on the right branch (or switch to it)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+    echo "$LOG_PREFIX WARNING: on branch '$CURRENT_BRANCH', switching to '$BRANCH'"
+    git checkout "$BRANCH" --quiet || { echo "$LOG_PREFIX ERROR: cannot checkout $BRANCH"; exit 1; }
+fi
+
+# ── Fetch ──────────────────────────────────────────────────────────────────────
+
+echo "$LOG_PREFIX Fetching origin/$BRANCH..."
+if ! git fetch origin "$BRANCH" --quiet 2>&1; then
+    echo "$LOG_PREFIX ERROR: git fetch failed — no internet? Skipping update."
+    exit 1
+fi
 
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse "origin/$BRANCH")
+REMOTE=$(git rev-parse "origin/$BRANCH" 2>/dev/null)
+
+if [ -z "$REMOTE" ]; then
+    echo "$LOG_PREFIX ERROR: could not resolve origin/$BRANCH — skipping"
+    exit 1
+fi
 
 if [ "$LOCAL" = "$REMOTE" ]; then
     echo "$LOG_PREFIX Already up to date ($LOCAL)"
     exit 0
 fi
 
-echo "$LOG_PREFIX New commits found — resetting to origin ($LOCAL → $REMOTE)"
-git reset --hard "origin/$BRANCH"
+echo "$LOG_PREFIX Update available: $LOCAL → $REMOTE"
 
-# Clear Chromium cache so all pages get fresh content (not just the currently open one)
+# ── Apply update ───────────────────────────────────────────────────────────────
+
+# Hard reset — always matches remote exactly, no conflicts possible
+git reset --hard "origin/$BRANCH"
+RESET_EXIT=$?
+
+if [ $RESET_EXIT -ne 0 ]; then
+    echo "$LOG_PREFIX ERROR: git reset --hard failed (exit $RESET_EXIT) — aborting"
+    exit 1
+fi
+
+# Verify we actually got to the right commit
+NEW_HEAD=$(git rev-parse HEAD)
+if [ "$NEW_HEAD" != "$REMOTE" ]; then
+    echo "$LOG_PREFIX ERROR: after reset, HEAD=$NEW_HEAD but expected $REMOTE — something is wrong"
+    exit 1
+fi
+
+echo "$LOG_PREFIX Successfully updated to $NEW_HEAD"
+
+# ── Clear cache + restart ──────────────────────────────────────────────────────
+
+# Wipe Chromium cache so all pages get fresh files (not just current tab)
 rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null
 echo "$LOG_PREFIX Chromium cache cleared"
 
-# Restart server
+# Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null
 sleep 2
-cd launch-timer/Phase2
+cd "$REPO_DIR/launch-timer/Phase2" || exit 1
 nohup python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
-echo "$LOG_PREFIX Server restarted (PID $SERVER_PID)"
 
-# Reload Chromium so the current page picks up changes immediately
+# Give server a moment to start, then verify it's actually running
 sleep 3
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "$LOG_PREFIX Server running (PID $SERVER_PID)"
+else
+    echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
+fi
+
+# Reload Chromium on-screen
 DISPLAY=:0 xdotool key ctrl+shift+r 2>/dev/null
 echo "$LOG_PREFIX Chromium reloaded"
 
-# Log the update so the daily digest can include it
-SHORT=$(git log -1 --pretty="%s" 2>/dev/null)
+# ── Log the update ─────────────────────────────────────────────────────────────
+
+SHORT=$(git -C "$REPO_DIR" log -1 --pretty="%s" 2>/dev/null)
 TIME=$(date '+%Y-%m-%d %H:%M:%S')
-COMMIT_MSG="$SHORT" COMMIT_TIME="$TIME" COMMIT_FROM="$LOCAL" COMMIT_TO="$REMOTE" \
+COMMIT_MSG="$SHORT" COMMIT_TIME="$TIME" COMMIT_FROM="$LOCAL" COMMIT_TO="$NEW_HEAD" \
 python3 - <<'PYEOF'
 import json, os
 log_file = os.environ['HOME'] + '/.rangetrack_updates.json'
@@ -61,13 +118,13 @@ entry = {
 try:
     with open(log_file) as f:
         updates = json.load(f)
-except:
+except Exception:
     updates = []
 updates.append(entry)
-updates = updates[-10:]
+updates = updates[-20:]
 with open(log_file, 'w') as f:
     json.dump(updates, f)
 print('Update logged.')
 PYEOF
 
-echo "$LOG_PREFIX Update logged: $SHORT"
+echo "$LOG_PREFIX Done: $SHORT"

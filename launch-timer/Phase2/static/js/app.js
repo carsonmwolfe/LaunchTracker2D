@@ -1277,7 +1277,7 @@ function updateInfoBar() {
   }
 
   const launch = currentLaunch();
-  if (!launch) {
+  if (!launch || typeof launch !== 'object') {
     document.getElementById('ib-name').textContent = 'NO LAUNCH DATA';
     document.getElementById('ib-badge').textContent = '—';
     document.getElementById('ib-sub').textContent = 'Check network connection or API status';
@@ -2230,12 +2230,12 @@ function saveState() {
 
 function restoreState() {
   try {
-    const saved = JSON.parse(localStorage.getItem('lt_state') || 'null');
-    // Discard saves older than 24 hours to prevent permanent stale state
-    if (saved && Date.now() - (saved._savedAt || 0) > 86400000) {
-      localStorage.removeItem('lt_state'); return;
-    }
-    if (!saved) return;
+    const raw = localStorage.getItem('lt_state');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    // Discard if not a valid object or older than 24 hours
+    if (!saved || typeof saved !== 'object') { localStorage.removeItem('lt_state'); return; }
+    if (Date.now() - (saved._savedAt || 0) > 86400000) { localStorage.removeItem('lt_state'); return; }
     // Only restore cooldown if it hasn't expired
     if (saved.postLaunchCooldown && Date.now() < saved.cooldownEndsAt) {
       state.postLaunchCooldown  = true;

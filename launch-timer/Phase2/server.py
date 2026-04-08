@@ -743,6 +743,8 @@ def wifi_connect():
             ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
             capture_output=True, text=True)
         net_id = result.stdout.strip()
+        if not net_id.isdigit():
+            return jsonify({'ok': False, 'error': 'Failed to create network profile'})
         subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True)
         if password:
             subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True)
