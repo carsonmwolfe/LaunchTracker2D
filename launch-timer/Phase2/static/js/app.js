@@ -365,7 +365,15 @@ function ts() {
   return new Date().toLocaleTimeString('en-US', { hour12: false });
 }
 
-function getHour() { return new Date().getHours(); }
+function getHour() {
+  const fmt = state.settings?.time_format;
+  if (fmt === 'utc') return new Date().getUTCHours();
+  if (fmt === 'site') {
+    const tz = state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York';
+    return parseInt(new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}),10);
+  }
+  return new Date().getHours(); // 'local' = Pi local
+}
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -1368,19 +1376,21 @@ function updateInfoBar() {
   if (ibLeft) ibLeft.onclick = () => { window.location = _missionUrl; };
 
   // Date + countdown (hidden elements kept for compat)
-  const useLocal = state.settings?.time_format === 'local';
-  const tz = useLocal ? undefined : 'UTC';
+  const _fmt = state.settings?.time_format;
+  const _siteTz = state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York';
+  const tz  = _fmt === 'utc' ? 'UTC' : _fmt === 'site' ? _siteTz : undefined;
+  const tzLabel = _fmt === 'utc' ? 'UTC' : _fmt === 'site' ? 'SITE' : 'LOCAL';
   const t0 = launch.t0 || launch.win_open;
   if (t0) {
     const d = new Date(t0);
     document.getElementById('ib-date').textContent =
       d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:tz}) + ' · ' +
       d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) +
-      (useLocal ? ' LOCAL' : ' UTC');
+      ' ' + tzLabel;
     // T-0 display in new detail row
     const t0Label = d.toLocaleDateString('en-US',{day:'numeric',month:'short',timeZone:tz}).toUpperCase()
       + ' · ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})
-      + (useLocal ? ' LOCAL' : ' UTC');
+      + ' ' + tzLabel;
     document.getElementById('ib-t0').textContent = t0Label;
     const cd = computeCountdown(t0);
     if (cd && cd !== 'LAUNCHED') {

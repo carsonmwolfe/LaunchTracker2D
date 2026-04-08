@@ -282,9 +282,10 @@
         <!-- Time format -->
         <div class="setting-cell">
           <div class="s-label">TIME FORMAT</div>
-          <div class="s-sub">Countdown display timezone</div>
+          <div class="s-sub">Countdown &amp; sky cycle timezone</div>
           <div class="s-control">
             <button class="tog" id="time-utc"   onclick="setTimeFormat('utc')">UTC</button>
+            <button class="tog" id="time-site"  onclick="setTimeFormat('site')">SITE</button>
             <button class="tog" id="time-local" onclick="setTimeFormat('local')">LOCAL</button>
           </div>
         </div>
@@ -380,6 +381,7 @@
       document.getElementById('unit-c').classList.toggle('active', settings.temp_unit === 'c');
       document.getElementById('site-cape').classList.toggle('active', settings.site === 'cape');
       document.getElementById('time-utc').classList.toggle('active',   settings.time_format === 'utc');
+      document.getElementById('time-site').classList.toggle('active',  settings.time_format === 'site');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
       const uid = settings.unit_id || '';
       document.getElementById('unit-id-input').value = uid;
@@ -421,6 +423,7 @@
     function setTimeFormat(f) {
       settings.time_format = f;
       document.getElementById('time-utc').classList.toggle('active',   f === 'utc');
+      document.getElementById('time-site').classList.toggle('active',  f === 'site');
       document.getElementById('time-local').classList.toggle('active', f === 'local');
       saveSettings();
     }
