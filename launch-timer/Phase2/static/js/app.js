@@ -642,7 +642,7 @@ function drawUmbilicals() {
   // Each arm: { frac=height along rocket, cableColors=array of line colors }
   const arms = [
     { frac: 0.18, cableColors: ['#dddddd','#ffffff','#cccccc'] },
-    { frac: 0.44, cableColors: ['#cc2222','#ff4444','#cc2222'] },
+    { frac: 0.44, cableColors: ['#aaaaaa','#cccccc','#aaaaaa'] },
     { frac: 0.67, cableColors: ['#dddddd','#ffffff','#cccccc'] },
   ];
 

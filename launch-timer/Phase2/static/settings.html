@@ -377,8 +377,7 @@
       document.getElementById('time-utc').classList.toggle('active',   settings.time_format === 'utc');
       document.getElementById('time-site').classList.toggle('active',  settings.time_format === 'site');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
-      const uid = settings.unit_id || '';
-      document.getElementById('unit-id-input').value = uid;
+      // unit_id managed server-side via MAC address
     }
 
     async function loadSettings() {
@@ -420,11 +419,6 @@
       saveSettings();
     }
 
-    document.getElementById('unit-id-input').addEventListener('change', function() {
-      settings.unit_id = this.value.trim().toUpperCase();
-      this.value = settings.unit_id;
-      saveSettings();
-    });
 
     function goBack()      { window.location = '/'; }
     function restartPage() { window.location.reload(); }
