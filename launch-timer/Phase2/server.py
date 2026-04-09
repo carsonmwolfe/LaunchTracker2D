@@ -436,20 +436,23 @@ def _background_thread():
             _weather_cache['data']    = data
             _weather_cache['fetched'] = now
 
+def _get_unit_id():
+    mac = None
+    for iface in ['wlan0', 'eth0', 'wlan1', 'en0']:
+        try:
+            mac = open(f'/sys/class/net/{iface}/address').read().strip()
+            if mac and mac != '00:00:00:00:00:00':
+                break
+        except Exception:
+            continue
+    return 'LT-' + (mac.replace(':', '')[-4:].upper() if mac else 'UNKN')
+
 def _ping_relay():
-    """Ping the DO relay every 5 minutes so the dashboard can track this unit."""
+    """Ping the DO relay every 5 minutes and poll for pending commands."""
     while True:
         try:
             settings = _load_settings()
-            mac = None
-            for iface in ['wlan0', 'eth0', 'wlan1', 'en0']:
-                try:
-                    mac = open(f'/sys/class/net/{iface}/address').read().strip()
-                    if mac and mac != '00:00:00:00:00:00':
-                        break
-                except Exception:
-                    continue
-            unit_id = 'LT-' + (mac.replace(':', '')[-4:].upper() if mac else 'UNKN')
+            unit_id  = _get_unit_id()
             wx       = _weather_cache.get('data') or {}
             requests.post(f'{RELAY_URL}/api/unit/ping', json={
                 'unit_id':   unit_id,
@@ -458,9 +461,28 @@ def _ping_relay():
                 'condition': wx.get('condition', ''),
                 'temp_f':    wx.get('temp_f', 0),
             }, timeout=5)
+            # Poll for pending commands
+            r = requests.get(f'{RELAY_URL}/api/unit/commands/{unit_id}', timeout=5)
+            for cmd in r.json():
+                _execute_command(cmd.get('command', ''))
         except Exception:
             pass
         time.sleep(300)
+
+def _execute_command(cmd):
+    print(f'[{_ts()}] Remote command received: {cmd}')
+    try:
+        if cmd == 'restart':
+            subprocess.Popen(['bash', '-c',
+                'sleep 2 && pkill -f "python3 server.py" && sleep 1 && '
+                'cd /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2 && '
+                'nohup python3 server.py >> /home/pi/server.log 2>&1 &'])
+        elif cmd == 'update':
+            subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
+        elif cmd == 'reboot':
+            subprocess.Popen(['sudo', 'reboot'])
+    except Exception as e:
+        print(f'[{_ts()}] Command error: {e}')
 
 threading.Thread(target=_background_thread, daemon=True).start()
 threading.Thread(target=_ping_relay, daemon=True).start()
