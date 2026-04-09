@@ -253,8 +253,8 @@
       <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> CONFIGURATION</div>
       <div class="settings-grid">
 
-        <!-- Unit ID — hidden from customers, only shown if pre-configured -->
-        <div class="setting-cell full" id="unit-id-cell" style="display:none;">
+        <!-- Unit ID -->
+        <div class="setting-cell full" id="unit-id-cell">
           <div class="s-label">UNIT ID</div>
           <div class="s-sub">Identifies this unit in health reports</div>
           <input class="unit-id-input" id="unit-id-input" type="text" maxlength="20" placeholder="e.g. CAPE-01" spellcheck="false">
@@ -386,8 +386,6 @@
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
       const uid = settings.unit_id || '';
       document.getElementById('unit-id-input').value = uid;
-      // Only show Unit ID cell if pre-configured (Carson sets before shipping)
-      document.getElementById('unit-id-cell').style.display = uid ? '' : 'none';
     }
 
     async function loadSettings() {
