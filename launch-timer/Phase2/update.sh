@@ -75,6 +75,9 @@ fi
 
 echo "$LOG_PREFIX Successfully updated to $NEW_HEAD"
 
+# Re-apply execute permission (lost on every git reset --hard)
+chmod +x "$REPO_DIR/launch-timer/Phase2/update.sh"
+
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
 # Wipe Chromium cache so all pages get fresh files (not just current tab)
