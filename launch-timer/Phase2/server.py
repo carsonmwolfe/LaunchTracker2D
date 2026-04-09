@@ -441,11 +441,15 @@ def _ping_relay():
     while True:
         try:
             settings = _load_settings()
-            try:
-                mac = open('/sys/class/net/wlan0/address').read().strip()
-            except Exception:
-                mac = '??:??:??:??:??:??'
-            unit_id  = settings.get('unit_id', '') or ('LT-' + mac.replace(':', '')[-4:].upper())
+            mac = None
+            for iface in ['wlan0', 'eth0', 'wlan1', 'en0']:
+                try:
+                    mac = open(f'/sys/class/net/{iface}/address').read().strip()
+                    if mac and mac != '00:00:00:00:00:00':
+                        break
+                except Exception:
+                    continue
+            unit_id = 'LT-' + (mac.replace(':', '')[-4:].upper() if mac else 'UNKN')
             wx       = _weather_cache.get('data') or {}
             requests.post(f'{RELAY_URL}/api/unit/ping', json={
                 'unit_id':   unit_id,
