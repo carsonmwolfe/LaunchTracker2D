@@ -103,7 +103,7 @@ log "Cron installed — runs every hour"
 
 # ── 6. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."
-echo 'pi ALL=(ALL) NOPASSWD: /sbin/reboot' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
+printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 log "Done"
 
 # ── Done ──────────────────────────────────────────────────────────────────────

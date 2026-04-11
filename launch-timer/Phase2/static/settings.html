@@ -103,6 +103,18 @@
     .s-sub { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 1px; line-height: 1.8; }
     .s-control { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
 
+    /* Timezone dropdown */
+    .tz-select {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; background: #080c12;
+      border: 2px solid #1a2030; color: #fff;
+      padding: 6px 8px; width: 100%; outline: none;
+      cursor: pointer; margin-top: 4px;
+      -webkit-appearance: none; appearance: none;
+    }
+    .tz-select:focus { border-color: #4a9ede; }
+    .tz-select option { background: #0a0e14; color: #fff; font-size: 7px; }
+
     /* Toggle buttons */
     .tog {
       font-family: 'Press Start 2P', monospace;
@@ -295,6 +307,24 @@
           </div>
         </div>
 
+        <!-- Timezone — full width row -->
+        <div class="setting-cell full">
+          <div class="s-label">TIMEZONE</div>
+          <div class="s-sub">Sets Pi system clock &amp; LOCAL time display</div>
+          <select class="tz-select" id="tz-select" onchange="setTimezone(this.value)">
+            <option value="America/New_York">Eastern (ET) — New York, Miami</option>
+            <option value="America/Chicago">Central (CT) — Chicago, Houston</option>
+            <option value="America/Denver">Mountain (MT) — Denver, Phoenix</option>
+            <option value="America/Los_Angeles">Pacific (PT) — LA, Seattle</option>
+            <option value="America/Anchorage">Alaska (AKT)</option>
+            <option value="Pacific/Honolulu">Hawaii (HST)</option>
+            <option value="Europe/London">London (GMT/BST)</option>
+            <option value="Europe/Paris">Central Europe (CET)</option>
+            <option value="Australia/Sydney">Sydney (AEST)</option>
+            <option value="Asia/Tokyo">Tokyo (JST)</option>
+          </select>
+        </div>
+
       </div>
 
       <div class="actions">
@@ -342,7 +372,7 @@
   </div>
 
   <script>
-    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'' };
+    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'', timezone:'America/New_York' };
 
     // Show first-run banner if redirected from home with ?setup=1
     if (new URLSearchParams(window.location.search).get('setup') === '1') {
@@ -377,6 +407,7 @@
       document.getElementById('time-utc').classList.toggle('active',   settings.time_format === 'utc');
       document.getElementById('time-site').classList.toggle('active',  settings.time_format === 'site');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
+      document.getElementById('tz-select').value = settings.timezone || 'America/New_York';
       // unit_id managed server-side via MAC address
     }
 
@@ -419,6 +450,16 @@
       saveSettings();
     }
 
+
+    function setTimezone(tz) {
+      settings.timezone = tz;
+      fetch('/api/settings/timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: tz })
+      }).catch(() => {});
+      saveSettings();
+    }
 
     function goBack()      { window.location = '/'; }
     function restartPage() { window.location.reload(); }

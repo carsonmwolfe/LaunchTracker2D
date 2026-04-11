@@ -734,6 +734,18 @@ def set_brightness():
     return jsonify({'ok': True})
 
 
+@app.route('/api/settings/timezone', methods=['POST'])
+def set_timezone():
+    tz = (request.get_json() or {}).get('timezone', '')
+    if not tz:
+        return jsonify({'ok': False, 'error': 'no timezone'})
+    try:
+        subprocess.run(['sudo', 'timedatectl', 'set-timezone', tz], check=True)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
 # ── Device info ───────────────────────────────────────────────────────────────
 
 @app.route('/api/device')
