@@ -850,32 +850,32 @@ function getRocketAssetKey(vehicle) {
 // PNGs with transparent padding below the nozzle need y > PAD_Y_BASE-h so the
 // transparent region sinks below the ground line.
 const ROCKET_CONFIG = {
-  rocket_falcon9:     { pad: { x: 440, y: 220, h: 155, fx: -32 }, te: { x: 128, y: 203, h: 155 } },
-  rocket_atlas:       { pad: { x: 469, y: 220, h: 162 }, te: { x: 167, y: 220, h: 162 } },
-  rocket_vulcan:      { pad: { x: 464, y: 178, h: 181 }, te: { x: 159, y: 178, h: 181 } },
-  rocket_electron:    { pad: { x: 483, y: 243, h: 116 }, te: { x: 180, y: 243, h: 116 } },
-  rocket_ng:          { pad: { x: 457, y: 159, h: 200 }, te: { x: 154, y: 159, h: 200 } },
-  rocket_kairos:      { pad: { x: 511, y: 232, h: 127 }, te: { x: 207, y: 232, h: 127 } },
-  rocket_longmarch:   { pad: { x: 471, y: 203, h: 156 }, te: { x: 167, y: 203, h: 156 } },
-  rocket_generic:     { pad: { x: 440, y: 204, h: 155 }, te: { x: 128, y: 204, h: 155 } },
-  rocket_firefly:     { pad: { x: 470, y: 195, h: 164 }, te: { x: 167, y: 195, h: 164 } },
-  rocket_starship:    { pad: { x: 445, y: 131, h: 228 }, te: { x: 143, y: 131, h: 228 } },
-  rocket_soyuz:       { pad: { x: 480, y: 228, h: 131 }, te: { x: 177, y: 228, h: 131 } },
-  rocket_soyuz5:      { pad: { x: 480, y: 228, h: 131 }, te: { x: 177, y: 228, h: 131 } },
-  rocket_ariane6:     { pad: { x: 472, y: 213, h: 146 }, te: { x: 173, y: 213, h: 146 } },
-  rocket_sls:         { pad: { x: 513, y: 190, h: 169 }, te: { x: 208, y: 190, h: 169 } },
-  rocket_gslv:        { pad: { x: 479, y: 227, h: 132 }, te: { x: 177, y: 227, h: 132 } },
-  rocket_longmarch12: { pad: { x: 470, y: 204, h: 155 }, te: { x: 170, y: 204, h: 155 } },
-  rocket_longmarch2d: { pad: { x: 474, y: 212, h: 147 }, te: { x: 173, y: 212, h: 147 } },
-  rocket_vegaC:       { pad: { x: 459, y: 172, h: 187 }, te: { x: 155, y: 172, h: 187 } },
-  rocket_jielong:     { pad: { x: 474, y: 213, h: 146 }, te: { x: 172, y: 213, h: 146 } },
-  rocket_falconheavy: { pad: { x: 479, y: 243, h: 116 }, te: { x: 179, y: 243, h: 116 } },
-  rocket_minotaur:    { pad: { x: 485, y: 244, h: 115 }, te: { x: 182, y: 244, h: 115 } },
-  rocket_neutron:     { pad: { x: 484, y: 241, h: 118 }, te: { x: 181, y: 241, h: 118 } },
-  rocket_rfaone:      { pad: { x: 484, y: 235, h: 124 }, te: { x: 180, y: 235, h: 124 } },
-  rocket_spectrum:    { pad: { x: 476, y: 217, h: 142 }, te: { x: 172, y: 217, h: 142 } },
-  rocket_tianlong:    { pad: { x: 478, y: 223, h: 136 }, te: { x: 174, y: 223, h: 136 } },
-  rocket_kinetica:    { pad: { x: 497, y: 217, h: 142 }, te: { x: 193, y: 217, h: 142 } },
+  rocket_falcon9:     { pad: { x: 439, y: 211, h: 155, fx: -33, fy: -12 }, te: { x: 250, y: 291, h: 71 } },
+  rocket_atlas:       { pad: { x: 462, y: 196, h: 183, fy: -26 },          te: { x: 261, y: 292, h: 79 } },
+  rocket_vulcan:      { pad: { x: 472, y: 200, h: 153 },                    te: { x: 265, y: 291, h: 67 } },
+  rocket_electron:    { pad: { x: 485, y: 252, h: 116, fy: -18 },          te: { x: 268, y: 309, h: 60 } },
+  rocket_ng:          { pad: { x: 452, y: 159, h: 216, fx: 2, fy: -20 },   te: { x: 252, y: 261, h: 109 } },
+  rocket_kairos:      { pad: { x: 480, y: 238, h: 127, fy: -10 },          te: { x: 267, y: 304, h: 60 } },
+  rocket_longmarch:   { pad: { x: 471, y: 207, h: 156, fy: -10 },          te: { x: 263, y: 290, h: 74 } },
+  rocket_generic:     { pad: { x: 440, y: 204, h: 155 },                    te: { x: 128, y: 204, h: 155 } },
+  rocket_firefly:     { pad: { x: 469, y: 215, h: 164, fy: -25 },          te: { x: 258, y: 284, h: 91 } },
+  rocket_starship:    { pad: { x: 429, y: 122, h: 280, fy: -40 },          te: { x: 242, y: 247, h: 138 } },
+  rocket_soyuz:       { pad: { x: 480, y: 223, h: 131 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_soyuz5:      { pad: { x: 480, y: 228, h: 131, fy: -3 },           te: { x: 266, y: 296, h: 66 } },
+  rocket_ariane6:     { pad: { x: 477, y: 220, h: 133 },                    te: { x: 265, y: 292, h: 67 } },
+  rocket_sls:         { pad: { x: 509, y: 161, h: 194 },                    te: { x: 280, y: 272, h: 87 } },
+  rocket_gslv:        { pad: { x: 479, y: 221, h: 132 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_longmarch12: { pad: { x: 470, y: 218, h: 155, fy: -17 },          te: { x: 261, y: 294, h: 76 } },
+  rocket_longmarch2d: { pad: { x: 476, y: 218, h: 147, fy: -12 },          te: { x: 263, y: 290, h: 73 } },
+  rocket_vegaC:       { pad: { x: 459, y: 190, h: 187, fy: -22 },          te: { x: 258, y: 284, h: 89 } },
+  rocket_jielong:     { pad: { x: 460, y: 191, h: 189, fx: 1, fy: -26 },   te: { x: 257, y: 281, h: 88 } },
+  rocket_falconheavy: { pad: { x: 477, y: 213, h: 143, fx: -2 },           te: { x: 265, y: 296, h: 65 } },
+  rocket_minotaur:    { pad: { x: 485, y: 244, h: 115, fy: -9 },           te: { x: 268, y: 304, h: 60 } },
+  rocket_neutron:     { pad: { x: 483, y: 235, h: 119 },                    te: { x: 267, y: 302, h: 60 } },
+  rocket_rfaone:      { pad: { x: 478, y: 244, h: 127, fy: -17 },          te: { x: 266, y: 305, h: 60 } },
+  rocket_spectrum:    { pad: { x: 476, y: 225, h: 142, fy: -13 },          te: { x: 264, y: 296, h: 69 } },
+  rocket_tianlong:    { pad: { x: 475, y: 226, h: 136, fy: -9 },           te: { x: 265, y: 298, h: 65 } },
+  rocket_kinetica:    { pad: { x: 506, y: 240, h: 109 },                    te: { x: 277, y: 299, h: 60 } },
 };
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
@@ -1579,7 +1579,7 @@ function updateLaunch() {
   const _fImg      = IMG[_fKey];
   const _fRw       = _fImg ? Math.round(_fImg.width * (_fCfg.h / _fImg.height)) : 50;
   const flameX     = _fCfg.x + _fRw / 2 + (_fCfg.fx || 0);
-  const flameY     = state.rocketY + 1;
+  const flameY     = state.rocketY + 1 + (_fCfg.fy || 0);
   if (state.flameIntensity > 0) {
     spawnFlameParticles(flameX, flameY, state.flameIntensity);
   }
