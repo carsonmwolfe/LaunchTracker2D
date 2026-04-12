@@ -2,629 +2,304 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Asset Positioner v2</title>
+<title>Rocket Positioner</title>
 <style>
-* { box-sizing: border-box; margin:0; padding:0; }
-body { background:#111; color:#eee; font-family:'Courier New',monospace; display:flex; flex-direction:column; align-items:center; padding:14px; gap:10px; }
-h1 { font-size:13px; letter-spacing:3px; color:#f5c400; }
-.sub { font-size:9px; color:#555; letter-spacing:1px; }
-.layout { display:flex; gap:14px; align-items:flex-start; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0e14; color: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-#c { display:block; border:2px solid #444; cursor:crosshair; image-rendering:pixelated; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #0d1620; border-bottom: 2px solid #00e87a; flex-shrink: 0; }
+.topbar h1 { font-size: 11px; letter-spacing: 2px; color: #00e87a; }
+.topbar .hint { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-left: auto; }
 
-.panel { width:255px; display:flex; flex-direction:column; gap:7px; flex-shrink:0; }
+.layout { display: flex; flex: 1; overflow: hidden; }
 
-.load-btn { background:#1a1a1a; border:1px dashed #444; padding:9px; text-align:center; font-size:11px; color:#888; cursor:pointer; letter-spacing:1px; }
-.load-btn:hover { border-color:#f5c400; color:#f5c400; }
-input[type=file] { display:none; }
+/* Left: rocket list */
+.sidebar { width: 200px; flex-shrink: 0; border-right: 2px solid #1a2030; display: flex; flex-direction: column; background: #080c12; }
+.sidebar-hdr { font-size: 8px; color: #4a9ede; letter-spacing: 2px; padding: 8px 10px; border-bottom: 1px solid #1a2030; }
+.rocket-list { flex: 1; overflow-y: auto; }
+.rocket-item { padding: 8px 10px; font-size: 9px; cursor: pointer; border-bottom: 1px solid #0d1520; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 6px; }
+.rocket-item:hover { background: #0d1520; color: #fff; }
+.rocket-item.active { background: rgba(0,232,122,0.1); color: #00e87a; border-left: 2px solid #00e87a; }
+.rocket-dot { width: 6px; height: 6px; border-radius: 50%; background: #1a2030; flex-shrink: 0; }
+.rocket-item.active .rocket-dot { background: #00e87a; }
 
-.sec { font-size:8px; letter-spacing:3px; color:#444; border-bottom:1px solid #222; padding-bottom:3px; text-transform:uppercase; }
+/* Center: canvas */
+.canvas-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #060a10; gap: 8px; }
+canvas { image-rendering: pixelated; border: 1px solid #1a2030; }
 
-.alist { display:flex; flex-direction:column; gap:3px; max-height:160px; overflow-y:auto; }
-.arow { background:#1a1a1a; border:1px solid #2a2a2a; padding:5px 8px; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; }
-.arow:hover { border-color:#444; }
-.arow.active { border-color:#f5c400; background:#1e1800; }
-.arow .nm { flex:1; color:#bbb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.arow .sz { color:#444; font-size:8px; }
-.vbtn { background:none; border:1px solid #2a2a2a; color:#555; font-size:8px; padding:1px 4px; cursor:pointer; }
-.vbtn:hover { color:#eee; border-color:#888; }
+/* Right: controls */
+.controls { width: 260px; flex-shrink: 0; border-left: 2px solid #1a2030; display: flex; flex-direction: column; background: #080c12; overflow-y: auto; }
+.ctrl-hdr { font-size: 8px; color: #ffd93d; letter-spacing: 2px; padding: 8px 10px; border-bottom: 1px solid #1a2030; }
+.ctrl-section { padding: 10px; border-bottom: 1px solid #1a2030; }
+.ctrl-label { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-bottom: 6px; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ctrl-row label { font-size: 9px; color: rgba(255,255,255,0.5); width: 14px; }
+.ctrl-row input[type=range] { flex: 1; accent-color: #00e87a; }
+.ctrl-row .val { font-size: 10px; color: #ffd93d; width: 36px; text-align: right; flex-shrink: 0; }
+.ctrl-row input[type=number] { flex: 1; background: #0d1520; border: 1px solid #1a2030; color: #fff; font-family: 'Courier New', monospace; font-size: 10px; padding: 3px 6px; }
 
-.pbox { background:#0d0d0d; border:1px solid #222; padding:9px; }
-.phint { font-size:9px; color:#333; }
-.pgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
-.pf label { display:block; font-size:8px; color:#555; margin-bottom:2px; letter-spacing:1px; }
-.pf input { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; color:#ccc; font-family:'Courier New',monospace; font-size:11px; padding:3px 5px; }
-.pf input:focus { outline:none; border-color:#f5c400; }
-.pf.full { grid-column:span 2; }
+.output { padding: 10px; }
+.output-label { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-bottom: 6px; }
+.output-code { background: #0d1520; border: 1px solid #1a2030; padding: 8px; font-size: 9px; color: #00e87a; line-height: 1.8; word-break: break-all; cursor: pointer; }
+.output-code:hover { border-color: #00e87a; }
+.copy-btn { margin-top: 6px; width: 100%; font-family: 'Courier New', monospace; font-size: 9px; background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; padding: 6px; cursor: pointer; letter-spacing: 1px; }
+.copy-btn:hover { background: rgba(0,232,122,0.2); }
+.copy-btn.copied { background: rgba(0,232,122,0.3); }
 
-/* Rotate slider */
-.rot-wrap { display:flex; align-items:center; gap:6px; margin-top:5px; }
-.rot-wrap label { font-size:8px; color:#555; letter-spacing:1px; width:40px; flex-shrink:0; }
-.rot-wrap input[type=range] { flex:1; accent-color:#f5c400; }
-.rot-wrap .rot-val { font-size:10px; color:#f5c400; width:40px; text-align:right; }
-
-.lock-row { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:9px; color:#555; }
-.lock-row input { accent-color:#f5c400; }
-
-.codebox { background:#050505; border:1px solid #222; padding:9px; }
-.codebox pre { font-size:9px; color:#00e87a; white-space:pre-wrap; word-break:break-all; line-height:1.5; max-height:140px; overflow-y:auto; margin-top:4px; }
-
-.btn { background:#f5c400; color:#000; border:none; padding:7px; font-family:'Courier New',monospace; font-size:10px; font-weight:bold; letter-spacing:2px; cursor:pointer; width:100%; }
-.btn:hover { background:#ffd700; }
-.btn.save { background:#00cc55; color:#000; font-size:11px; padding:9px; }
-.btn.save:hover { background:#00ff66; }
-.btn.dim { background:#1a1a1a; color:#666; border:1px solid #2a2a2a; }
-.btn.dim:hover { background:#222; color:#aaa; }
-#saved { font-size:9px; color:#00e87a; text-align:center; height:12px; }
-
-.tip { font-size:8px; color:#333; line-height:1.8; border-top:1px solid #1a1a1a; padding-top:6px; }
-.tip span { color:#666; }
-
-.kb { display:inline-block; background:#222; border:1px solid #444; padding:0 4px; border-radius:2px; font-size:8px; color:#aaa; }
+.coords { font-size: 9px; color: #4a5568; text-align: center; }
 </style>
 </head>
 <body>
-<h1>🚀 ASSET POSITIONER v2</h1>
-<p class="sub">Drag · Scale · Rotate · Save to app.js</p>
+
+<div class="topbar">
+  <h1>ROCKET POSITIONER</h1>
+  <span class="hint">Select rocket → adjust sliders → copy config</span>
+</div>
+
 <div class="layout">
-  <canvas id="c" width="800" height="600"></canvas>
-  <div class="panel">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-hdr">ROCKETS</div>
+    <div class="rocket-list" id="rocket-list"></div>
+  </div>
 
-    <div class="load-btn" onclick="document.getElementById('fi').click()">
-      📂 Load PNG Assets
-      <br><span style="font-size:8px;color:#444;">select multiple files at once</span>
-    </div>
-    <input type="file" id="fi" multiple accept="image/*">
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <canvas id="c" width="800" height="480"></canvas>
+    <div class="coords" id="coords">click canvas to read position</div>
+  </div>
 
-    <div class="load-btn" onclick="loadFromServer()" style="border-color:#00e87a;color:#00e87a;">
-      🌐 Load from Server
-      <br><span style="font-size:8px;color:#333;">auto-loads all /static/assets/</span>
-    </div>
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-hdr">POSITION &amp; SCALE</div>
 
-    <div class="load-btn" onclick="document.getElementById('fjs').click()" style="border-color:#333;">
-      📄 Load app.js <span style="font-size:8px;color:#444;">(to enable Save)</span>
-    </div>
-    <input type="file" id="fjs" accept=".js">
-
-    <div class="sec">Assets</div>
-    <div class="alist" id="alist"><div style="font-size:9px;color:#333;padding:4px;">No assets loaded</div></div>
-
-    <div class="sec">Transform</div>
-    <div class="pbox">
-      <div class="phint" id="phint">Click an asset to select it</div>
-      <div id="pbody" style="display:none">
-        <div class="pgrid">
-          <div class="pf"><label>X</label><input type="number" id="px" oninput="fromPanel('x')"></div>
-          <div class="pf"><label>Y</label><input type="number" id="py" oninput="fromPanel('y')"></div>
-          <div class="pf"><label>WIDTH</label><input type="number" id="pw" oninput="fromPanel('w')"></div>
-          <div class="pf"><label>HEIGHT</label><input type="number" id="ph" oninput="fromPanel('h')"></div>
-        </div>
-        <div class="rot-wrap">
-          <label>ROTATE</label>
-          <input type="range" id="prot" min="-180" max="180" step="1" value="0" oninput="fromPanel('r')">
-          <span class="rot-val" id="rot-val">0°</span>
-        </div>
-        <div class="lock-row">
-          <input type="checkbox" id="lock" checked>
-          <label for="lock">Lock aspect ratio</label>
-        </div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">PAD POSITION (x, y, h)</div>
+      <div class="ctrl-row">
+        <label>X</label>
+        <input type="range" id="pad-x" min="380" max="560" value="476" oninput="update()">
+        <span class="val" id="pad-x-val">476</span>
+      </div>
+      <div class="ctrl-row">
+        <label>Y</label>
+        <input type="range" id="pad-y" min="100" max="320" value="217" oninput="update()">
+        <span class="val" id="pad-y-val">217</span>
+      </div>
+      <div class="ctrl-row">
+        <label>H</label>
+        <input type="range" id="pad-h" min="60" max="280" value="142" oninput="update()">
+        <span class="val" id="pad-h-val">142</span>
       </div>
     </div>
 
-    <div class="sec">Generated Code</div>
-    <div class="codebox"><pre id="cout">// Load assets to begin</pre></div>
+    <div class="ctrl-section">
+      <div class="ctrl-label">FLAME OFFSET (fx) — optional</div>
+      <div class="ctrl-row">
+        <label>FX</label>
+        <input type="range" id="pad-fx" min="-80" max="80" value="0" oninput="update()">
+        <span class="val" id="pad-fx-val">0</span>
+      </div>
+    </div>
 
-    <button class="btn save" onclick="saveToAppJs()">💾 Save — Update app.js</button>
-    <div id="saved"></div>
-    <button class="btn" onclick="copyCode()">📋 Copy Code Only</button>
-    <button class="btn dim" onclick="resetSel()">↺ Reset Selected</button>
-    <button class="btn dim" onclick="deleteSelected()">🗑 Delete Selected</button>
-
-    <div class="tip">
-      <span>DRAG</span> to move &nbsp;·&nbsp; <span>CORNER ◢</span> to scale<br>
-      <span>🔄 HANDLE</span> above asset to rotate<br>
-      <span>X/Y/W/H</span> for precision &nbsp;·&nbsp; <span>SLIDER</span> to rotate<br>
-      <span class="kb">Del</span> delete &nbsp; <span class="kb">Esc</span> deselect &nbsp; <span class="kb">←→↑↓</span> nudge
+    <div class="output">
+      <div class="output-label">CONFIG LINE — click to copy</div>
+      <div class="output-code" id="output-code" onclick="copyConfig()">—</div>
+      <button class="copy-btn" id="copy-btn" onclick="copyConfig()">COPY TO CLIPBOARD</button>
     </div>
   </div>
 </div>
 
 <script>
+const ROCKETS = {
+  rocket_falcon9:     { file: 'rocket-falcon9.png',    pad: { x: 440, y: 220, h: 155, fx: -32 } },
+  rocket_atlas:       { file: 'rocket-atlasV.png',     pad: { x: 469, y: 220, h: 162 } },
+  rocket_vulcan:      { file: 'rocket-vulcan.png',     pad: { x: 464, y: 178, h: 181 } },
+  rocket_electron:    { file: 'rocket-electron.png',   pad: { x: 483, y: 243, h: 116 } },
+  rocket_ng:          { file: 'rocket-NG.png',         pad: { x: 457, y: 159, h: 200 } },
+  rocket_kairos:      { file: 'rocket-KAIROS.png',     pad: { x: 511, y: 232, h: 127 } },
+  rocket_longmarch:   { file: 'rocket-longmarch.png',  pad: { x: 471, y: 203, h: 156 } },
+  rocket_firefly:     { file: 'rocket-firefly.png',    pad: { x: 470, y: 195, h: 164 } },
+  rocket_starship:    { file: 'rocket-starship.png',   pad: { x: 445, y: 131, h: 228 } },
+  rocket_soyuz:       { file: 'rocket-Soyuz.png',      pad: { x: 480, y: 228, h: 131 } },
+  rocket_soyuz5:      { file: 'rocket-Soyuz5.png',     pad: { x: 480, y: 228, h: 131 } },
+  rocket_ariane6:     { file: 'rocket-Ariane6.png',    pad: { x: 472, y: 213, h: 146 } },
+  rocket_sls:         { file: 'rocket-SLS.png',        pad: { x: 513, y: 190, h: 169 } },
+  rocket_gslv:        { file: 'rocket-GSLV.png',       pad: { x: 479, y: 227, h: 132 } },
+  rocket_longmarch12: { file: 'rocket-longmarch12.png',pad: { x: 470, y: 204, h: 155 } },
+  rocket_longmarch2d: { file: 'rocket-longmarch2d.png',pad: { x: 474, y: 212, h: 147 } },
+  rocket_vegaC:       { file: 'rocket-vegaC.png',      pad: { x: 459, y: 172, h: 187 } },
+  rocket_jielong:     { file: 'rocket-Jielong.png',    pad: { x: 474, y: 213, h: 146 } },
+  rocket_falconheavy: { file: 'rocket-FalconHeavy.png',pad: { x: 479, y: 243, h: 116 } },
+  rocket_minotaur:    { file: 'rocket-MinotaurIV.png', pad: { x: 485, y: 244, h: 115 } },
+  rocket_neutron:     { file: 'rocket-Neutron.png',    pad: { x: 484, y: 241, h: 118 } },
+  rocket_rfaone:      { file: 'rocket-RFAone.png',     pad: { x: 484, y: 235, h: 124 } },
+  rocket_spectrum:    { file: 'rocket-Spectrum.png',   pad: { x: 476, y: 217, h: 142 } },
+  rocket_tianlong:    { file: 'rocket-tianlong3.png',  pad: { x: 478, y: 223, h: 136 } },
+  rocket_kinetica:    { file: 'rocket-Kinetica.png',   pad: { x: 497, y: 217, h: 142 } },
+};
+
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const W=800, H=600;
 
-// ── Background ────────────────────────────────────────────────────────────────
-function drawBG() {
-  ctx.fillStyle='#87ceeb'; ctx.fillRect(0,0,W,400);
-  ctx.fillStyle='#1a8b9e'; ctx.fillRect(0,500,W,100);
-  ctx.fillStyle='#156673'; ctx.fillRect(0,500,W,12);
-  ctx.fillStyle='#5a8c3a'; ctx.fillRect(0,365,W,135);
-  ctx.fillStyle='#3a3a3a'; ctx.fillRect(0,420,W,18);
-  ctx.fillStyle='#6a6a3a';
-  for(let x=0;x<W;x+=20) ctx.fillRect(x,428,10,2);
+let currentKey = null;
+let images = {};
+let towerImg = null;
+let padImg = null;
+
+// Load tower + pad background
+function loadBg() {
+  return new Promise(resolve => {
+    let loaded = 0;
+    const done = () => { if (++loaded === 2) resolve(); };
+    const t = new Image(); t.onload = done; t.onerror = done;
+    t.src = '/static/assets/ground-LaunchPad.png';
+    towerImg = t;
+    const p = new Image(); p.onload = done; p.onerror = done;
+    p.src = '/static/assets/ground-MLP.png';
+    padImg = p;
+  });
+}
+
+// Build sidebar
+function buildList() {
+  const list = document.getElementById('rocket-list');
+  Object.keys(ROCKETS).forEach(key => {
+    const div = document.createElement('div');
+    div.className = 'rocket-item';
+    div.id = 'item-' + key;
+    div.innerHTML = `<div class="rocket-dot"></div>${key.replace('rocket_', '')}`;
+    div.onclick = () => selectRocket(key);
+    list.appendChild(div);
+  });
+}
+
+function selectRocket(key) {
+  currentKey = key;
+  document.querySelectorAll('.rocket-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('item-' + key).classList.add('active');
+
+  const cfg = ROCKETS[key].pad;
+  document.getElementById('pad-x').value = cfg.x;
+  document.getElementById('pad-y').value = cfg.y;
+  document.getElementById('pad-h').value = cfg.h;
+  document.getElementById('pad-fx').value = cfg.fx || 0;
+
+  // Load image if not cached
+  if (!images[key]) {
+    const img = new Image();
+    img.onload = () => { images[key] = img; update(); };
+    img.onerror = () => { images[key] = null; update(); };
+    img.src = '/static/assets/' + ROCKETS[key].file;
+  } else {
+    update();
+  }
+}
+
+function getVals() {
+  const x  = parseInt(document.getElementById('pad-x').value);
+  const y  = parseInt(document.getElementById('pad-y').value);
+  const h  = parseInt(document.getElementById('pad-h').value);
+  const fx = parseInt(document.getElementById('pad-fx').value);
+  document.getElementById('pad-x-val').textContent  = x;
+  document.getElementById('pad-y-val').textContent  = y;
+  document.getElementById('pad-h-val').textContent  = h;
+  document.getElementById('pad-fx-val').textContent = fx;
+  return { x, y, h, fx };
+}
+
+function drawScene({ x, y, h, fx }) {
+  // Sky
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0, 0, 800, 480);
+
+  // Ground
+  ctx.fillStyle = '#2d5016';
+  ctx.fillRect(0, 370, 800, 110);
+  ctx.fillStyle = '#3a6b1a';
+  ctx.fillRect(0, 368, 800, 6);
+
+  // Road
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 374, 800, 20);
+
+  // Tower
+  if (towerImg && towerImg.complete && towerImg.naturalWidth) {
+    const th = 289;
+    const tw = Math.round(towerImg.width * (th / towerImg.height));
+    ctx.drawImage(towerImg, 465, 160, tw, th);
+  }
+
+  // Pad ground
+  if (padImg && padImg.complete && padImg.naturalWidth) {
+    ctx.drawImage(padImg, 430, 330, 160, 50);
+  }
 
   // Reference lines
-  ctx.setLineDash([3,3]); ctx.lineWidth=0.5;
-  const refs=[{y:365,c:'rgba(80,220,80,0.4)',l:'y=365'},{y:420,c:'rgba(200,200,80,0.4)',l:'y=420'},{y:500,c:'rgba(80,180,255,0.4)',l:'y=500'}];
-  ctx.font='8px Courier New';
-  for(const r of refs){
-    ctx.strokeStyle=r.c; ctx.beginPath(); ctx.moveTo(0,r.y); ctx.lineTo(W,r.y); ctx.stroke();
-    ctx.fillStyle=r.c; ctx.fillText(r.l, 3, r.y-2);
-  }
+  ctx.strokeStyle = 'rgba(255,0,0,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, 359); ctx.lineTo(800, 359); ctx.stroke(); // PAD_Y_BASE
+  ctx.beginPath(); ctx.moveTo(515, 0); ctx.lineTo(515, 480); ctx.stroke(); // NOZZLE_X
   ctx.setLineDash([]);
 
-  // Grid
-  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=0.5;
-  for(let x=0;x<=W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<=H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Rocket
+  const img = images[currentKey];
+  if (img) {
+    const w = Math.round(img.width * (h / img.height));
+    ctx.drawImage(img, x, y, w, h);
+
+    // Show bounding box
+    ctx.strokeStyle = 'rgba(0,232,122,0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, w, h);
+  }
+
+  // Labels
+  ctx.fillStyle = 'rgba(255,0,0,0.6)';
+  ctx.font = '9px Courier New';
+  ctx.fillText('PAD_Y=359', 4, 356);
+  ctx.fillText('NOZZLE_X=515', 518, 20);
 }
 
-// ── Asset state ───────────────────────────────────────────────────────────────
-// Each asset: { img, filename, cx, cy, w, h, rot(rad), origW, origH, visible }
-const AM = {};   // stem → asset
-let sel = null;
-let appJsText = null;  // loaded app.js content
+function update() {
+  if (!currentKey) return;
+  const vals = getVals();
+  drawScene(vals);
 
-// Interaction state
-let mode = null;  // 'drag' | 'scale' | 'rotate'
-let mStart = {x:0,y:0};
-let mPrev  = {x:0,y:0};
-let scaleStart = {w:0,h:0};
-let rotStart = 0;
-
-const META = {
-  'ground-vab':           {label:'VAB',              code:'vab'},
-  'ground-launchpad':     {label:'Launch Pad+Tower', code:'launchTower'},
-  'ground-countdownclock':{label:'Countdown Clock',  code:'countdownClock'},
-  'rocket-falcon9':       {label:'Falcon 9',         code:'rocket_falcon9'},
-  'rocket-electron':      {label:'Electron',         code:'rocket_electron'},
-  'rocket-atlasv':        {label:'Atlas V',          code:'rocket_atlas'},
-  'rocket-atlas':         {label:'Atlas V',          code:'rocket_atlas'},
-  'rocket-vulcan':        {label:'Vulcan',           code:'rocket_vulcan'},
-  'rocket-kairos':        {label:'KAIROS',           code:'rocket_kairos'},
-  'rocket-longmarch12':   {label:'Long March 12',    code:'rocket_longmarch12'},
-  'rocket-longmarch2d':   {label:'Long March 2D',    code:'rocket_longmarch2d'},
-  'rocket-longmarch':     {label:'Long March',       code:'rocket_longmarch'},
-  'rocket-ng':            {label:'New Glenn',        code:'rocket_ng'},
-  'rocket-starship':      {label:'Starship',         code:'rocket_starship'},
-  'rocket-ariane6':       {label:'Ariane 6',         code:'rocket_ariane6'},
-  'rocket-sls':           {label:'SLS',              code:'rocket_sls'},
-  'rocket-firefly':       {label:'Firefly Alpha',    code:'rocket_firefly'},
-  'rocket-gslv':          {label:'GSLV',             code:'rocket_gslv'},
-  'rocket-soyuz':         {label:'Soyuz',            code:'rocket_soyuz'},
-  'rocket-vegac':         {label:'Vega-C',           code:'rocket_vegaC'},
-  'rocket-jielong':       {label:'Jielong',          code:'rocket_jielong'},
-};
-function stemOf(fn){ return fn.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9-]/g,'-'); }
-function metaFor(stem){ for(const[k,v]of Object.entries(META))if(stem.includes(k))return v; return{label:stem,code:stem.replace(/-/g,'_')}; }
-
-// ── Server asset loading ──────────────────────────────────────────────────────
-async function loadFromServer() {
-  try {
-    const res = await fetch('/api/assets');
-    if (!res.ok) throw new Error('not ok');
-    const files = await res.json();
-    let pending = files.length;
-    if (!pending) { showSaved('No assets found on server'); return; }
-    for (const fn of files) {
-      const img = new Image();
-      const stem = stemOf(fn);
-      img.onload = () => {
-        const isR = stem.startsWith('rocket');
-        const tH = isR ? 200 : 280;
-        const sc = tH / img.naturalHeight;
-        const dw = Math.round(img.naturalWidth * sc);
-        let cx = isR ? 620 : (stem.includes('launch') ? 500 : (stem.includes('countdown') ? 630 : 160));
-        let cy = stem.includes('countdown') ? 320 : Math.max(tH/2, 365-tH/2);
-        if (!AM[stem]) AM[stem] = {img, filename:fn, cx, cy, w:dw, h:tH, rot:0, origW:img.naturalWidth, origH:img.naturalHeight, visible:true};
-        else { AM[stem].img = img; AM[stem].origW = img.naturalWidth; AM[stem].origH = img.naturalHeight; }
-        if (--pending <= 0) { refreshList(); redraw(); showSaved(`✓ Loaded ${files.length} assets from server`); }
-      };
-      img.onerror = () => { if (--pending <= 0) { refreshList(); redraw(); } };
-      img.src = `/static/assets/${fn}`;
-    }
-  } catch(e) {
-    showSaved('⚠ Server not reachable — use file upload instead');
-  }
+  // Update output
+  const { x, y, h, fx } = vals;
+  const teX = x - 300;
+  const fxStr = fx !== 0 ? `, fx: ${fx}` : '';
+  const line = `  ${currentKey.padEnd(20)}: { pad: { x: ${x}, y: ${y}, h: ${h}${fxStr} }, te: { x: ${teX}, y: ${y}, h: ${h} } },`;
+  document.getElementById('output-code').textContent = line;
 }
 
-// Auto-load when served from localhost
-window.addEventListener('load', () => {
-  if (location.hostname === 'localhost' || location.hostname.match(/\.local$/)) {
-    loadFromServer();
-  }
+function copyConfig() {
+  const text = document.getElementById('output-code').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ COPIED';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY TO CLIPBOARD'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Click canvas to read coords
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = 800 / rect.width;
+  const scaleY = 480 / rect.height;
+  const cx = Math.round((e.clientX - rect.left) * scaleX);
+  const cy = Math.round((e.clientY - rect.top) * scaleY);
+  document.getElementById('coords').textContent = `clicked: x=${cx}, y=${cy}`;
 });
 
-// ── File loading ──────────────────────────────────────────────────────────────
-document.getElementById('fi').addEventListener('change', e=>{
-  Array.from(e.target.files).forEach(f=>loadImg(f));
-  e.target.value='';
+// Init
+loadBg().then(() => {
+  buildList();
+  // Draw empty scene
+  drawScene({ x: 476, y: 217, h: 142, fx: 0 });
 });
-document.getElementById('fjs').addEventListener('change', e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    appJsText=ev.target.result;
-    showSaved('✓ app.js loaded — Save button ready');
-  };
-  r.readAsText(f);
-  e.target.value='';
-});
-
-function loadImg(file){
-  const stem=stemOf(file.name);
-  const url=URL.createObjectURL(file);
-  const img=new Image();
-  img.onload=()=>{
-    const isR=stem.startsWith('rocket');
-    const tH=isR?200:280;
-    const sc=tH/img.naturalHeight;
-    const dw=Math.round(img.naturalWidth*sc);
-    // cx/cy = center of asset
-    let cx=isR?620:(stem.includes('launch')?500:(stem.includes('countdown')?630:160));
-    let cy=stem.includes('countdown')?320:Math.max(tH/2, 365-tH/2);
-    if(AM[stem]){ AM[stem].img=img; AM[stem].origW=img.naturalWidth; AM[stem].origH=img.naturalHeight; }
-    else AM[stem]={img,filename:file.name,cx,cy,w:dw,h:tH,rot:0,origW:img.naturalWidth,origH:img.naturalHeight,visible:true};
-    refreshList(); redraw();
-  };
-  img.src=url;
-}
-
-// ── Canvas rendering ──────────────────────────────────────────────────────────
-const HANDLE_R = 6;   // resize handle radius
-const ROT_DIST = 24;  // rotate handle distance above asset
-
-function redraw(){
-  ctx.clearRect(0,0,W,H);
-  drawBG();
-  for(const [stem,a] of Object.entries(AM)){
-    if(!a.visible) continue;
-    ctx.save();
-    ctx.translate(a.cx, a.cy);
-    ctx.rotate(a.rot);
-    ctx.globalAlpha = (stem===sel) ? 1 : 0.9;
-    ctx.drawImage(a.img, -a.w/2, -a.h/2, a.w, a.h);
-    ctx.globalAlpha=1;
-
-    if(stem===sel){
-      // Selection box
-      ctx.strokeStyle='#f5c400'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
-      ctx.strokeRect(-a.w/2-2, -a.h/2-2, a.w+4, a.h+4);
-      ctx.setLineDash([]);
-
-      // Scale handle (bottom-right)
-      ctx.fillStyle='#f5c400';
-      ctx.beginPath(); ctx.arc(a.w/2+2, a.h/2+2, HANDLE_R, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle='#000';
-      ctx.font='bold 8px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('◢', a.w/2+2, a.h/2+3);
-
-      // Rotate handle (top-center)
-      ctx.strokeStyle='#00ccff'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
-      ctx.beginPath(); ctx.moveTo(0,-a.h/2-2); ctx.lineTo(0,-a.h/2-ROT_DIST); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle='#00ccff';
-      ctx.beginPath(); ctx.arc(0, -a.h/2-ROT_DIST, HANDLE_R, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle='#000';
-      ctx.fillText('↻', 0, -a.h/2-ROT_DIST+1);
-    }
-    ctx.restore();
-  }
-}
-
-// ── Hit testing ───────────────────────────────────────────────────────────────
-function canvasPos(e){
-  const r=canvas.getBoundingClientRect();
-  return {x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height)};
-}
-
-function localPos(a, gx, gy){
-  // transform global point into asset-local coords
-  const dx=gx-a.cx, dy=gy-a.cy;
-  const cos=Math.cos(-a.rot), sin=Math.sin(-a.rot);
-  return {x:cos*dx-sin*dy, y:sin*dx+cos*dy};
-}
-
-function hitTest(gx, gy){
-  // returns {stem, part:'body'|'scale'|'rotate'} or null
-  const stems=Object.keys(AM).reverse(); // top-drawn last = checked first
-  for(const stem of stems){
-    const a=AM[stem]; if(!a.visible) continue;
-    const lp=localPos(a,gx,gy);
-
-    // Rotate handle
-    const rhgx=a.cx + Math.cos(a.rot-Math.PI/2)*(a.h/2+ROT_DIST);
-    const rhgy=a.cy + Math.sin(a.rot-Math.PI/2)*(a.h/2+ROT_DIST);
-    if(Math.hypot(gx-rhgx,gy-rhgy)<HANDLE_R+4) return {stem,part:'rotate'};
-
-    // Scale handle
-    if(Math.hypot(lp.x-(a.w/2+2), lp.y-(a.h/2+2))<HANDLE_R+4) return {stem,part:'scale'};
-
-    // Body
-    if(lp.x>=-a.w/2 && lp.x<=a.w/2 && lp.y>=-a.h/2 && lp.y<=a.h/2) return {stem,part:'body'};
-  }
-  return null;
-}
-
-// ── Mouse events ──────────────────────────────────────────────────────────────
-canvas.addEventListener('mousedown', e=>{
-  const p=canvasPos(e);
-  const hit=hitTest(p.x,p.y);
-  if(!hit){ desel(); return; }
-
-  pick(hit.stem);
-  const a=AM[hit.stem];
-  mStart={x:p.x,y:p.y}; mPrev={x:p.x,y:p.y};
-
-  if(hit.part==='scale'){
-    mode='scale'; scaleStart={w:a.w,h:a.h};
-    canvas.style.cursor='nwse-resize';
-  } else if(hit.part==='rotate'){
-    mode='rotate';
-    rotStart=Math.atan2(p.y-a.cy, p.x-a.cx)-a.rot;
-    canvas.style.cursor='crosshair';
-  } else {
-    mode='drag'; canvas.style.cursor='grabbing';
-  }
-  e.preventDefault();
-});
-
-document.addEventListener('mousemove', e=>{
-  if(!mode||!sel) return;
-  const p=canvasPos(e);
-  const a=AM[sel];
-
-  if(mode==='drag'){
-    a.cx += p.x-mPrev.x; a.cy += p.y-mPrev.y;
-  } else if(mode==='scale'){
-    // distance from center to current mouse, relative to scale-start distance
-    const lp=localPos(a,p.x,p.y);
-    const lstart=localPos(a,mStart.x,mStart.y);
-    const dx=lp.x-lstart.x, dy=lp.y-lstart.y;
-    const locked=document.getElementById('lock').checked;
-    let nw=Math.max(10, scaleStart.w+dx*2);
-    let nh=Math.max(10, scaleStart.h+dy*2);
-    if(locked){
-      const asp=a.origW/a.origH;
-      if(Math.abs(dx)>=Math.abs(dy)) nh=nw/asp; else nw=nh*asp;
-    }
-    a.w=Math.round(nw); a.h=Math.round(nh);
-  } else if(mode==='rotate'){
-    a.rot = Math.atan2(p.y-a.cy, p.x-a.cx)-rotStart;
-  }
-
-  mPrev={x:p.x,y:p.y};
-  fillPanel(); redraw();
-});
-
-document.addEventListener('mouseup', ()=>{ mode=null; canvas.style.cursor='crosshair'; });
-
-// ── Keyboard ──────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', e=>{
-  if(!sel) return;
-  const a=AM[sel];
-  if(e.key==='Escape'){ desel(); return; }
-  if(e.key==='Delete'||e.key==='Backspace'){ deleteSelected(); return; }
-  const step=e.shiftKey?10:1;
-  if(e.key==='ArrowLeft')  { a.cx-=step; e.preventDefault(); }
-  if(e.key==='ArrowRight') { a.cx+=step; e.preventDefault(); }
-  if(e.key==='ArrowUp')    { a.cy-=step; e.preventDefault(); }
-  if(e.key==='ArrowDown')  { a.cy+=step; e.preventDefault(); }
-  fillPanel(); redraw();
-});
-
-// ── Selection ─────────────────────────────────────────────────────────────────
-function pick(stem){
-  sel=stem;
-  document.getElementById('phint').style.display='none';
-  document.getElementById('pbody').style.display='block';
-  fillPanel(); refreshList(); redraw();
-}
-function desel(){
-  sel=null;
-  document.getElementById('phint').style.display='block';
-  document.getElementById('pbody').style.display='none';
-  refreshList(); redraw();
-}
-function deleteSelected(){
-  if(!sel)return;
-  delete AM[sel]; sel=null;
-  document.getElementById('phint').style.display='block';
-  document.getElementById('pbody').style.display='none';
-  refreshList(); refreshCode(); redraw();
-}
-
-// ── Panel sync ────────────────────────────────────────────────────────────────
-function fillPanel(){
-  if(!sel)return;
-  const a=AM[sel];
-  // x/y shown as top-left corner for familiarity
-  document.getElementById('px').value=Math.round(a.cx-a.w/2);
-  document.getElementById('py').value=Math.round(a.cy-a.h/2);
-  document.getElementById('pw').value=a.w;
-  document.getElementById('ph').value=a.h;
-  const deg=Math.round(a.rot*180/Math.PI);
-  document.getElementById('prot').value=deg;
-  document.getElementById('rot-val').textContent=deg+'°';
-  refreshCode();
-}
-
-function fromPanel(changed){
-  if(!sel)return;
-  const a=AM[sel];
-  const x=parseInt(document.getElementById('px').value)||0;
-  const y=parseInt(document.getElementById('py').value)||0;
-  let w=parseInt(document.getElementById('pw').value)||10;
-  let h=parseInt(document.getElementById('ph').value)||10;
-  const deg=parseFloat(document.getElementById('prot').value)||0;
-  document.getElementById('rot-val').textContent=Math.round(deg)+'°';
-
-  if(document.getElementById('lock').checked && (changed==='w'||changed==='h')){
-    const asp=a.origW/a.origH;
-    if(changed==='w') h=Math.round(w/asp);
-    if(changed==='h') w=Math.round(h*asp);
-    document.getElementById('pw').value=w;
-    document.getElementById('ph').value=h;
-  }
-  a.cx=x+w/2; a.cy=y+h/2; a.w=w; a.h=h; a.rot=deg*Math.PI/180;
-  refreshCode(); redraw();
-}
-
-// ── Asset list ────────────────────────────────────────────────────────────────
-function refreshList(){
-  const el=document.getElementById('alist');
-  const keys=Object.keys(AM);
-  if(!keys.length){ el.innerHTML='<div style="font-size:9px;color:#333;padding:4px;">No assets loaded</div>'; return; }
-  el.innerHTML='';
-  for(const stem of keys){
-    const a=AM[stem]; const meta=metaFor(stem);
-    const row=document.createElement('div');
-    row.className='arow'+(sel===stem?' active':'');
-    row.innerHTML=`<span class="nm">${meta.label}</span><span class="sz">${a.w}×${a.h}</span><button class="vbtn">${a.visible?'👁':'🚫'}</button>`;
-    row.addEventListener('click',()=>pick(stem));
-    row.querySelector('.vbtn').addEventListener('click',e=>{
-      e.stopPropagation(); a.visible=!a.visible; refreshList(); redraw();
-    });
-    el.appendChild(row);
-  }
-}
-
-// ── Code generation ───────────────────────────────────────────────────────────
-function refreshCode(){
-  const lines=['// ── Asset positions (Asset Positioner v2) ──',''];
-  for(const [stem,a] of Object.entries(AM)){
-    const meta=metaFor(stem);
-    const isR=stem.startsWith('rocket');
-    // top-left x/y for ctx.drawImage
-    const tlx=Math.round(a.cx-a.w/2);
-    const tly=Math.round(a.cy-a.h/2);
-    const deg=parseFloat((a.rot*180/Math.PI).toFixed(1));
-
-    lines.push(`// ${meta.label}`);
-    lines.push(`{`);
-    if(deg!==0){
-      lines.push(`  ctx.save();`);
-      lines.push(`  ctx.translate(${Math.round(a.cx)}, ${Math.round(a.cy)});`);
-      lines.push(`  ctx.rotate(${(a.rot).toFixed(4)});`);
-      lines.push(`  const scale_${meta.code} = ${a.h} / IMG.${meta.code}.height;`);
-      lines.push(`  const w_${meta.code} = Math.round(IMG.${meta.code}.width * scale_${meta.code});`);
-      lines.push(`  ctx.drawImage(IMG.${meta.code}, -w_${meta.code}/2, ${-Math.round(a.h/2)}, w_${meta.code}, ${a.h});`);
-      lines.push(`  ctx.restore();`);
-    } else {
-      lines.push(`  const scale_${meta.code} = ${a.h} / IMG.${meta.code}.height;`);
-      lines.push(`  const w_${meta.code} = Math.round(IMG.${meta.code}.width * scale_${meta.code});`);
-      lines.push(`  ctx.drawImage(IMG.${meta.code}, ${tlx}, ${tly}, w_${meta.code}, ${a.h});`);
-    }
-    lines.push(`}`);
-    lines.push('');
-  }
-  document.getElementById('cout').textContent=lines.join('\n');
-  return lines.join('\n');
-}
-
-// ── Save to app.js ────────────────────────────────────────────────────────────
-function saveToAppJs(){
-  if(!appJsText){
-    showSaved('⚠ Load your app.js first using the button above');
-    return;
-  }
-
-  let updated = appJsText;
-  let changeCount = 0;
-
-  for(const [stem, a] of Object.entries(AM)){
-    const meta = metaFor(stem);
-    const isR = stem.startsWith('rocket');
-    const deg = parseFloat((a.rot*180/Math.PI).toFixed(1));
-    const tlx = Math.round(a.cx - a.w/2);
-    const tly = Math.round(a.cy - a.h/2);
-
-    if(isR){
-      const tlx = Math.round(a.cx - a.w/2);
-      const tly = Math.round(a.cy - a.h/2);
-      const rKey = meta.code; // e.g. 'rocket_falcon9'
-      // Update ROCKET_CONFIG pad entry: rocket_xxx:   { pad: { x: NNN, y: NNN, h: NNN }
-      const cfgRe = new RegExp(`(${rKey}\\s*:\\s*\\{\\s*pad\\s*:\\s*\\{\\s*x\\s*:)\\s*\\d+(\\s*,\\s*y\\s*:)\\s*\\d+(\\s*,\\s*h\\s*:)\\s*\\d+`);
-      if (cfgRe.test(updated)) {
-        updated = updated.replace(cfgRe, `$1 ${tlx}$2 ${tly}$3 ${a.h}`);
-        changeCount++;
-      } else {
-        // Legacy: try PAD_X / PAD_Y_BASE / ROCKET_TARGET_HEIGHT
-        const centerX = Math.round(a.cx);
-        const bottomY = Math.round(a.cy + a.h/2);
-        updated = updated.replace(/const PAD_X\s*=\s*[\d.]+,\s*PAD_Y_BASE\s*=\s*[\d.]+;/,
-          `const PAD_X = ${centerX}, PAD_Y_BASE = ${bottomY};`);
-        updated = updated.replace(/const ROCKET_TARGET_HEIGHT\s*=\s*[\d]+;/,
-          `const ROCKET_TARGET_HEIGHT = ${a.h};`);
-        changeCount++;
-      }
-    } else if(stem.includes('launchpad') || stem.includes('launch')){
-      // Update drawLaunchTower
-      updated = updated.replace(
-        /function drawLaunchTower\(\)\s*\{[\s\S]*?(?=\n\})\n\}/,
-        `function drawLaunchTower() {\n  if (IMG.launchTower) {\n    const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / IMG.launchTower.height;\n    const scaledW = Math.round(IMG.launchTower.width * scale);\n    ctx.drawImage(IMG.launchTower, ${tlx}, ${tly}, scaledW, TARGET_HEIGHT);\n  }\n}`
-      );
-      changeCount++;
-    } else if(stem.includes('vab')){
-      updated = updated.replace(
-        /const TARGET_HEIGHT = \d+;\s*\/\/.*?\n\s*const scale = TARGET_HEIGHT \/ vh;/,
-        `const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / vh;`
-      );
-      // Also update vabX/vabY
-      updated = updated.replace(
-        /const vabX\s*=\s*[\d.]+;\s*\n\s*const vabY\s*=\s*[\d.]+;/,
-        `const vabX = ${tlx};\n    const vabY = ${tly};`
-      );
-      changeCount++;
-    } else if(stem.includes('countdown')){
-      updated = updated.replace(
-        /const clockX\s*=\s*[\d.]+;\s*\n\s*const clockY\s*=\s*[\d.]+;/,
-        `const clockX = ${tlx};\n    const clockY = ${tly};`
-      );
-      updated = updated.replace(
-        /const TARGET_HEIGHT\s*=\s*\d+;\s*\n\s*const scale\s*=\s*TARGET_HEIGHT \/ IMG\.countdownClock\.height;/,
-        `const TARGET_HEIGHT = ${a.h};\n    const scale = TARGET_HEIGHT / IMG.countdownClock.height;`
-      );
-      changeCount++;
-    }
-  }
-
-  // Download updated file
-  const blob = new Blob([updated], {type:'text/javascript'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download='app.js'; a.click();
-  URL.revokeObjectURL(url);
-  showSaved(`✓ app.js downloaded with ${changeCount} update(s)!`);
-}
-
-function copyCode(){
-  const text=refreshCode();
-  const done=()=>{ showSaved('✓ Code copied to clipboard'); };
-  if(navigator.clipboard) navigator.clipboard.writeText(text).then(done);
-  else{ const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);done(); }
-}
-
-function showSaved(msg){
-  const el=document.getElementById('saved');
-  el.textContent=msg;
-  setTimeout(()=>el.textContent='',3500);
-}
-
-function resetSel(){
-  if(!sel)return;
-  const a=AM[sel];
-  const isR=sel.startsWith('rocket');
-  const tH=isR?200:280, sc=tH/a.origH;
-  a.w=Math.round(a.origW*sc); a.h=tH; a.rot=0;
-  a.cx=isR?620:(sel.includes('launch')?500:160);
-  a.cy=sel.includes('countdown')?320:Math.max(tH/2,365-tH/2);
-  fillPanel(); redraw();
-}
-
-// Initial draw
-redraw();
 </script>
 </body>
 </html>

@@ -50,6 +50,7 @@ const ASSETS = {
   rocket_rfaone:       'rocket-RFAone.png',
   rocket_spectrum:     'rocket-Spectrum.png',
   rocket_tianlong:     'rocket-tianlong3.png',
+  rocket_kinetica:     'rocket-Kinetica.png',
   moon:                'moon.png',
 };
 
@@ -840,6 +841,7 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('neutron'))                                                             return 'rocket_neutron';
   if (v.includes('rfa') || v.includes('rfa one'))                                       return 'rocket_rfaone';
   if (v.includes('spectrum'))                                                            return 'rocket_spectrum';
+  if (v.includes('kinetica'))                                                            return 'rocket_kinetica';
   if (v.includes('tianlong') || v.includes('sky dragon'))                               return 'rocket_tianlong';
   return 'rocket_generic';
 }
@@ -873,6 +875,7 @@ const ROCKET_CONFIG = {
   rocket_rfaone:      { pad: { x: 484, y: 235, h: 124 }, te: { x: 180, y: 235, h: 124 } },
   rocket_spectrum:    { pad: { x: 476, y: 217, h: 142 }, te: { x: 172, y: 217, h: 142 } },
   rocket_tianlong:    { pad: { x: 478, y: 223, h: 136 }, te: { x: 174, y: 223, h: 136 } },
+  rocket_kinetica:    { pad: { x: 497, y: 217, h: 142 }, te: { x: 193, y: 217, h: 142 } },
 };
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
