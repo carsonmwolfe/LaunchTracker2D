@@ -2351,6 +2351,7 @@ function saveState() {
   _stateDirty = false;
   try {
     localStorage.setItem('lt_state', JSON.stringify({
+      currentIdx:          state.currentIdx,
       postLaunchCooldown:  state.postLaunchCooldown,
       cooldownEndsAt:      state.cooldownEndsAt,
       buriedLaunchIds:     state.buriedLaunchIds,
@@ -2359,6 +2360,11 @@ function saveState() {
       nextMissionT0:       state.nextMissionT0,
       _lastLaunchT0:       state._lastLaunchT0,
       _lastLaunchVehicle:  state._lastLaunchVehicle,
+      isLaunching:         state.isLaunching,
+      launchFrame:         state.launchFrame,
+      rocketY:             state.rocketY,
+      flameIntensity:      state.flameIntensity,
+      launchTriggered:     state.launchTriggered,
       _savedAt:            Date.now(),
     }));
   } catch(e) {}
@@ -2373,6 +2379,16 @@ function restoreState() {
     if (!saved || typeof saved !== 'object') { localStorage.removeItem('lt_state'); return; }
     if (Date.now() - (saved._savedAt || 0) > 86400000) { localStorage.removeItem('lt_state'); return; }
     // Only restore cooldown if it hasn't expired
+    // Restore current launch index
+    if (saved.currentIdx != null) state.currentIdx = saved.currentIdx;
+    // Restore mid-flight state
+    if (saved.isLaunching) {
+      state.isLaunching    = true;
+      state.launchFrame    = saved.launchFrame || 0;
+      state.rocketY        = saved.rocketY || PAD_Y_BASE;
+      state.flameIntensity = saved.flameIntensity || 0;
+      state.launchTriggered = true;
+    }
     if (saved.postLaunchCooldown && Date.now() < saved.cooldownEndsAt) {
       state.postLaunchCooldown  = true;
       state.cooldownEndsAt      = saved.cooldownEndsAt;
