@@ -796,13 +796,15 @@ def api_device():
 
 _pending_notify = []
 _NOTIFY_FILE = '/tmp/rangetrack_notify.json'
+_NOTIFY_TTL  = 25  # seconds — notification survives page reloads within this window
 
 def _notify_write(title, msg):
-    """Write notification to file so it survives server restarts."""
+    """Write notification to file with expiry so it survives server restarts and page reloads."""
     import json as _json
+    entry = {'title': title, 'msg': msg, 'expires': time.time() + _NOTIFY_TTL}
     try:
         with open(_NOTIFY_FILE, 'w') as f:
-            _json.dump([{'title': title, 'msg': msg}], f)
+            _json.dump([entry], f)
     except Exception:
         pass
     _pending_notify.append({'title': title, 'msg': msg})
@@ -810,18 +812,21 @@ def _notify_write(title, msg):
 @app.route('/api/notify')
 def get_notify():
     import json as _json
+    now = time.time()
     msgs = list(_pending_notify)
     _pending_notify.clear()
-    # Also check file (survives restarts)
+    # Check file — only return if not expired, keep it until it is
     try:
         with open(_NOTIFY_FILE) as f:
             file_msgs = _json.load(f)
-        if file_msgs:
-            msgs = file_msgs + msgs
-        os.remove(_NOTIFY_FILE)
+        live = [m for m in file_msgs if m.get('expires', 0) > now]
+        if live:
+            msgs = live + msgs
+        else:
+            os.remove(_NOTIFY_FILE)  # all expired — clean up
     except Exception:
         pass
-    return jsonify(msgs)
+    return jsonify([{'title': m['title'], 'msg': m['msg']} for m in msgs])
 
 @app.route('/api/notify-push', methods=['POST'])
 def notify_push():

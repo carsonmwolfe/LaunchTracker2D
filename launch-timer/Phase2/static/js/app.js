@@ -2431,7 +2431,7 @@ function restoreState() {
     if (_wdFails >= 3) {
       window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
     }
-  }, 3000);
+  }, 10000);
   requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
 })();
