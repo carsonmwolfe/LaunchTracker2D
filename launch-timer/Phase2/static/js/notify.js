@@ -37,7 +37,7 @@
     }
     #pi-notify-bar-inner {
       height: 100%; background: #00e87a;
-      animation: pi-notify-drain 5s linear forwards;
+      animation: pi-notify-drain 15s linear forwards;
     }
     @keyframes pi-notify-drain {
       from { width: 100%; }
@@ -71,7 +71,7 @@
     bar.style.animation = '';
     overlay.classList.add('show');
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => overlay.classList.remove('show'), 5000);
+    hideTimer = setTimeout(() => overlay.classList.remove('show'), 15000);
   }
 
   async function pollNotify() {
