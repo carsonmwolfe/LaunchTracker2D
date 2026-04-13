@@ -86,6 +86,7 @@ echo "$LOG_PREFIX Successfully updated to $NEW_HEAD"
 
 # Re-apply execute permission (lost on every git reset --hard)
 chmod +x "$REPO_DIR/launch-timer/Phase2/update.sh"
+chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
