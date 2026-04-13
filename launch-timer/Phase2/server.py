@@ -512,7 +512,6 @@ def _execute_command(cmd):
             pass
         # Queue on-screen notification for all pages (persisted to file to survive restart)
         if cmd == 'update':
-            _notify_write('UPDATE RECEIVED', 'Installing update — this may take a moment.')
             subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
         elif cmd == 'reboot':
             _notify_write('REBOOTING', 'System reboot in progress...')
