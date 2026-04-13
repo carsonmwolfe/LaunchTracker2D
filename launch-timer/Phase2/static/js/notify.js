@@ -59,6 +59,7 @@
   document.body.appendChild(overlay);
 
   let hideTimer = null;
+  let _shownKey = null;  // dedup: don't re-trigger the same notification
 
   function showNotify(title, msg, icon) {
     document.getElementById('pi-notify-icon').textContent = icon || '✓';
@@ -80,8 +81,14 @@
       const msgs = await r.json();
       if (msgs && msgs.length > 0) {
         const n = msgs[0];
-        const icon = n.title.includes('REBOOT') ? '↻' : '↑';
-        showNotify(n.title, n.msg, icon);
+        const key = n.title + '|' + n.msg;
+        if (key !== _shownKey) {
+          _shownKey = key;
+          // Clear key after TTL so a genuinely new identical notification can show
+          setTimeout(() => { if (_shownKey === key) _shownKey = null; }, 30000);
+          const icon = n.title.includes('REBOOT') ? '↻' : '↑';
+          showNotify(n.title, n.msg, icon);
+        }
       }
     } catch (e) {}
     setTimeout(pollNotify, 1000);
