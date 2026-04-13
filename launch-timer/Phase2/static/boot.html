@@ -68,12 +68,11 @@
       const msg = messages[Math.min(Math.floor(attempts / 3), messages.length - 1)];
       status.innerHTML = msg + '<span class="dot">...</span>';
       try {
-        const r = await fetch('http://localhost:5001/', { cache: 'no-store' });
-        if (r.ok) {
-          status.innerHTML = 'READY &mdash; LAUNCHING<span class="dot">...</span>';
-          setTimeout(() => { window.location = 'http://localhost:5001/'; }, 500);
-          return;
-        }
+        // mode: 'no-cors' bypasses cross-origin block from file:// → http://
+        await fetch('http://localhost:5001/', { cache: 'no-store', mode: 'no-cors' });
+        status.innerHTML = 'READY &mdash; LAUNCHING<span class="dot">...</span>';
+        setTimeout(() => { window.location = 'http://localhost:5001/'; }, 500);
+        return;
       } catch (e) {}
       setTimeout(tryConnect, 1500);
     }
