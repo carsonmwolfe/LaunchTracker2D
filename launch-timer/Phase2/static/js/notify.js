@@ -84,7 +84,7 @@
         showNotify(n.title, n.msg, icon);
       }
     } catch (e) {}
-    setTimeout(pollNotify, 4000);
+    setTimeout(pollNotify, 1000);
   }
 
   pollNotify();

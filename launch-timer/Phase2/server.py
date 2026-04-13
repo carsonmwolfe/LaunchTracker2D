@@ -510,12 +510,12 @@ def _execute_command(cmd):
                           timeout=5)
         except Exception:
             pass
-        # Queue on-screen notification for all pages
+        # Queue on-screen notification for all pages (persisted to file to survive restart)
         if cmd == 'update':
-            _pending_notify.append({'title': 'UPDATE RECEIVED', 'msg': 'Installing update — this may take a moment.'})
+            _notify_write('UPDATE RECEIVED', 'Installing update — this may take a moment.')
             subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
         elif cmd == 'reboot':
-            _pending_notify.append({'title': 'REBOOTING', 'msg': 'System reboot in progress...'})
+            _notify_write('REBOOTING', 'System reboot in progress...')
             subprocess.Popen(['bash', '-c', 'sleep 2 && sudo shutdown -r now'])
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
@@ -796,18 +796,39 @@ def api_device():
 # ── Pi notification (shown on all pages) ──────────────────────────────────────
 
 _pending_notify = []
+_NOTIFY_FILE = '/tmp/rangetrack_notify.json'
+
+def _notify_write(title, msg):
+    """Write notification to file so it survives server restarts."""
+    import json as _json
+    try:
+        with open(_NOTIFY_FILE, 'w') as f:
+            _json.dump([{'title': title, 'msg': msg}], f)
+    except Exception:
+        pass
+    _pending_notify.append({'title': title, 'msg': msg})
 
 @app.route('/api/notify')
 def get_notify():
+    import json as _json
     msgs = list(_pending_notify)
     _pending_notify.clear()
+    # Also check file (survives restarts)
+    try:
+        with open(_NOTIFY_FILE) as f:
+            file_msgs = _json.load(f)
+        if file_msgs:
+            msgs = file_msgs + msgs
+        os.remove(_NOTIFY_FILE)
+    except Exception:
+        pass
     return jsonify(msgs)
 
 @app.route('/api/notify-push', methods=['POST'])
 def notify_push():
     data = request.get_json() or {}
     if data.get('title'):
-        _pending_notify.append({'title': data['title'], 'msg': data.get('msg', '')})
+        _notify_write(data['title'], data.get('msg', ''))
     return jsonify({'ok': True})
 
 # ── Reboot ────────────────────────────────────────────────────────────────────
