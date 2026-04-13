@@ -63,18 +63,22 @@
       'ALMOST READY',
     ];
 
-    async function tryConnect() {
+    function tryConnect() {
       attempts++;
       const msg = messages[Math.min(Math.floor(attempts / 3), messages.length - 1)];
       status.innerHTML = msg + '<span class="dot">...</span>';
-      try {
-        // mode: 'no-cors' bypasses cross-origin block from file:// → http://
-        await fetch('http://localhost:5001/', { cache: 'no-store', mode: 'no-cors' });
+      // Image probe — onload only fires when Flask is genuinely up and serving files.
+      // Works cross-origin from file:// with no CORS issues.
+      const img = new Image();
+      img.onload = function() {
         status.innerHTML = 'READY &mdash; LAUNCHING<span class="dot">...</span>';
         setTimeout(() => { window.location = 'http://localhost:5001/'; }, 500);
-        return;
-      } catch (e) {}
-      setTimeout(tryConnect, 1500);
+      };
+      img.onerror = function() {
+        // Server down or not ready yet — try again
+        setTimeout(tryConnect, 1500);
+      };
+      img.src = 'http://localhost:5001/static/assets/BootLOGO.png?_=' + Date.now();
     }
 
     tryConnect();
