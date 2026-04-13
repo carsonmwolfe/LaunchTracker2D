@@ -796,7 +796,7 @@ def api_device():
 
 _pending_notify = []
 _NOTIFY_FILE = '/tmp/rangetrack_notify.json'
-_NOTIFY_TTL  = 25  # seconds — notification survives page reloads within this window
+_NOTIFY_TTL  = 16  # seconds — just over the 15s display time; survives page reloads but doesn't bleed into next update
 
 def _notify_write(title, msg):
     """Write notification to file with expiry so it survives server restarts and page reloads."""
