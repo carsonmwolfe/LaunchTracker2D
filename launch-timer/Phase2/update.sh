@@ -88,20 +88,24 @@ echo "$LOG_PREFIX Chromium cache cleared"
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null
 sudo fuser -k 5001/tcp 2>/dev/null
-sleep 3
+sleep 2
 cd "$REPO_DIR/launch-timer/Phase2" || exit 1
 nohup python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
 
-# Give server a moment to start, then verify it's actually running
-sleep 3
-if kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo "$LOG_PREFIX Server running (PID $SERVER_PID)"
-else
+# Wait for server to actually respond before reloading Chromium (max 20s)
+for i in $(seq 1 13); do
+    if curl -s -o /dev/null http://localhost:5001/ --max-time 1 2>/dev/null; then
+        echo "$LOG_PREFIX Server ready (PID $SERVER_PID)"
+        break
+    fi
+    sleep 1.5
+done
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Reload Chromium on-screen
+# Reload Chromium on-screen only once server is confirmed up
 DISPLAY=:0 xdotool key ctrl+shift+r 2>/dev/null
 echo "$LOG_PREFIX Chromium reloaded"
 
