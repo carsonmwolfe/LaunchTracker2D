@@ -89,8 +89,8 @@ cat > "$AUTOSTART_DIR/autostart" << 'AUTOEOF'
 # Start RangeTrack server
 @bash -c 'cd /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2 && nohup python3 server.py >> /home/pi/server.log 2>&1 &'
 
-# Wait for server then launch Chromium in kiosk mode
-@bash -c 'sleep 6 && chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run http://localhost:5001'
+# Launch Chromium immediately with boot page — it auto-redirects when server is ready
+@bash -c 'sleep 2 && chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html'
 AUTOEOF
 
 log "Autostart configured"

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800">
+<title>RangeTrack OS — Starting</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060a10;
+    color: #00e87a;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .logo { font-size: 11px; color: rgba(0,232,122,0.35); letter-spacing: 3px; margin-bottom: 48px; }
+  .title { font-size: 28px; font-weight: bold; letter-spacing: 6px; margin-bottom: 8px; }
+  .sub { font-size: 11px; color: rgba(0,232,122,0.45); letter-spacing: 3px; margin-bottom: 56px; }
+  .bar-wrap {
+    width: 280px; height: 2px;
+    background: rgba(0,232,122,0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .bar {
+    height: 100%;
+    background: #00e87a;
+    width: 0%;
+    animation: pulse-bar 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-bar {
+    0%   { width: 0%;   margin-left: 0%; }
+    50%  { width: 60%;  margin-left: 20%; }
+    100% { width: 0%;   margin-left: 100%; }
+  }
+  .status {
+    font-size: 10px;
+    color: rgba(0,232,122,0.4);
+    letter-spacing: 2px;
+    min-height: 16px;
+  }
+  .dot { display: inline-block; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+  <div class="logo">// LAUNCHTRACKER2D //</div>
+  <div class="title">RANGETRACK OS</div>
+  <div class="sub">LAUNCH DISPLAY SYSTEM</div>
+  <div class="bar-wrap"><div class="bar"></div></div>
+  <div class="status" id="status">INITIALIZING<span class="dot">...</span></div>
+
+  <script>
+    let attempts = 0;
+    const status = document.getElementById('status');
+    const messages = [
+      'INITIALIZING',
+      'STARTING SERVER',
+      'LOADING DATA',
+      'CONNECTING',
+      'ALMOST READY',
+    ];
+
+    async function tryConnect() {
+      attempts++;
+      const msg = messages[Math.min(Math.floor(attempts / 3), messages.length - 1)];
+      status.innerHTML = msg + '<span class="dot">...</span>';
+      try {
+        const r = await fetch('http://localhost:5001/', { cache: 'no-store' });
+        if (r.ok) {
+          status.innerHTML = 'READY &mdash; LAUNCHING<span class="dot">...</span>';
+          setTimeout(() => { window.location = 'http://localhost:5001/'; }, 500);
+          return;
+        }
+      } catch (e) {}
+      setTimeout(tryConnect, 1500);
+    }
+
+    tryConnect();
+  </script>
+</body>
+</html>
