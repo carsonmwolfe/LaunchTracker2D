@@ -1729,10 +1729,12 @@ async function fetchData(afterLaunch=false) {
     const newLaunches = data.launches || [];
     if (newLaunches.length === 0 && state.launches.length > 0) return;
 
+    const hadData = state.launches.length > 0;
     state.launches    = newLaunches;
     state.weather     = data.weather  || state.weather;
     state.settings    = data.settings || state.settings;
     state.lastFetchAt = Date.now();
+    if (hadData) showNotification('DATA UPDATED');
 
     // Prune buriedLaunchIds: remove any ID that no longer appears in the
     // fresh launch list (it already launched or was removed by the API).
