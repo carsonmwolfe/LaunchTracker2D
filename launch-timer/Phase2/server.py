@@ -489,7 +489,7 @@ def _ping_relay():
         time.sleep(300)
 
 def _poll_commands():
-    """Poll DO relay for pending commands every 30 seconds."""
+    """Poll DO relay for pending commands every 5 seconds."""
     while True:
         try:
             unit_id = _get_unit_id()
@@ -498,7 +498,7 @@ def _poll_commands():
                 _execute_command(cmd.get('command', ''))
         except Exception:
             pass
-        time.sleep(30)
+        time.sleep(5)
 
 def _execute_command(cmd):
     print(f'[{_ts()}] Remote command received: {cmd}')
