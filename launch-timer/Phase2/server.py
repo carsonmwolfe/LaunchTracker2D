@@ -480,10 +480,17 @@ def _poll_commands():
 def _execute_command(cmd):
     print(f'[{_ts()}] Remote command received: {cmd}')
     try:
+        # Acknowledge to relay before executing (reboot won't be able to after)
+        try:
+            requests.post(f'{RELAY_URL}/api/unit/ack',
+                          json={'unit_id': _get_unit_id(), 'command': cmd},
+                          timeout=5)
+        except Exception:
+            pass
         if cmd == 'update':
             subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
         elif cmd == 'reboot':
-            subprocess.Popen(['bash', '-c', 'sleep 2 && sudo reboot'])
+            subprocess.Popen(['bash', '-c', 'sleep 2 && sudo shutdown -r now'])
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
@@ -765,8 +772,20 @@ def api_device():
 @app.route('/api/reboot', methods=['POST'])
 def reboot():
     threading.Thread(
-        target=lambda: (time.sleep(1), subprocess.Popen(['sudo', 'reboot'])),
+        target=lambda: (time.sleep(1), subprocess.Popen(['sudo', 'shutdown', '-r', 'now'])),
         daemon=True).start()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/restart-browser', methods=['POST'])
+def restart_browser():
+    def _do():
+        time.sleep(1)
+        subprocess.Popen(['bash', '-c',
+            'DISPLAY=:0 pkill -f chromium; sleep 2; '
+            'DISPLAY=:0 chromium-browser --kiosk --noerrdialogs --disable-infobars '
+            '--no-first-run http://localhost:5001 &'])
+    threading.Thread(target=_do, daemon=True).start()
     return jsonify({'ok': True})
 
 

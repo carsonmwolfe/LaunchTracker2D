@@ -462,7 +462,9 @@
     }
 
     function goBack()      { window.location = '/'; }
-    function restartPage() { window.location.reload(); }
+    function restartPage() {
+      fetch('/api/restart-browser', { method: 'POST' }).catch(() => {});
+    }
     function goWifi()      { window.location = '/wifi'; }
     function rebootPi() {
       if (confirm('Reboot the Pi?')) {

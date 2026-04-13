@@ -80,9 +80,10 @@ def health():
 
 _units = {}
 _commands = {}   # unit_id -> list of pending command dicts
+_acks    = {}    # unit_id -> list of {command, ts}
 _cmd_lock = threading.Lock()
 
-UNIT_TTL = 86400  # drop units not seen in 24h
+UNIT_TTL = 3600  # drop units not seen in 1h
 
 @app.route('/api/unit/ping', methods=['POST'])
 def unit_ping():
@@ -99,9 +100,13 @@ def unit_ping():
 @app.route('/api/units')
 def units():
     now = time.time()
-    # Only return units seen in last 24h
     active = {k: v for k, v in _units.items() if now - v.get('last_seen', 0) < UNIT_TTL}
     return jsonify(active)
+
+@app.route('/api/unit/<unit_id>', methods=['DELETE'])
+def delete_unit(unit_id):
+    _units.pop(unit_id, None)
+    return jsonify({'ok': True})
 
 # ── Command queue ──────────────────────────────────────────────────────────────
 
@@ -126,6 +131,21 @@ def get_commands(unit_id):
     with _cmd_lock:
         cmds = _commands.pop(unit_id, [])
     return jsonify(cmds)
+
+@app.route('/api/unit/ack', methods=['POST'])
+def unit_ack():
+    """Pi confirms a command was received and is executing."""
+    data    = request.get_json() or {}
+    unit_id = data.get('unit_id')
+    cmd     = data.get('command')
+    if unit_id and cmd:
+        _acks.setdefault(unit_id, []).append({'command': cmd, 'ts': time.time()})
+    return jsonify({'ok': True})
+
+@app.route('/api/unit/acks/<unit_id>')
+def get_acks(unit_id):
+    """Dashboard polls this; clears on read."""
+    return jsonify(_acks.pop(unit_id, []))
 
 @app.after_request
 def add_cors(r):

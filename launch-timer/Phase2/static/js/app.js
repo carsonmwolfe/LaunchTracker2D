@@ -92,9 +92,10 @@ let state = {
   launchComplete:  false,
 
   // Rocket flame particles
-  flameParticles: [],
-  ventParticles:  [],
-  flameIntensity: 0,
+  flameParticles:  [],
+  trenchParticles: [],
+  ventParticles:   [],
+  flameIntensity:  0,
 
   // Smoke (pre-launch vent on pad)
   smokeFrame: 0,
@@ -369,11 +370,10 @@ function ts() {
 function getHour() {
   const fmt = state.settings?.time_format;
   if (fmt === 'utc') return new Date().getUTCHours();
-  if (fmt === 'site') {
-    const tz = state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York';
-    return parseInt(new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}),10);
-  }
-  return new Date().getHours(); // 'local' = Pi local
+  const tz = fmt === 'site'
+    ? (state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York')
+    : (state.settings?.timezone || 'America/New_York');
+  return parseInt(new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}),10);
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -476,9 +476,6 @@ function drawBackground() {
     const sc = getStarsCache();
     if (sc) ctx.drawImage(sc, 0, 0);
   }
-
-  // Grass + road — cached offscreen canvas
-  ctx.drawImage(getGrassCache(), 0, 0);
 
   // Bottom info bar background
   ctx.fillStyle = 'rgba(8,8,18,0.97)';
@@ -898,20 +895,17 @@ function drawBackgroundPad() {
   const vehicle2   = nextLaunch ? (nextLaunch.vehicle || '') : '';
   const assetKey2  = vehicle2 ? getRocketAssetKey(vehicle2) : null;
   const rocketImg  = assetKey2 ? IMG[assetKey2] : null;
-  let rocketTop = ty + Math.round(th * 0.32);
   let rocketMidY = ty + Math.round(th * 0.55);
-  const pad2GroundY = 360;
   if (rocketImg && vehicle2) {
-    const cfg = (ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic).pad;
-    const rh  = Math.round(cfg.h * sc);
-    const rw  = Math.round(rocketImg.width * (rh / rocketImg.height));
-    const rocketX2 = padX + Math.round((cfg.x - NOZZLE_X) * sc) - 18;
-    rocketTop = pad2GroundY - rh;
-    rocketMidY = rocketTop + Math.round(rh * 0.5);
+    const rCfg = ROCKET_CONFIG[assetKey2] || ROCKET_CONFIG.rocket_generic;
+    const te   = rCfg.te || rCfg.pad;  // use te (hand-tuned for pad 2) directly
+    const rh   = te.h;
+    const rw   = Math.round(rocketImg.width * (rh / rocketImg.height));
+    rocketMidY = te.y + Math.round(rh * 0.5);
 
     // Draw rocket FIRST so tower structure renders in front of it
     ctx.globalAlpha = 0.82;
-    ctx.drawImage(rocketImg, rocketX2, rocketTop, rw, rh);
+    ctx.drawImage(rocketImg, te.x, te.y, rw, rh);
     ctx.globalAlpha = 1;
   }
 
@@ -1072,46 +1066,158 @@ function drawSmoke() {
 // ─────────────────────────────────────────────────────────────────────────────
 //  LAUNCH FLAME PARTICLES
 // ─────────────────────────────────────────────────────────────────────────────
-const FLAME_COLORS = {
-  core:  ['#ffffff','#ffffcc','#ffff88','#ffdd44'],
-  mid:   ['#ffcc00','#ffaa00','#ff8800','#ff6600'],
-  outer: ['#ff6600','#ff4400','#dd2200','#aa1100'],
-};
+// Types:
+//   'core'  — tight white/yellow jet, fast downward, narrow spread
+//   'plume' — wide orange/red cloud, slower, drifts sideways
+//   'smoke' — dark grey, billows sideways on ground when rocket hasn't lifted
 
-const MAX_FLAME_PARTICLES = 120;
+const MAX_FLAME_PARTICLES = 280;
+
+const FLAME_PALETTE = [
+  '#ffffff', // 0 — white core
+  '#ffffaa', // 1 — pale yellow
+  '#ffee44', // 2 — bright yellow
+  '#ffcc00', // 3 — yellow-orange
+  '#ff8800', // 4 — orange
+  '#ff4400', // 5 — red-orange
+  '#cc2200', // 6 — dark red
+  '#661100', // 7 — near-black tip
+];
+
 function spawnFlameParticles(flameX, flameY, intensity) {
   if (state.flameParticles.length >= MAX_FLAME_PARTICLES) return;
-  const n = Math.min(Math.floor(20 * intensity), MAX_FLAME_PARTICLES - state.flameParticles.length);
-  for(let i=0;i<n;i++){
-    state.flameParticles.push({
-      x:   flameX + (Math.random()-0.5)*16,
-      y:   flameY,
-      vx:  (Math.random()-0.5)*1,
-      vy:  2.0 + Math.random()*2.5,
-      age: 0,
-      life: 12 + Math.floor(Math.random()*13),
-      size: 3 + Math.random()*5,
-      type: Math.random()<0.5 ? 'core' : Math.random()<0.5 ? 'mid' : 'outer',
-    });
+  const slots = MAX_FLAME_PARTICLES - state.flameParticles.length;
+  const n = Math.min(Math.floor(30 * intensity), slots);
+  const liftDist = PAD_Y_BASE - state.rocketY; // 0 on pad, grows as rocket rises
+  const lifted = liftDist > 6;
+
+  // Flame trench intensity — full at T-0, fades out gradually over 200px of altitude
+  const trenchIntensity = Math.max(0, 1 - liftDist / 200);
+
+  if (lifted) {
+    // ── Rocket is airborne — downward jet only, no trench ──
+    for (let i = 0; i < n; i++) {
+      const r = Math.random();
+      if (r < 0.55) {
+        const px = Math.round((flameX + (Math.random()-0.5) * 6) / 2) * 2;
+        state.flameParticles.push({
+          type: 'core',
+          x: px, y: flameY,
+          vx: (Math.random()-0.5) * 0.4,
+          vy: 3.5 + Math.random() * 2.5,
+          age: 0, life: 8 + Math.floor(Math.random() * 6),
+          sz: 4,
+        });
+      } else {
+        const px = Math.round((flameX + (Math.random()-0.5) * 14) / 2) * 2;
+        state.flameParticles.push({
+          type: 'outer',
+          x: px, y: flameY + Math.random() * 4,
+          vx: (Math.random()-0.5) * 1.2,
+          vy: 1.8 + Math.random() * 1.8,
+          age: 0, life: 12 + Math.floor(Math.random() * 8),
+          sz: 6,
+        });
+      }
+    }
+  }
+
+  // ── Flame trench — continuous sideways plumes ──
+  // Steady-state: cap=220, avgLife=16 → need spawn≥220/16≈14/frame. Use 22.
+  // Steady-state: cap=900, avgLife=35 → need spawn≥900/35≈26/frame. Use 35.
+  // Wide life range (10-60) staggers deaths so no wave-die-respawn spurting.
+  const MAX_TRENCH = 900;
+  if (trenchIntensity > 0) {
+    const trenchY = PAD_Y_BASE;
+    const slots = MAX_TRENCH - state.trenchParticles.length;
+    const tn = Math.min(Math.ceil(35 * trenchIntensity), slots);
+    for (let i = 0; i < tn; i++) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const isDark = Math.random() < 0.18;
+      // Decouple vx and vy completely so particles don't all trace the same diagonal line.
+      // 65% hug the ground (low vy), 35% rise higher — builds volume below then above.
+      const lowRiser = Math.random() < 0.65;
+      state.trenchParticles.push({
+        type: 'trench_smoke',
+        x: flameX + side * (side < 0 ? (28 + Math.random() * 22) : (62 + Math.random() * 28)),
+        y: trenchY - Math.random() * 8,
+        vx: side * (1.5 + Math.random() * 5.5),         // horizontal independent of vertical
+        vy: lowRiser ? -(0.2 + Math.random() * 1.2)     // mostly horizontal, stays low
+                     : -(1.5 + Math.random() * 2.8),    // rises moderately, not sky-high
+        age: 0, life: 10 + Math.floor(Math.random() * 50),
+        sz: 10 + Math.floor(Math.random() * 3) * 2,
+        dark: isDark,
+        side,
+      });
+    }
   }
 }
 
+// Called BEFORE pad/tower — trench smoke appears behind structures
+function drawTrenchParticles() {
+  state.trenchParticles = state.trenchParticles.filter(p => p.age < p.life);
+
+  // snap helper — align to 2px pixel grid for crisp retro look
+  const snap = v => Math.round(v / 2) * 2;
+
+  state.trenchParticles.forEach(p => {
+    const t = p.age / p.life;
+    p.vx *= 0.97; p.vy *= 0.97;
+    // Turbulence — breaks straight-line trajectories into billowing shapes
+    p.vx += (Math.random() - 0.5) * 0.4;
+    p.vy += (Math.random() - 0.5) * 0.3;
+    p.x += p.vx; p.y += p.vy;
+    // Blocks grow slightly as cloud billows outward
+    const bsz = p.sz + Math.floor(t * 6);
+    const gray = p.dark
+      ? Math.floor(170 + t * 30)   // light grey: 170→200
+      : Math.floor(220 + t * 30);  // almost white: 220→250
+    ctx.globalAlpha = t < 0.15 ? t / 0.15 * 0.85   // fade in fast
+                    : (1 - t) * 0.85;               // fade out slowly
+    ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+    ctx.fillRect(snap(p.x) - bsz / 2, snap(p.y) - bsz / 2, bsz, bsz);
+    p.age++;
+  });
+  ctx.globalAlpha = 1;
+}
+
+// Called AFTER pad/tower — jet and pad smoke appear in front
 function drawFlameParticles() {
   state.flameParticles = state.flameParticles.filter(p => p.age < p.life);
-  state.flameParticles.forEach(p => {
+
+  state.flameParticles.filter(p => p.type === 'smoke').forEach(p => {
     const t = p.age / p.life;
-    const cols = FLAME_COLORS[p.type];
-    const ci = Math.min(Math.floor(t * cols.length), cols.length-1);
-    if(t > 0.85 && Math.random() > 0.7) return;
-    const sz = p.size * (1.2 - t*0.8);
-    const wx = Math.sin(p.age*0.3)*1.5;
-    const wy = Math.cos(p.age*0.4)*0.8;
-    ctx.fillStyle = cols[ci];
-    ctx.beginPath();
-    ctx.ellipse(p.x+wx, p.y+wy, sz/2, sz/2, 0, 0, Math.PI*2);
-    ctx.fill();
+    const sz = Math.round((p.sz * (1 + t * 1.4)) / 2) * 2;
+    const gray = Math.floor(160 + t * 70);
+    ctx.globalAlpha = (1 - t) * 0.55;
+    ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+    ctx.fillRect(Math.round(p.x - sz/2), Math.round(p.y - sz/4), sz, Math.round(sz * 0.55));
+    p.age++; p.x += p.vx; p.y += p.vy; p.vx *= 0.96;
+  });
+  ctx.globalAlpha = 1;
+
+  state.flameParticles.filter(p => p.type === 'outer').forEach(p => {
+    const t = p.age / p.life;
+    const ci = Math.min(3 + Math.floor(t * 5), FLAME_PALETTE.length - 1);
+    const halfW = Math.max(2, Math.round((p.sz * (1.2 - t * 0.5)) / 2));
+    const blockH = Math.max(2, Math.round(p.sz * (1 - t * 0.3)));
+    ctx.globalAlpha = (1 - t * 0.7);
+    ctx.fillStyle = FLAME_PALETTE[ci];
+    ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
     p.age++; p.x += p.vx; p.y += p.vy;
   });
+
+  state.flameParticles.filter(p => p.type === 'core').forEach(p => {
+    const t = p.age / p.life;
+    const ci = Math.min(Math.floor(t * 5), FLAME_PALETTE.length - 1);
+    const halfW = Math.max(2, Math.round(p.sz * (1 - t * 0.35)));
+    const blockH = Math.max(2, p.sz);
+    ctx.globalAlpha = t < 0.15 ? 1 : (1 - t * 0.5);
+    ctx.fillStyle = FLAME_PALETTE[ci];
+    ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
+    p.age++; p.x += p.vx; p.y += p.vy;
+  });
+  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1350,7 +1456,8 @@ function updateInfoBar() {
   // Date + countdown (hidden elements kept for compat)
   const _fmt = state.settings?.time_format;
   const _siteTz = state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York';
-  const tz  = _fmt === 'utc' ? 'UTC' : _fmt === 'site' ? _siteTz : undefined;
+  const _localTz = state.settings?.timezone || 'America/New_York';
+  const tz  = _fmt === 'utc' ? 'UTC' : _fmt === 'site' ? _siteTz : _localTz;
   const tzLabel = _fmt === 'utc' ? 'UTC' : _fmt === 'site' ? 'SITE' : 'LOCAL';
   const t0 = launch.t0 || launch.win_open;
   if (t0) {
@@ -1519,9 +1626,10 @@ function startLaunchAnimation() {
   state.isLaunching    = true;
   state.launchFrame    = 0;
   state.rocketY        = PAD_Y_BASE;
-  state.flameParticles = [];
-  state.ventParticles  = [];
-  state.flameIntensity = 0;
+  state.flameParticles  = [];
+  state.trenchParticles = [];
+  state.ventParticles   = [];
+  state.flameIntensity  = 0;
   state.rocketOffscreen = false;
 }
 
@@ -1579,7 +1687,8 @@ function updateLaunch() {
   const _fImg      = IMG[_fKey];
   const _fRw       = _fImg ? Math.round(_fImg.width * (_fCfg.h / _fImg.height)) : 50;
   const flameX     = _fCfg.x + _fRw / 2 + (_fCfg.fx || 0);
-  const flameY     = state.rocketY + 1 + (_fCfg.fy || 0);
+  // Flame Y = bottom of rocket image + liftoff offset + fy (matches positioner exactly)
+  const flameY     = _fCfg.y + _fCfg.h + (state.rocketY - PAD_Y_BASE) + (_fCfg.fy || 0);
   if (state.flameIntensity > 0) {
     spawnFlameParticles(flameX, flameY, state.flameIntensity);
   }
@@ -2055,18 +2164,20 @@ function render(now) {
   if (cond === 'fog') drawFog();
   drawVAB();
   // drawFences();
+  drawTrenchParticles(); // ← Trench smoke/fire (behind grass, road, pad)
+  drawFlameParticles();  // ← Rocket jet (behind grass, road, pad)
+  ctx.drawImage(getGrassCache(), 0, 0);  // grass/road covers base of exhaust
   drawBackgroundPad();  // ← Next rocket on distant pad
   drawRocket();         // ← Active pad rocket (behind tower)
   drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
-  
+
   //drawPond();
   drawBirds();
   drawCars();
   drawSpotlights();
   drawSmoke();
-  drawFlameParticles();
   updateInfoBar();
   drawCountdown();
   drawMilestoneTimeline();

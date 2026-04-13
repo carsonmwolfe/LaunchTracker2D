@@ -131,31 +131,31 @@ canvas { image-rendering: pixelated; border: 1px solid #1a2030; max-width: 100%;
 
 <script>
 const ROCKETS = {
-  rocket_falcon9:     { file: 'rocket-falcon9.png',    pad: { x: 439, y: 211, h: 155, fx: -30 }, te: { x: 250, y: 291, h: 71 } },
-  rocket_atlas:       { file: 'rocket-atlasV.png',     pad: { x: 462, y: 196, h: 183 },           te: { x: 261, y: 292, h: 79 } },
-  rocket_vulcan:      { file: 'rocket-vulcan.png',     pad: { x: 472, y: 200, h: 153 },           te: { x: 265, y: 291, h: 67 } },
-  rocket_electron:    { file: 'rocket-electron.png',   pad: { x: 485, y: 252, h: 116 },           te: { x: 268, y: 309, h: 60 } },
-  rocket_ng:          { file: 'rocket-NG.png',         pad: { x: 452, y: 159, h: 216, fx: 7 },   te: { x: 252, y: 261, h: 109 } },
-  rocket_kairos:      { file: 'rocket-KAIROS.png',     pad: { x: 480, y: 238, h: 127 },           te: { x: 267, y: 304, h: 60 } },
-  rocket_longmarch:   { file: 'rocket-longmarch.png',  pad: { x: 471, y: 207, h: 156 },           te: { x: 263, y: 290, h: 74 } },
-  rocket_firefly:     { file: 'rocket-firefly.png',    pad: { x: 469, y: 215, h: 164 },           te: { x: 258, y: 284, h: 91 } },
-  rocket_starship:    { file: 'rocket-starship.png',   pad: { x: 429, y: 122, h: 280 },           te: { x: 242, y: 247, h: 138 } },
-  rocket_soyuz:       { file: 'rocket-Soyuz.png',      pad: { x: 480, y: 223, h: 131 },           te: { x: 268, y: 297, h: 62 } },
-  rocket_soyuz5:      { file: 'rocket-Soyuz5.png',     pad: { x: 480, y: 228, h: 131 },           te: { x: 266, y: 296, h: 66 } },
-  rocket_ariane6:     { file: 'rocket-Ariane6.png',    pad: { x: 477, y: 220, h: 133 },           te: { x: 265, y: 292, h: 67 } },
-  rocket_sls:         { file: 'rocket-SLS.png',        pad: { x: 509, y: 161, h: 194 },           te: { x: 280, y: 272, h: 87 } },
-  rocket_gslv:        { file: 'rocket-GSLV.png',       pad: { x: 479, y: 221, h: 132 },           te: { x: 268, y: 297, h: 62 } },
-  rocket_longmarch12: { file: 'rocket-longmarch12.png',pad: { x: 470, y: 218, h: 155 },           te: { x: 261, y: 294, h: 76 } },
-  rocket_longmarch2d: { file: 'rocket-longmarch2d.png',pad: { x: 476, y: 218, h: 147 },           te: { x: 263, y: 290, h: 73 } },
-  rocket_vegaC:       { file: 'rocket-vegaC.png',      pad: { x: 459, y: 190, h: 187 },           te: { x: 258, y: 284, h: 89 } },
-  rocket_jielong:     { file: 'rocket-Jielong.png',    pad: { x: 460, y: 191, h: 189, fx: 6 },   te: { x: 257, y: 281, h: 88 } },
-  rocket_falconheavy: { file: 'rocket-FalconHeavy.png',pad: { x: 477, y: 213, h: 143, fx: -2 }, te: { x: 265, y: 296, h: 65 } },
-  rocket_minotaur:    { file: 'rocket-MinotaurIV.png', pad: { x: 485, y: 244, h: 115 },           te: { x: 268, y: 304, h: 60 } },
-  rocket_neutron:     { file: 'rocket-Neutron.png',    pad: { x: 483, y: 235, h: 119 },           te: { x: 267, y: 302, h: 60 } },
-  rocket_rfaone:      { file: 'rocket-RFAone.png',     pad: { x: 478, y: 244, h: 127 },           te: { x: 266, y: 305, h: 60 } },
-  rocket_spectrum:    { file: 'rocket-Spectrum.png',   pad: { x: 476, y: 225, h: 142 },           te: { x: 264, y: 296, h: 69 } },
-  rocket_tianlong:    { file: 'rocket-tianlong3.png',  pad: { x: 475, y: 226, h: 136 },           te: { x: 265, y: 298, h: 65 } },
-  rocket_kinetica:    { file: 'rocket-Kinetica.png',   pad: { x: 506, y: 240, h: 109 },           te: { x: 277, y: 299, h: 60 } },
+  rocket_falcon9:     { file: 'rocket-falcon9.png',    pad: { x: 439, y: 211, h: 155, fx: -33, fy: -12 }, te: { x: 250, y: 291, h: 71 } },
+  rocket_atlas:       { file: 'rocket-atlasV.png',     pad: { x: 462, y: 196, h: 183, fy: -26 },          te: { x: 261, y: 292, h: 79 } },
+  rocket_vulcan:      { file: 'rocket-vulcan.png',     pad: { x: 472, y: 200, h: 153 },                    te: { x: 265, y: 291, h: 67 } },
+  rocket_electron:    { file: 'rocket-electron.png',   pad: { x: 485, y: 252, h: 116, fy: -18 },          te: { x: 268, y: 309, h: 60 } },
+  rocket_ng:          { file: 'rocket-NG.png',         pad: { x: 452, y: 159, h: 216, fx: 2, fy: -20 },   te: { x: 252, y: 261, h: 109 } },
+  rocket_kairos:      { file: 'rocket-KAIROS.png',     pad: { x: 480, y: 238, h: 127, fy: -10 },          te: { x: 267, y: 304, h: 60 } },
+  rocket_longmarch:   { file: 'rocket-longmarch.png',  pad: { x: 471, y: 207, h: 156, fy: -10 },          te: { x: 263, y: 290, h: 74 } },
+  rocket_firefly:     { file: 'rocket-firefly.png',    pad: { x: 469, y: 215, h: 164, fy: -25 },          te: { x: 258, y: 284, h: 91 } },
+  rocket_starship:    { file: 'rocket-starship.png',   pad: { x: 429, y: 122, h: 280, fy: -40 },          te: { x: 242, y: 247, h: 138 } },
+  rocket_soyuz:       { file: 'rocket-Soyuz.png',      pad: { x: 480, y: 223, h: 131 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_soyuz5:      { file: 'rocket-Soyuz5.png',     pad: { x: 480, y: 228, h: 131, fy: -3 },           te: { x: 266, y: 296, h: 66 } },
+  rocket_ariane6:     { file: 'rocket-Ariane6.png',    pad: { x: 477, y: 220, h: 133 },                    te: { x: 265, y: 292, h: 67 } },
+  rocket_sls:         { file: 'rocket-SLS.png',        pad: { x: 509, y: 161, h: 194 },                    te: { x: 280, y: 272, h: 87 } },
+  rocket_gslv:        { file: 'rocket-GSLV.png',       pad: { x: 479, y: 221, h: 132 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_longmarch12: { file: 'rocket-longmarch12.png',pad: { x: 470, y: 218, h: 155, fy: -17 },          te: { x: 261, y: 294, h: 76 } },
+  rocket_longmarch2d: { file: 'rocket-longmarch2d.png',pad: { x: 476, y: 218, h: 147, fy: -12 },          te: { x: 263, y: 290, h: 73 } },
+  rocket_vegaC:       { file: 'rocket-vegaC.png',      pad: { x: 459, y: 190, h: 187, fy: -22 },          te: { x: 258, y: 284, h: 89 } },
+  rocket_jielong:     { file: 'rocket-Jielong.png',    pad: { x: 460, y: 191, h: 189, fx: 1, fy: -26 },   te: { x: 257, y: 281, h: 88 } },
+  rocket_falconheavy: { file: 'rocket-FalconHeavy.png',pad: { x: 477, y: 213, h: 143, fx: -2 },           te: { x: 265, y: 296, h: 65 } },
+  rocket_minotaur:    { file: 'rocket-MinotaurIV.png', pad: { x: 485, y: 244, h: 115, fy: -9 },           te: { x: 268, y: 304, h: 60 } },
+  rocket_neutron:     { file: 'rocket-Neutron.png',    pad: { x: 483, y: 235, h: 119 },                    te: { x: 267, y: 302, h: 60 } },
+  rocket_rfaone:      { file: 'rocket-RFAone.png',     pad: { x: 478, y: 244, h: 127, fy: -17 },          te: { x: 266, y: 305, h: 60 } },
+  rocket_spectrum:    { file: 'rocket-Spectrum.png',   pad: { x: 476, y: 225, h: 142, fy: -13 },          te: { x: 264, y: 296, h: 69 } },
+  rocket_tianlong:    { file: 'rocket-tianlong3.png',  pad: { x: 475, y: 226, h: 136, fy: -9 },           te: { x: 265, y: 298, h: 65 } },
+  rocket_kinetica:    { file: 'rocket-Kinetica.png',   pad: { x: 506, y: 240, h: 109 },                    te: { x: 277, y: 299, h: 60 } },
 };
 
 const canvas = document.getElementById('c');
@@ -336,27 +336,24 @@ function drawScene({ x, y, h, fx, fy, tex, tey, teh }) {
     ctx.strokeRect(x, y, w, h);
 
     // ── Flame origin indicator (matches app.js: x + w/2 + fx, y + h + fy) ──
-    const flameX = x + w / 2 + fx;
-    const flameY = y + h + fy;
-    // Cone
-    ctx.beginPath();
-    ctx.moveTo(flameX - 10, flameY);
-    ctx.lineTo(flameX + 10, flameY);
-    ctx.lineTo(flameX, flameY + 30);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255,120,0,0.7)';
-    ctx.fill();
-    // Centre dot
-    ctx.beginPath();
-    ctx.arc(flameX, flameY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    // Crosshair
-    ctx.strokeStyle = 'rgba(255,180,0,0.8)';
+    const flameX = Math.round(x + w / 2 + fx);
+    const flameY = Math.round(y + h + fy);
+    // Pixel flame column — same palette as app.js
+    const FLAME_PALETTE = ['#ffffff','#ffff88','#ffcc00','#ff8800','#ff4400','#cc2200','#661100'];
+    const colW = 4, segH = 4;
+    for (let i = 0; i < FLAME_PALETTE.length; i++) {
+      const halfW = Math.max(1, Math.round((colW * (1 - i * 0.08)) / 2));
+      ctx.fillStyle = FLAME_PALETTE[i];
+      ctx.globalAlpha = i < 2 ? 1 : (1 - i / FLAME_PALETTE.length * 0.5);
+      ctx.fillRect(flameX - halfW, flameY + i * segH, halfW * 2, segH);
+    }
+    ctx.globalAlpha = 1;
+    // Crosshair at origin
+    ctx.strokeStyle = 'rgba(255,180,0,0.9)';
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(flameX, flameY - 8); ctx.lineTo(flameX, flameY + 35); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(flameX - 12, flameY); ctx.lineTo(flameX + 12, flameY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(flameX, flameY - 6); ctx.lineTo(flameX, flameY + 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(flameX - 8, flameY); ctx.lineTo(flameX + 8, flameY); ctx.stroke();
     ctx.setLineDash([]);
   }
 
