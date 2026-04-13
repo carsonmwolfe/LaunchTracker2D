@@ -1535,13 +1535,33 @@ function showNotification(text) {
 function drawNotification() {
   if (!state.notification) return;
   const n = state.notification;
-  const nx = 800 - (200 - n.offset);   // slides in
-  drawRect(nx-140, 10, 140, 30, '#2a2a2a', '#4a90e2', 2);
-  drawOval(nx-130, 25, 4, 4, '#00ff88');
-  ctx.fillStyle='#ffffff'; ctx.font='bold 8px Courier New'; ctx.textAlign='center';
-  ctx.fillText('DATA UPDATED', nx-68, 22);
-  ctx.fillStyle='#aaaaaa'; ctx.font='7px Courier New';
-  ctx.fillText(ts(), nx-68, 33);
+  const W_N = 160, H_N = 36;
+  const nx = 800 - (W_N + 8) + (W_N + 8) * (n.offset / 200); // slides in from right
+  const ny = 8;
+  ctx.globalAlpha = Math.min(1, n.alpha);
+  // Background
+  ctx.fillStyle = 'rgba(8,12,22,0.96)';
+  ctx.fillRect(Math.round(nx), ny, W_N, H_N);
+  // Green left accent bar
+  ctx.fillStyle = '#00e87a';
+  ctx.fillRect(Math.round(nx), ny, 2, H_N);
+  // Border
+  ctx.strokeStyle = 'rgba(0,232,122,0.30)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(Math.round(nx) + 0.5, ny + 0.5, W_N - 1, H_N - 1);
+  // Dot
+  ctx.fillStyle = '#00e87a';
+  ctx.fillRect(Math.round(nx) + 10, ny + 10, 4, 4);
+  // Title
+  ctx.fillStyle = '#00e87a';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(n.text, Math.round(nx) + 22, ny + 15);
+  // Timestamp
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '8px Courier New';
+  ctx.fillText(ts(), Math.round(nx) + 22, ny + 27);
+  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
