@@ -2420,6 +2420,18 @@ function restoreState() {
   startPolling();
   // Persist state every 5 seconds
   setInterval(saveState, 5000);
+  // Server watchdog — redirect to boot page if server goes down
+  let _wdFails = 0;
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/data?_wd=1', { cache: 'no-store' });
+      if (r.ok) { _wdFails = 0; return; }
+    } catch(e) {}
+    _wdFails++;
+    if (_wdFails >= 3) {
+      window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
+    }
+  }, 3000);
   requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
 })();
