@@ -463,7 +463,7 @@
 
     function goBack()      { window.location = '/'; }
     function restartPage() {
-      fetch('/api/restart-browser', { method: 'POST' }).catch(() => {});
+      window.location = '/';
     }
     function goWifi()      { window.location = '/wifi'; }
     function rebootPi() {
