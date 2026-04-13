@@ -803,6 +803,13 @@ def get_notify():
     _pending_notify.clear()
     return jsonify(msgs)
 
+@app.route('/api/notify-push', methods=['POST'])
+def notify_push():
+    data = request.get_json() or {}
+    if data.get('title'):
+        _pending_notify.append({'title': data['title'], 'msg': data.get('msg', '')})
+    return jsonify({'ok': True})
+
 # ── Reboot ────────────────────────────────────────────────────────────────────
 
 @app.route('/api/reboot', methods=['POST'])

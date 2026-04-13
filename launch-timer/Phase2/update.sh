@@ -50,6 +50,9 @@ fi
 
 if [ "$LOCAL" = "$REMOTE" ]; then
     echo "$LOG_PREFIX Already up to date ($LOCAL)"
+    curl -s -X POST http://localhost:5001/api/notify-push \
+        -H "Content-Type: application/json" \
+        -d '{"title":"ALREADY UP TO DATE","msg":"No new updates available."}' > /dev/null 2>&1
     exit 0
 fi
 
@@ -132,3 +135,6 @@ print('Update logged.')
 PYEOF
 
 echo "$LOG_PREFIX Done: $SHORT"
+curl -s -X POST http://localhost:5001/api/notify-push \
+    -H "Content-Type: application/json" \
+    -d "{\"title\":\"UPDATE COMPLETE\",\"msg\":\"$SHORT\"}" > /dev/null 2>&1
