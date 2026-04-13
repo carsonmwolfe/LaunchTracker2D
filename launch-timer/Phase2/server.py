@@ -849,10 +849,11 @@ def reboot():
 def restart_browser():
     def _do():
         time.sleep(1)
-        subprocess.Popen(['bash', '-c',
+        subprocess.Popen(
             'DISPLAY=:0 pkill -f chromium; sleep 2; '
-            'DISPLAY=:0 chromium-browser --kiosk --noerrdialogs --disable-infobars '
-            '--no-first-run http://localhost:5001 &'])
+            'DISPLAY=:0 nohup chromium-browser --kiosk --noerrdialogs --disable-infobars '
+            '--no-first-run http://localhost:5001 >/dev/null 2>&1 &',
+            shell=True, start_new_session=True)
     threading.Thread(target=_do, daemon=True).start()
     return jsonify({'ok': True})
 
