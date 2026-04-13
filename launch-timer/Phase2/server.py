@@ -436,16 +436,39 @@ def _background_thread():
             _weather_cache['data']    = data
             _weather_cache['fetched'] = now
 
+_UNIT_ID_FILE = '/home/pi/.rangetrack_unit_id'
+
 def _get_unit_id():
-    mac = None
-    for iface in ['wlan0', 'eth0', 'wlan1', 'en0']:
-        try:
-            mac = open(f'/sys/class/net/{iface}/address').read().strip()
-            if mac and mac != '00:00:00:00:00:00':
-                break
-        except Exception:
-            continue
-    return 'LT-' + (mac.replace(':', '')[-4:].upper() if mac else 'UNKN')
+    # Return cached ID if already resolved this session
+    if hasattr(_get_unit_id, '_cached'):
+        return _get_unit_id._cached
+    # Try to load persisted ID first
+    try:
+        uid = open(_UNIT_ID_FILE).read().strip()
+        if uid.startswith('LT-') and len(uid) > 4:
+            _get_unit_id._cached = uid
+            return uid
+    except Exception:
+        pass
+    # Derive from MAC — retry up to 10 times in case net isn't up yet
+    for _ in range(10):
+        for iface in ['wlan0', 'eth0', 'wlan1', 'en0']:
+            try:
+                mac = open(f'/sys/class/net/{iface}/address').read().strip()
+                if mac and mac != '00:00:00:00:00:00':
+                    uid = 'LT-' + mac.replace(':', '')[-4:].upper()
+                    try:
+                        open(_UNIT_ID_FILE, 'w').write(uid)
+                    except Exception:
+                        pass
+                    _get_unit_id._cached = uid
+                    return uid
+            except Exception:
+                continue
+        import time as _t; _t.sleep(2)
+    uid = 'LT-UNKN'
+    _get_unit_id._cached = uid
+    return uid
 
 def _ping_relay():
     """Ping the DO relay every 5 minutes."""
@@ -487,9 +510,12 @@ def _execute_command(cmd):
                           timeout=5)
         except Exception:
             pass
+        # Queue on-screen notification for all pages
         if cmd == 'update':
+            _pending_notify.append({'title': 'UPDATE RECEIVED', 'msg': 'Installing update — this may take a moment.'})
             subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
         elif cmd == 'reboot':
+            _pending_notify.append({'title': 'REBOOTING', 'msg': 'System reboot in progress...'})
             subprocess.Popen(['bash', '-c', 'sleep 2 && sudo shutdown -r now'])
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
@@ -766,6 +792,16 @@ def api_device():
     lat, lon = _get_location()
     return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'lat': lat, 'lon': lon})
 
+
+# ── Pi notification (shown on all pages) ──────────────────────────────────────
+
+_pending_notify = []
+
+@app.route('/api/notify')
+def get_notify():
+    msgs = list(_pending_notify)
+    _pending_notify.clear()
+    return jsonify(msgs)
 
 # ── Reboot ────────────────────────────────────────────────────────────────────
 
