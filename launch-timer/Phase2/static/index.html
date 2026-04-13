@@ -60,6 +60,11 @@
       font-family: 'Press Start 2P', monospace;
       z-index: 5;
     }
+    @keyframes t10-flash {
+      0%, 100% { border-top-color: #ff2244; background: rgba(8,12,18,0.97); }
+      50%       { border-top-color: #ff6644; background: rgba(40,8,8,0.97); }
+    }
+    #info-bar.t10-alert { animation: t10-flash 1s ease-in-out infinite; }
 
     /* LEFT panel — launch window */
     #ib-window {

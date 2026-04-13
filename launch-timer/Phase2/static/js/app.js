@@ -1476,9 +1476,20 @@ function updateInfoBar() {
       const {days,hours,minutes,seconds} = cd;
       const hh=String(hours).padStart(2,'0'), mm=String(minutes).padStart(2,'0'), ss=String(seconds).padStart(2,'0');
       document.getElementById('ib-cd').textContent = days>0 ? `T− ${days}d ${hh}:${mm}:${ss}` : `T− ${hh}:${mm}:${ss}`;
+      // T-10 alert: flash info bar red when under 10 minutes
+      const infoBar = document.getElementById('info-bar');
+      if (infoBar) {
+        if (cd.total_seconds <= 600 && cd.total_seconds > 0) {
+          infoBar.classList.add('t10-alert');
+        } else {
+          infoBar.classList.remove('t10-alert');
+        }
+      }
     } else if (cd === 'LAUNCHED') {
       document.getElementById('ib-cd').textContent = 'LAUNCHED';
       document.getElementById('ib-cd').style.color = '#4a9ede';
+      const infoBar = document.getElementById('info-bar');
+      if (infoBar) infoBar.classList.remove('t10-alert');
     }
     const winOpen = launch.win_open || t0;
     const winClose = launch.win_close || null;

@@ -9,6 +9,15 @@ REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
 BRANCH="Phase3"
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 UPDATE_LOG="/home/pi/.rangetrack_updates.json"
+LOCK_FILE="/tmp/rangetrack_update.lock"
+
+# ── Lock — prevent supervisor and cron colliding ───────────────────────────────
+if [ -e "$LOCK_FILE" ]; then
+    echo "$LOG_PREFIX Already running (lock exists) — skipping"
+    exit 0
+fi
+trap 'rm -f "$LOCK_FILE"' EXIT
+touch "$LOCK_FILE"
 
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 
