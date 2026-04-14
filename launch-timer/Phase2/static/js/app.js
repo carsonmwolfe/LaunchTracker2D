@@ -433,11 +433,19 @@ function _getSkyPhase() {
 
 function getSkyColors() {
   const cond = state.weather.condition;
-  const isRainy = ['rain','thunderstorm','light_rain'].includes(cond);
-  if (isRainy) return { sky:'#3a4a5a', ocean:'#0d1a2e', cloud:'#505050' };
-  if (cond === 'cloudy') return { sky:'#7a9ab8', ocean:'#1a5b6e', cloud:'#b0b0b0' };
-  if (cond === 'fog')    return { sky:'#8a9aaa', ocean:'#1a5b6e', cloud:'#c0c8d0' };
   const phase = _getSkyPhase();
+  const night = phase === 'night';
+  const isRainy = ['rain','thunderstorm','light_rain'].includes(cond);
+  // All overcast/weather conditions still respect night
+  if (isRainy) return night
+    ? { sky:'#0d1520', ocean:'#070d18', cloud:'#252830' }
+    : { sky:'#3a4a5a', ocean:'#0d1a2e', cloud:'#505050' };
+  if (cond === 'cloudy') return night
+    ? { sky:'#0d1a2a', ocean:'#080e1a', cloud:'#1a2030' }
+    : { sky:'#7a9ab8', ocean:'#1a5b6e', cloud:'#b0b0b0' };
+  if (cond === 'fog') return night
+    ? { sky:'#0d1520', ocean:'#080e18', cloud:'#1e2530' }
+    : { sky:'#8a9aaa', ocean:'#1a5b6e', cloud:'#c0c8d0' };
   if (phase === 'day')     return { sky:'#87ceeb', ocean:'#1a8b9e', cloud:'#ffffff' };
   if (phase === 'sunset')  return { sky:'#ff9933', ocean:'#1a5b6e', cloud:'#ffd9b3' };
   if (phase === 'sunrise') return { sky:'#ff9966', ocean:'#2a5b6e', cloud:'#ffe5cc' };
