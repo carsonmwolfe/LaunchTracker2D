@@ -370,10 +370,14 @@ function ts() {
 function getHour() {
   const fmt = state.settings?.time_format;
   if (fmt === 'utc') return new Date().getUTCHours();
-  const tz = fmt === 'site'
-    ? (state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York')
-    : (state.settings?.timezone || 'America/New_York');
-  return parseInt(new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}),10);
+  if (fmt === 'site') {
+    const tz = state.settings?.site === 'vandenberg' ? 'America/Los_Angeles' : 'America/New_York';
+    const h = parseInt(new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}),10);
+    return h === 24 ? 0 : h;
+  }
+  // 'local' — use the device's actual local hour, not a hardcoded timezone
+  const h = new Date().getHours();
+  return h;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -398,12 +402,18 @@ function lerpColor(c1, c2, t) {
 //  SKY / TIME-OF-DAY
 // ─────────────────────────────────────────────────────────────────────────────
 function _getSkyPhase() {
-  // Use server-provided sunrise/sunset if available, else fall back to clock
   const now = Date.now();
   const wx = state.weather;
+  const fmt = state.settings?.time_format;
+
+  // Only use launch-site sunrise/sunset when user is in site or UTC mode.
+  // In local mode the site times are wrong for the user's location — use device clock.
   let srMs = null, ssMs = null;
-  if (wx.sunrise) try { srMs = new Date(wx.sunrise).getTime(); } catch(e) {}
-  if (wx.sunset)  try { ssMs = new Date(wx.sunset).getTime();  } catch(e) {}
+  if (fmt !== 'local') {
+    if (wx.sunrise) try { srMs = new Date(wx.sunrise).getTime(); } catch(e) {}
+    if (wx.sunset)  try { ssMs = new Date(wx.sunset).getTime();  } catch(e) {}
+  }
+
   if (srMs && ssMs) {
     const fade = 45 * 60 * 1000; // 45 min fade window
     if (now < srMs - fade)               return 'night';
@@ -412,10 +422,11 @@ function _getSkyPhase() {
     if (now < ssMs)                      return 'sunset';
     return 'night';
   }
-  // Fallback: hour-based
+
+  // Hour-based fallback (also used for local mode)
   const h = getHour();
-  if (h >= 10 && h < 16) return 'day';
-  if (h >= 16 && h < 18) return 'sunset';
+  if (h >= 10 && h < 18) return 'day';
+  if (h >= 18 && h < 20) return 'sunset';
   if (h >= 6  && h < 10) return 'sunrise';
   return 'night';
 }
