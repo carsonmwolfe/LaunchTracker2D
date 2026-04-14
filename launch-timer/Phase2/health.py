@@ -132,6 +132,10 @@ def is_server_running():
         return False
 
 def restart_server():
+    # Skip if update.sh or the supervisor is already handling it
+    if os.path.exists('/tmp/rangetrack_update.lock'):
+        print(f'[{ts()}] Update in progress — skipping restart.')
+        return
     try:
         phase2 = os.path.dirname(os.path.abspath(__file__))
         subprocess.run(['pkill', '-f', SERVER_SCRIPT], capture_output=True)
