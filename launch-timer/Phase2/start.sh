@@ -11,7 +11,8 @@ BOOT_URL="file://$APP_DIR/static/boot.html"
 CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
   --disable-features=ChromeWhatsNew --no-default-browser-check \
   --disable-background-networking --disable-session-crashed-bubble \
-  --disable-gpu --enable-virtual-keyboard --window-size=800,480"
+  --disable-gpu --enable-virtual-keyboard --window-size=800,480 \
+  --disable-notifications --disable-popup-blocking"
 
 # ── Clear screen to dark ──────────────────────────────────────────────────────
 xsetroot -solid '#060a10'

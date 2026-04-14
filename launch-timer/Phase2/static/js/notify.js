@@ -59,7 +59,11 @@
   document.body.appendChild(overlay);
 
   let hideTimer = null;
-  let _shownKey = null;  // dedup: don't re-trigger the same notification
+
+  // Dedup key stored in sessionStorage so it survives page reloads during updates
+  function _getShownKey() { try { return sessionStorage.getItem('pi-notify-key'); } catch(e) { return null; } }
+  function _setShownKey(k) { try { sessionStorage.setItem('pi-notify-key', k); } catch(e) {} }
+  function _clearShownKey(k) { try { if (sessionStorage.getItem('pi-notify-key') === k) sessionStorage.removeItem('pi-notify-key'); } catch(e) {} }
 
   function showNotify(title, msg, icon) {
     document.getElementById('pi-notify-icon').textContent = icon || '✓';
@@ -82,10 +86,10 @@
       if (msgs && msgs.length > 0) {
         const n = msgs[0];
         const key = n.title + '|' + n.msg;
-        if (key !== _shownKey) {
-          _shownKey = key;
-          // Clear key after TTL so a genuinely new identical notification can show
-          setTimeout(() => { if (_shownKey === key) _shownKey = null; }, 30000);
+        if (key !== _getShownKey()) {
+          _setShownKey(key);
+          // Clear after 30s so a genuinely new identical notification can show
+          setTimeout(() => _clearShownKey(key), 30000);
           const icon = n.title.includes('REBOOT') ? '↻' : '↑';
           showNotify(n.title, n.msg, icon);
         }
