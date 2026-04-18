@@ -884,18 +884,38 @@ def api_snapshot():
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
+def _use_nmcli():
+    """True if NetworkManager is managing wifi (Pi OS Trixie+)."""
+    try:
+        r = subprocess.run(['nmcli', '-t', '-f', 'STATE', 'g'],
+                           capture_output=True, text=True, timeout=5)
+        return 'connected' in r.stdout or 'disconnected' in r.stdout
+    except Exception:
+        return False
+
 @app.route('/api/wifi/scan')
 def wifi_scan():
     try:
-        subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
-        time.sleep(1)
-        result   = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True, timeout=15)
-        networks = []
-        for line in result.split('\n'):
-            if 'ESSID:' in line:
-                ssid = line.split('ESSID:')[1].strip().strip('"')
+        if _use_nmcli():
+            subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], capture_output=True, timeout=10)
+            result = subprocess.check_output(
+                ['nmcli', '-t', '-f', 'SSID', 'dev', 'wifi', 'list'],
+                text=True, timeout=15)
+            networks = []
+            for line in result.strip().split('\n'):
+                ssid = line.strip()
                 if ssid and ssid not in networks:
                     networks.append(ssid)
+        else:
+            subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
+            time.sleep(1)
+            result = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True, timeout=15)
+            networks = []
+            for line in result.split('\n'):
+                if 'ESSID:' in line:
+                    ssid = line.split('ESSID:')[1].strip().strip('"')
+                    if ssid and ssid not in networks:
+                        networks.append(ssid)
         return jsonify({'networks': networks})
     except Exception as e:
         return jsonify({'networks': [], 'error': str(e)})
@@ -903,12 +923,21 @@ def wifi_scan():
 @app.route('/api/wifi/current')
 def wifi_current():
     try:
-        result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
-                                capture_output=True, text=True)
-        for line in result.stdout.split('\n'):
-            if line.startswith('ssid='):
-                return jsonify({'ssid': line.split('=', 1)[1].strip()})
-        return jsonify({'ssid': ''})
+        if _use_nmcli():
+            result = subprocess.run(
+                ['nmcli', '-t', '-f', 'ACTIVE,SSID', 'dev', 'wifi'],
+                capture_output=True, text=True, timeout=5)
+            for line in result.stdout.split('\n'):
+                if line.startswith('yes:'):
+                    return jsonify({'ssid': line.split(':', 1)[1].strip()})
+            return jsonify({'ssid': ''})
+        else:
+            result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
+                                    capture_output=True, text=True, timeout=5)
+            for line in result.stdout.split('\n'):
+                if line.startswith('ssid='):
+                    return jsonify({'ssid': line.split('=', 1)[1].strip()})
+            return jsonify({'ssid': ''})
     except Exception:
         return jsonify({'ssid': ''})
 
@@ -918,44 +947,64 @@ def wifi_connect():
     ssid     = data.get('ssid', '')
     password = data.get('password', '')
     try:
-        result = subprocess.run(
-            ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
-            capture_output=True, text=True)
-        net_id = result.stdout.strip()
-        if not net_id.isdigit():
-            return jsonify({'ok': False, 'error': 'Failed to create network profile'})
-        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True)
-        if password:
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True)
-        else:
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'key_mgmt', 'NONE'], check=True)
-        subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'select_network', net_id],          check=True)
-        time.sleep(8)
-        status    = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
-                                   capture_output=True, text=True)
-        connected = (f'ssid={ssid}' in status.stdout and
-                     'wpa_state=COMPLETED' in status.stdout)
-        if connected:
+        if _use_nmcli():
+            # Delete any existing saved connection with this SSID first
+            subprocess.run(['nmcli', 'con', 'delete', ssid],
+                           capture_output=True, timeout=5)
             if password:
-                net_block = f'    ssid="{ssid}"\n    psk="{password}"\n    key_mgmt=WPA-PSK\n'
+                result = subprocess.run(
+                    ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password],
+                    capture_output=True, text=True, timeout=30)
             else:
-                net_block = f'    ssid="{ssid}"\n    key_mgmt=NONE\n'
-            clean_config = (
-                'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
-                'update_config=1\ncountry=US\n\n'
-                f'network={{\n{net_block}}}\n'
-            )
-            with open('/tmp/wpa_supplicant.conf', 'w') as f:
-                f.write(clean_config)
-            subprocess.run(['sudo', 'bash', '-c',
-                            'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'],
-                           check=True)
-            _data_cache['fetched_at'] = 0
-            return jsonify({'ok': True})
+                result = subprocess.run(
+                    ['nmcli', 'dev', 'wifi', 'connect', ssid],
+                    capture_output=True, text=True, timeout=30)
+            connected = result.returncode == 0 and 'successfully activated' in result.stdout
+            if connected:
+                _data_cache['fetched_at'] = 0
+                return jsonify({'ok': True})
+            else:
+                err = result.stderr.strip() or result.stdout.strip()
+                return jsonify({'ok': False, 'error': err or 'Could not connect — wrong password?'})
         else:
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'remove_network', net_id], check=True)
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'],             check=True)
-            return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
+            result = subprocess.run(
+                ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
+                capture_output=True, text=True, timeout=5)
+            net_id = result.stdout.strip()
+            if not net_id.isdigit():
+                return jsonify({'ok': False, 'error': 'Failed to create network profile'})
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True, timeout=5)
+            if password:
+                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True, timeout=5)
+            else:
+                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'key_mgmt', 'NONE'], check=True, timeout=5)
+            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'select_network', net_id], check=True, timeout=5)
+            time.sleep(8)
+            status    = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
+                                       capture_output=True, text=True, timeout=5)
+            connected = (f'ssid={ssid}' in status.stdout and
+                         'wpa_state=COMPLETED' in status.stdout)
+            if connected:
+                if password:
+                    net_block = f'    ssid="{ssid}"\n    psk="{password}"\n    key_mgmt=WPA-PSK\n'
+                else:
+                    net_block = f'    ssid="{ssid}"\n    key_mgmt=NONE\n'
+                clean_config = (
+                    'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
+                    'update_config=1\ncountry=US\n\n'
+                    f'network={{\n{net_block}}}\n'
+                )
+                with open('/tmp/wpa_supplicant.conf', 'w') as f:
+                    f.write(clean_config)
+                subprocess.run(['sudo', 'bash', '-c',
+                                'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'],
+                               check=True, timeout=5)
+                _data_cache['fetched_at'] = 0
+                return jsonify({'ok': True})
+            else:
+                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'remove_network', net_id], timeout=5)
+                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], timeout=5)
+                return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
     except Exception as e:
         print(f'[{_ts()}] WiFi connect error: {e}')
         return jsonify({'ok': False, 'error': str(e)})
