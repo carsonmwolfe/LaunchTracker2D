@@ -9,7 +9,6 @@ All pages read from /api/data — single source of truth.
 """
 
 import threading
-import webbrowser
 import time
 import requests
 import json
@@ -945,14 +944,9 @@ def wifi_connect():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def open_browser():
-    time.sleep(1.2)
-    webbrowser.open('http://localhost:5001')
-
 if __name__ == '__main__':
     print(f'[{_ts()}] ══════════════════════════════════════')
     print(f'[{_ts()}]  LaunchTracker2D — Phase 2')
     print(f'[{_ts()}]  http://localhost:5001')
     print(f'[{_ts()}] ══════════════════════════════════════')
-    threading.Thread(target=open_browser, daemon=True).start()
     app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)

@@ -34,7 +34,7 @@ rm -f /home/pi/.config/chromium/SingletonLock \
 xsetroot -solid '#060a10' 2>/dev/null || true
 
 # ── Kill anything already on port 5001 ───────────────────────────────────────
-sudo fuser -k 5001/tcp 2>/dev/null
+fuser -k 5001/tcp 2>/dev/null || kill $(fuser 5001/tcp 2>/dev/null) 2>/dev/null || true
 sleep 1
 
 # ── Start server ──────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ while true; do
             echo "[$(date '+%H:%M:%S')] Server down but update in progress — skipping restart" >> "$SERVER_LOG"
         else
             echo "[$(date '+%H:%M:%S')] Server crashed — restarting..." >> "$SERVER_LOG"
-            sudo fuser -k 5001/tcp 2>/dev/null
+            fuser -k 5001/tcp 2>/dev/null || kill $(fuser 5001/tcp 2>/dev/null) 2>/dev/null || true
             sleep 1
             cd "$APP_DIR"
             nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
