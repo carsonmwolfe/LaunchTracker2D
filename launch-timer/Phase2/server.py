@@ -525,6 +525,13 @@ threading.Thread(target=_poll_commands, daemon=True).start()
 
 # ── Auto brightness ───────────────────────────────────────────────────────────
 
+def _backlight_path():
+    """Return the first available backlight brightness path, or None."""
+    import glob
+    for p in glob.glob('/sys/class/backlight/*/brightness'):
+        return p
+    return None
+
 def _auto_brightness():
     while True:
         try:
@@ -547,9 +554,11 @@ def _auto_brightness():
                 else:
                     brightness = DAY_MAX
                 try:
-                    cur = int(open('/sys/class/backlight/rpi_backlight/brightness').read().strip())
-                    if abs(cur - brightness) > 5:
-                        open('/sys/class/backlight/rpi_backlight/brightness', 'w').write(str(brightness))
+                    bp = _backlight_path()
+                    if bp:
+                        cur = int(open(bp).read().strip())
+                        if abs(cur - brightness) > 5:
+                            open(bp, 'w').write(str(brightness))
                         print(f'[{_ts()}] Auto brightness → {brightness}')
                 except Exception:
                     pass
@@ -757,9 +766,10 @@ def set_brightness():
     val    = max(20, min(100, int((request.get_json() or {}).get('value', 40))))
     mapped = int(val * 2.55)
     try:
-        subprocess.run(
-            ['sudo', 'bash', '-c', f'echo {mapped} > /sys/class/backlight/rpi_backlight/brightness'],
-            check=True)
+        bp = _backlight_path()
+        if not bp:
+            return jsonify({'ok': False, 'error': 'no backlight'})
+        open(bp, 'w').write(str(mapped))
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
     return jsonify({'ok': True})
