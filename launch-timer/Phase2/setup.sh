@@ -27,9 +27,17 @@ log "=== RangeTrack OS Setup ==="
 # ── 1. Dependencies ────────────────────────────────────────────────────────────
 log "Installing dependencies..."
 sudo apt-get update -qq
-sudo apt-get install -y python3 python3-pip chromium-browser xdotool git psmisc unclutter -qq
-pip3 install flask requests --quiet
-log "Dependencies installed"
+# chromium-browser on older Pi OS, chromium on newer
+if apt-cache show chromium-browser &>/dev/null; then
+    CHROMIUM_PKG="chromium-browser"
+else
+    CHROMIUM_PKG="chromium"
+fi
+sudo apt-get install -y python3 python3-pip $CHROMIUM_PKG xdotool git psmisc -qq
+# unclutter not always available, skip if missing
+sudo apt-get install -y unclutter -qq 2>/dev/null || true
+pip3 install flask requests --quiet --break-system-packages 2>/dev/null || pip3 install flask requests --quiet
+log "Dependencies installed (chromium pkg: $CHROMIUM_PKG)"
 
 # ── 2. Clone or update repo ────────────────────────────────────────────────────
 if [ -d "$REPO_DIR/.git" ]; then
@@ -74,23 +82,8 @@ log "Setting up autostart..."
 AUTOSTART_DIR="/home/pi/.config/lxsession/LXDE-pi"
 mkdir -p "$AUTOSTART_DIR"
 
-cat > "$AUTOSTART_DIR/autostart" << 'AUTOEOF'
-@lxpanel --profile LXDE-pi
-@pcmanfm --desktop --profile LXDE-pi
-
-# Disable screen blanking
-@xset s off
-@xset -dpms
-@xset s noblank
-
-# Hide cursor
-@unclutter -idle 0.1 -root
-
-# Start RangeTrack server
-@bash -c 'cd /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2 && nohup python3 server.py >> /home/pi/server.log 2>&1 &'
-
-# Launch Chromium immediately with boot page — it auto-redirects when server is ready
-@bash -c 'sleep 2 && chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html'
+cat > "$AUTOSTART_DIR/autostart" << AUTOEOF
+@bash $SERVER_DIR/start.sh
 AUTOEOF
 
 log "Autostart configured"

@@ -4,7 +4,12 @@
 
 APP_DIR="/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2"
 SERVER_LOG="/home/pi/server.log"
-CHROMIUM="/usr/bin/chromium-browser"
+# Support both chromium-browser (older Pi OS) and chromium (newer)
+if [ -x "/usr/bin/chromium-browser" ]; then
+    CHROMIUM="/usr/bin/chromium-browser"
+else
+    CHROMIUM="/usr/bin/chromium"
+fi
 APP_URL="http://localhost:5001/"
 BOOT_URL="file://$APP_DIR/static/boot.html"
 
