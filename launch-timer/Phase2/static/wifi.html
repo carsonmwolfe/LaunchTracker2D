@@ -41,41 +41,52 @@
     .top-title-wrap { flex: 1; text-align: center; }
     .top-title { font-size: 8px; color: #fff; }
     .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
-    .top-current { font-size: 5px; color: #ffd93d; background: #0a1a10; border: 2px solid #ffd93d; padding: 3px 7px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+    .top-current {
+      font-size: 5px; color: #ffd93d;
+      background: #0a1a10; border: 2px solid #ffd93d;
+      padding: 3px 7px; white-space: nowrap;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+    }
 
     /* BODY */
     .body { flex: 1; display: flex; overflow: hidden; }
 
-    /* LEFT */
+    /* LEFT — network list */
     .left-col {
-      width: 280px; flex-shrink: 0;
+      width: 360px; flex-shrink: 0;
       display: flex; flex-direction: column;
       border-right: 3px solid #2a3a50;
       background: #0e1520;
     }
-
     .phdr {
       font-size: 6px; color: #00e87a;
-      background: #141e2e; padding: 5px 8px;
+      background: #141e2e; padding: 6px 10px;
       border-bottom: 2px solid #2a3a50;
-      display: flex; align-items: center; gap: 5px;
+      display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0;
     }
-    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+    .phdr-left { display: flex; align-items: center; gap: 6px; }
+    .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .btn-scan-sm {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px; background: #141e2e;
+      border: 2px solid #6ab4f8; color: #6ab4f8;
+      padding: 3px 6px; cursor: pointer;
+    }
+    .btn-scan-sm:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* Network list */
     .networks-list {
       flex: 1; overflow-y: auto; overflow-x: hidden;
       padding: 6px;
-      display: flex; flex-direction: column; gap: 4px;
+      display: flex; flex-direction: column; gap: 5px;
     }
     .network {
       background: #1a2535;
       border: 2px solid #344558;
-      padding: 7px 8px;
+      padding: 9px 10px;
       cursor: pointer;
       font-size: 7px; color: #ffffff;
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 8px;
       flex-shrink: 0;
     }
     .network:hover { background: #1f2e42; border-color: rgba(0,232,122,0.6); }
@@ -83,90 +94,85 @@
     .network.current-net { border-color: #ffd93d; }
     .network-signal { font-size: 7px; flex-shrink: 0; color: #6ab4f8; }
     .network-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .network-lock { font-size: 6px; color: #ffd93d; flex-shrink: 0; }
-    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.5); text-align: center; padding: 16px 8px; }
+    .network-badge { font-size: 5px; color: #ffd93d; flex-shrink: 0; background: rgba(255,211,61,0.1); border: 1px solid #ffd93d; padding: 2px 4px; }
+    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.5); text-align: center; padding: 20px 8px; }
 
-    /* Fields */
-    .fields-block { flex-shrink: 0; border-top: 2px solid #2a3a50; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: #0e1520; }
-    .field-row { display: flex; flex-direction: column; gap: 3px; }
-    .field-label-row { display: flex; justify-content: space-between; align-items: center; }
-    .field-label { font-size: 6px; color: #6ab4f8; letter-spacing: 1px; }
-    .field-clear { font-size: 5px; color: #ff6644; cursor: pointer; background: none; border: none; font-family: 'Press Start 2P', monospace; padding: 0; }
-    .field-clear:hover { color: #ff4422; }
-    .field-input {
+    /* RIGHT — connect panel */
+    .right-col {
+      flex: 1;
+      display: flex; flex-direction: column;
+      padding: 16px 18px 12px;
+      background: #0c1018;
+    }
+
+    .connect-hdr {
+      font-size: 6px; color: #4a9ede; letter-spacing: 2px;
+      margin-bottom: 12px; flex-shrink: 0;
+    }
+
+    /* Selected network display */
+    .ssid-display {
+      background: #141e2e;
+      border: 2px solid #2a3a50;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+    .ssid-display-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 6px; }
+    .ssid-display-val { font-size: 9px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 7px; }
+    .ssid-display.has-selection { border-color: #00e87a; }
+
+    /* Password field */
+    .pw-block { flex-shrink: 0; margin-bottom: 16px; }
+    .pw-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .pw-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; }
+    .pw-hint { font-size: 5px; color: rgba(255,255,255,0.3); }
+    .pw-input-wrap { position: relative; }
+    input.pw-field {
+      width: 100%;
       background: #1a2535;
       border: 2px solid #344558;
-      padding: 7px 8px;
+      padding: 11px 44px 11px 10px;
       color: #ffffff;
       font-family: 'Press Start 2P', monospace;
-      font-size: 8px;
-      width: 100%;
-      cursor: pointer;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      display: flex; align-items: center; justify-content: space-between;
+      font-size: 9px;
+      outline: none;
+      caret-color: #00e87a;
     }
-    .field-input.active { border-color: #00e87a; color: #00e87a; background: #0a1f12; }
-    .field-placeholder { color: rgba(255,255,255,0.45); font-size: 7px; }
-    .field-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .show-toggle { font-size: 6px; color: rgba(255,255,255,0.5); cursor: pointer; flex-shrink: 0; padding-left: 4px; user-select: none; }
+    input.pw-field:focus {
+      border-color: #00e87a;
+      background: #0a1f12;
+    }
+    .show-toggle {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px; color: rgba(255,255,255,0.4);
+      cursor: pointer; user-select: none; background: none; border: none;
+      padding: 4px;
+    }
     .show-toggle:hover { color: #ffd93d; }
 
-    /* Buttons */
-    .action-row { display: flex; gap: 6px; flex-shrink: 0; padding: 0 8px 8px; }
-    .btn {
-      flex: 1; padding: 9px 4px;
+    /* Connect button */
+    .connect-btn {
+      width: 100%;
+      padding: 13px;
       font-family: 'Press Start 2P', monospace;
-      font-size: 7px; cursor: pointer; border: none;
-      text-align: center;
+      font-size: 8px; cursor: pointer; border: none;
+      background: #00e87a; color: #050a07;
+      flex-shrink: 0; margin-bottom: 10px;
     }
-    .btn-connect { background: #00e87a; color: #050a07; }
-    .btn-connect:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
-    .btn-scan { background: #141e2e; border: 2px solid #6ab4f8; color: #6ab4f8; }
-    .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
+    .connect-btn:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
 
     /* Status */
     .status-bar {
       flex-shrink: 0;
-      background: #141e2e; border-top: 2px solid #2a3a50;
-      padding: 5px 8px; font-size: 6px; height: 22px;
-      color: #ffd93d; letter-spacing: 1px;
+      font-size: 6px; color: #ffd93d;
+      letter-spacing: 1px; min-height: 16px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .status-bar.success { color: #00e87a; }
     .status-bar.error   { color: #ff4422; }
-
-    /* RIGHT — keyboard */
-    .right-col {
-      flex: 1;
-      display: flex; flex-direction: column;
-      padding: 8px; gap: 4px;
-    }
-    .kb-header {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-shrink: 0; padding: 0 2px 4px;
-      border-bottom: 1px solid #1a2030;
-      margin-bottom: 2px;
-    }
-    .kb-active-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; }
-    .kb-charcount { font-size: 5px; color: rgba(255,255,255,0.25); }
-
-    .keyboard { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .kb-row { display: flex; gap: 4px; flex: 1; }
-    .kb-key {
-      background: #141e2e;
-      border: 2px solid #2a3a50;
-      color: #e8eef8;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 11px;
-      cursor: pointer;
-      flex: 1;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .kb-key:active { background: #1a2030; border-color: #00e87a; }
-    .kb-key.wide  { flex: 2; }
-    .kb-key.space { flex: 6; }
-    .kb-key.action { background: #0a1a10; border-color: #00e87a; color: #00e87a; }
-    .kb-key.toggled { background: rgba(255,211,61,0.1); border-color: #ffd93d; color: #ffd93d; }
   </style>
 </head>
 <body>
@@ -188,206 +194,72 @@
 
   <div class="body">
 
-    <!-- LEFT -->
+    <!-- LEFT: network list -->
     <div class="left-col">
-      <div class="phdr"><div class="phdr-dot" style="background:#4a9ede;"></div>> AVAILABLE NETWORKS</div>
+      <div class="phdr">
+        <div class="phdr-left">
+          <div class="phdr-dot" style="background:#4a9ede;"></div>
+          <span>AVAILABLE NETWORKS</span>
+        </div>
+        <button class="btn-scan-sm" id="btn-scan" onclick="scanNetworks()">↺ SCAN</button>
+      </div>
       <div class="networks-list" id="networks">
         <div class="scan-msg">SCANNING...</div>
       </div>
+    </div>
 
-      <div class="fields-block">
-        <div class="field-row">
-          <div class="field-label-row">
-            <div class="field-label">SSID</div>
-            <button class="field-clear" onclick="clearField('ssid')">CLR</button>
-          </div>
-          <div class="field-input" id="ssid-display" onclick="setActive('ssid')">
-            <span class="field-val field-placeholder" id="ssid-val">SELECT NETWORK</span>
-          </div>
+    <!-- RIGHT: connect panel -->
+    <div class="right-col">
+      <div class="connect-hdr">> CONNECT TO NETWORK</div>
+
+      <div class="ssid-display" id="ssid-display">
+        <div class="ssid-display-label">SELECTED NETWORK</div>
+        <div class="ssid-display-val placeholder" id="ssid-val">— TAP A NETWORK —</div>
+      </div>
+
+      <div class="pw-block">
+        <div class="pw-label-row">
+          <div class="pw-label">PASSWORD</div>
+          <div class="pw-hint">TAP FIELD TO TYPE</div>
         </div>
-        <div class="field-row">
-          <div class="field-label-row">
-            <div class="field-label">PASSWORD</div>
-            <button class="field-clear" onclick="clearField('password')">CLR</button>
-          </div>
-          <div class="field-input active" id="password-display" onclick="setActive('password')">
-            <span class="field-val field-placeholder" id="password-val">ENTER PASSWORD</span>
-            <span class="show-toggle" id="show-toggle" onclick="event.stopPropagation();toggleShow()">SHOW</span>
-          </div>
+        <div class="pw-input-wrap">
+          <input type="password" class="pw-field" id="password"
+                 placeholder="••••••••"
+                 autocomplete="off" autocorrect="off"
+                 autocapitalize="off" spellcheck="false">
+          <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
         </div>
       </div>
 
-      <div class="action-row">
-        <button class="btn btn-scan" id="btn-scan" onclick="scanNetworks()">↺ SCAN</button>
-        <button class="btn btn-connect" id="btn-connect" onclick="connect()">CONNECT</button>
-      </div>
+      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
 
       <div class="status-bar" id="status"></div>
     </div>
 
-    <!-- RIGHT: keyboard -->
-    <div class="right-col">
-      <div class="kb-header">
-        <div class="kb-active-label" id="kb-label">EDITING: PASSWORD</div>
-        <div class="kb-charcount" id="kb-charcount"></div>
-      </div>
-      <div class="keyboard">
-        <div class="kb-row" id="row1"></div>
-        <div class="kb-row" id="row2"></div>
-        <div class="kb-row" id="row3"></div>
-        <div class="kb-row" id="row4"></div>
-        <div class="kb-row" id="row5"></div>
-      </div>
-    </div>
-
   </div>
 
-  <input type="text" id="ssid" style="display:none">
-  <input type="text" id="password" style="display:none">
-
   <script>
-    let activeField = 'password';
-    let shifted = false;
-    let symbols = false;
+    let selectedSsid = '';
     let showPassword = false;
-
-    const escHtml = (() => {
-      const d = document.createElement('div');
-      return s => { d.textContent = String(s ?? ''); return d.innerHTML; };
-    })();
-
-    const letterRows = [
-      ['1','2','3','4','5','6','7','8','9','0'],
-      ['q','w','e','r','t','y','u','i','o','p'],
-      ['a','s','d','f','g','h','j','k','l'],
-      ['z','x','c','v','b','n','m'],
-    ];
-    const symbolRows = [
-      ['!','@','#','$','%','^','&','*','(',')'],
-      ['-','_','+','=','[',']','{','}'],
-      [';',':','\'','"',',','.','?','/'],
-      ['\\','|','`','~','<','>'],
-    ];
-
-    function setActive(id) {
-      activeField = id;
-      document.getElementById('ssid-display').classList.toggle('active', id === 'ssid');
-      document.getElementById('password-display').classList.toggle('active', id === 'password');
-      document.getElementById('kb-label').textContent = 'EDITING: ' + (id === 'ssid' ? 'SSID' : 'PASSWORD');
-      updateCharCount();
-    }
-
-    function updateDisplay(id) {
-      const val = document.getElementById(id).value;
-      const valEl = document.getElementById(id + '-val');
-      if (!val) {
-        valEl.textContent = id === 'ssid' ? 'SELECT NETWORK' : 'ENTER PASSWORD';
-        valEl.classList.add('field-placeholder');
-      } else {
-        valEl.classList.remove('field-placeholder');
-        valEl.textContent = (id === 'password' && !showPassword) ? '•'.repeat(val.length) : val;
-      }
-      updateCharCount();
-    }
-
-    function updateCharCount() {
-      const val = document.getElementById(activeField).value;
-      const el = document.getElementById('kb-charcount');
-      el.textContent = val.length ? val.length + ' CHARS' : '';
-    }
-
-    function clearField(id) {
-      document.getElementById(id).value = '';
-      updateDisplay(id);
-      setActive(id);
-      // Deselect network if clearing SSID
-      if (id === 'ssid') {
-        document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
-      }
-    }
 
     function toggleShow() {
       showPassword = !showPassword;
+      const input = document.getElementById('password');
+      input.type = showPassword ? 'text' : 'password';
       document.getElementById('show-toggle').textContent = showPassword ? 'HIDE' : 'SHOW';
-      document.getElementById('show-toggle').style.color = showPassword ? '#ffd93d' : '';
-      updateDisplay('password');
     }
 
-    // Keyboard: only rebuild on mode change, update text on shift
-    function buildKeyboard() {
-      const rows = symbols ? symbolRows : letterRows;
-      // Rows 1-4: pure letter/number keys, uniform size
-      ['row1','row2','row3','row4'].forEach((rowId, i) => {
-        const el = document.getElementById(rowId);
-        el.innerHTML = '';
-        (rows[i] || []).forEach(k => {
-          const btn = document.createElement('button');
-          btn.className = 'kb-key';
-          btn.textContent = (!symbols && shifted) ? k.toUpperCase() : k;
-          btn.addEventListener('click', () => typeKey(btn.textContent));
-          el.appendChild(btn);
-        });
-      });
-      // Row 5: action keys only — SYM | SHIFT | SPACE | DEL
-      const r5 = document.getElementById('row5');
-      r5.innerHTML = '';
-      const sym = document.createElement('button');
-      sym.className = 'kb-key wide' + (symbols ? ' toggled' : '');
-      sym.textContent = symbols ? 'ABC' : '!@#';
-      sym.addEventListener('click', toggleSymbols);
-      r5.appendChild(sym);
-      if (!symbols) {
-        const shift = document.createElement('button');
-        shift.className = 'kb-key wide' + (shifted ? ' action' : '');
-        shift.textContent = 'SHIFT';
-        shift.addEventListener('click', toggleShift);
-        r5.appendChild(shift);
-      }
-      const space = document.createElement('button');
-      space.className = 'kb-key space';
-      space.textContent = 'SPACE';
-      space.addEventListener('click', () => typeKey(' '));
-      r5.appendChild(space);
-      const bksp = document.createElement('button');
-      bksp.className = 'kb-key wide action';
-      bksp.textContent = 'DEL';
-      bksp.addEventListener('click', backspace);
-      r5.appendChild(bksp);
+    function selectNetwork(ssid, isCurrent) {
+      selectedSsid = ssid;
+      const valEl = document.getElementById('ssid-val');
+      valEl.textContent = ssid;
+      valEl.classList.remove('placeholder');
+      document.getElementById('ssid-display').classList.add('has-selection');
+      document.getElementById('btn-connect').disabled = false;
+      setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), '');
+      // Focus the password field — triggers native keyboard
+      document.getElementById('password').focus();
     }
-
-    function updateShiftDisplay() {
-      // Faster than full rebuild — just update letter key labels and shift button
-      document.querySelectorAll('#row2 .kb-key, #row3 .kb-key, #row4 .kb-key').forEach(btn => {
-        const t = btn.textContent;
-        if (t.length === 1 && t.match(/[a-z]/i)) {
-          btn.textContent = shifted ? t.toUpperCase() : t.toLowerCase();
-        }
-      });
-      const shiftBtn = document.querySelector('#row5 .kb-key.wide:not(.toggled)');
-      if (shiftBtn && shiftBtn.textContent === 'SHIFT') {
-        shiftBtn.className = 'kb-key wide' + (shifted ? ' action' : '');
-      }
-    }
-
-    function typeKey(k) {
-      document.getElementById(activeField).value += k;
-      updateDisplay(activeField);
-      if (shifted && !symbols) { shifted = false; updateShiftDisplay(); }
-    }
-
-    function backspace() {
-      const el = document.getElementById(activeField);
-      el.value = el.value.slice(0, -1);
-      updateDisplay(activeField);
-    }
-
-    function toggleShift() {
-      shifted = !shifted;
-      if (symbols) return;
-      updateShiftDisplay();
-    }
-
-    function toggleSymbols() { symbols = !symbols; shifted = false; buildKeyboard(); }
 
     function setStatus(msg, type) {
       const el = document.getElementById('status');
@@ -402,15 +274,16 @@
     }
 
     function connect() {
-      const ssid = document.getElementById('ssid').value.trim();
+      if (!selectedSsid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
       const password = document.getElementById('password').value;
-      if (!ssid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
+      // Dismiss keyboard before connecting
+      document.getElementById('password').blur();
       setConnecting(true);
-      setStatus('CONNECTING TO ' + ssid.toUpperCase() + '...', '');
+      setStatus('CONNECTING TO ' + selectedSsid.toUpperCase() + '...', '');
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssid, password })
+        body: JSON.stringify({ ssid: selectedSsid, password })
       })
       .then(r => r.json())
       .then(data => {
@@ -423,7 +296,7 @@
         }
       })
       .catch(() => {
-        // Fetch failing likely means we switched networks successfully
+        // Fetch failing likely means network switched — treat as success
         setStatus('CONNECTED — RETURNING TO HOME', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
       });
@@ -434,12 +307,13 @@
       container.innerHTML = '<div class="scan-msg">SCANNING...</div>';
       document.getElementById('btn-scan').disabled = true;
 
-      // Also fetch current network for display
+      let currentSsid = '';
+
       fetch('/api/wifi/current').then(r => r.json()).then(d => {
-        const cur = d.ssid || '';
-        if (cur) {
+        currentSsid = (d.ssid || '').trim();
+        if (currentSsid) {
           const el = document.getElementById('top-current');
-          el.textContent = 'CONNECTED: ' + cur.toUpperCase();
+          el.textContent = 'CONNECTED: ' + currentSsid.toUpperCase();
           el.style.display = '';
         }
       }).catch(() => {});
@@ -448,70 +322,45 @@
         document.getElementById('btn-scan').disabled = false;
         container.innerHTML = '';
         if (!data.networks || !data.networks.length) {
-          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND — TAP SCAN</div>';
+          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND</div>';
           return;
         }
-        // Get current SSID for highlight
-        fetch('/api/wifi/current').then(r => r.json()).then(d => {
-          const cur = (d.ssid || '').trim();
-          data.networks.forEach(ssid => {
-            const div = document.createElement('div');
-            const isCurrent = ssid === cur;
-            div.className = 'network' + (isCurrent ? ' current-net' : '');
-            // Safe: use textContent for SSID, not innerHTML
-            const sigEl = document.createElement('span');
-            sigEl.className = 'network-signal';
-            sigEl.textContent = '|||';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'network-name';
-            nameEl.textContent = ssid;
-            const lockEl = document.createElement('span');
-            lockEl.className = 'network-lock';
-            lockEl.textContent = isCurrent ? '[OK]' : '[+]';
-            div.appendChild(sigEl);
-            div.appendChild(nameEl);
-            div.appendChild(lockEl);
-            div.addEventListener('click', () => {
-              document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
-              div.classList.add('selected');
-              document.getElementById('ssid').value = ssid;
-              updateDisplay('ssid');
-              setActive('password');
-              setStatus('SELECTED: ' + ssid.toUpperCase(), '');
-            });
-            container.appendChild(div);
+        data.networks.forEach(ssid => {
+          const isCurrent = ssid === currentSsid;
+          const div = document.createElement('div');
+          div.className = 'network' + (isCurrent ? ' current-net' : '');
+
+          const sig = document.createElement('span');
+          sig.className = 'network-signal';
+          sig.textContent = '|||';
+
+          const name = document.createElement('span');
+          name.className = 'network-name';
+          name.textContent = ssid;
+
+          div.appendChild(sig);
+          div.appendChild(name);
+
+          if (isCurrent) {
+            const badge = document.createElement('span');
+            badge.className = 'network-badge';
+            badge.textContent = 'CONNECTED';
+            div.appendChild(badge);
+          }
+
+          div.addEventListener('click', () => {
+            document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+            div.classList.add('selected');
+            selectNetwork(ssid, isCurrent);
           });
-        }).catch(() => {
-          // Render without current highlight if /current fails
-          data.networks.forEach(ssid => {
-            const div = document.createElement('div');
-            div.className = 'network';
-            const sigEl = document.createElement('span');
-            sigEl.className = 'network-signal'; sigEl.textContent = '|||';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'network-name'; nameEl.textContent = ssid;
-            const lockEl = document.createElement('span');
-            lockEl.className = 'network-lock'; lockEl.textContent = '[+]';
-            div.appendChild(sigEl); div.appendChild(nameEl); div.appendChild(lockEl);
-            div.addEventListener('click', () => {
-              document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
-              div.classList.add('selected');
-              document.getElementById('ssid').value = ssid;
-              updateDisplay('ssid');
-              setActive('password');
-              setStatus('SELECTED: ' + ssid.toUpperCase(), '');
-            });
-            container.appendChild(div);
-          });
+          container.appendChild(div);
         });
       }).catch(() => {
         document.getElementById('btn-scan').disabled = false;
-        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN TO RETRY</div>';
+        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN</div>';
       });
     }
 
-    setActive('password');
-    buildKeyboard();
     scanNetworks();
   </script>
 </body>
