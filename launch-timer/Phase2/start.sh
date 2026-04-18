@@ -13,11 +13,21 @@ fi
 APP_URL="http://localhost:5001/"
 BOOT_URL="file://$APP_DIR/static/boot.html"
 
-CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
-  --disable-features=ChromeWhatsNew --no-default-browser-check \
-  --disable-background-networking --disable-session-crashed-bubble \
-  --disable-gpu --enable-virtual-keyboard --window-size=800,480 \
-  --disable-notifications --disable-popup-blocking"
+# Detect Wayland vs X11
+if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+  CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+    --disable-features=ChromeWhatsNew --no-default-browser-check \
+    --disable-background-networking --disable-session-crashed-bubble \
+    --enable-virtual-keyboard --window-size=800,480 \
+    --disable-notifications --disable-popup-blocking \
+    --ozone-platform=wayland --no-first-run"
+else
+  CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+    --disable-features=ChromeWhatsNew --no-default-browser-check \
+    --disable-background-networking --disable-session-crashed-bubble \
+    --disable-gpu --enable-virtual-keyboard --window-size=800,480 \
+    --disable-notifications --disable-popup-blocking --no-first-run"
+fi
 
 # ── Ensure DISPLAY is set ────────────────────────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
@@ -47,7 +57,7 @@ for i in $(seq 1 20); do
 done
 
 # ── Launch Chromium directly to app (server confirmed up) ────────────────────
-DISPLAY=:0 "$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
+"$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
 CHROMIUM_PID=$!
 
 # ── Supervisor loop — restart server if it crashes ───────────────────────────
@@ -66,7 +76,7 @@ while true; do
             nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
             SERVER_PID=$!
             sleep 5
-            DISPLAY=:0 xdotool key ctrl+shift+r 2>/dev/null
+            xdotool key ctrl+shift+r 2>/dev/null || true
         fi
     else
         # Update may have restarted the server — re-acquire PID so supervisor stays accurate
@@ -78,7 +88,7 @@ while true; do
 
     # If Chromium died too, relaunch it
     if ! kill -0 $CHROMIUM_PID 2>/dev/null; then
-        DISPLAY=:0 "$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
+        "$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
         CHROMIUM_PID=$!
     fi
 done
