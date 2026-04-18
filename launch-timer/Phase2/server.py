@@ -858,7 +858,7 @@ def get_version():
 @app.route('/api/reboot', methods=['POST'])
 def reboot():
     threading.Thread(
-        target=lambda: (time.sleep(1), subprocess.Popen(['sudo', 'shutdown', '-r', 'now'])),
+        target=lambda: (time.sleep(1), subprocess.Popen(['sudo', '/sbin/reboot'])),
         daemon=True).start()
     return jsonify({'ok': True})
 
