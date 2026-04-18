@@ -96,7 +96,12 @@ _WMO_CONDITION = {
     95:'thunderstorm', 96:'thunderstorm', 99:'thunderstorm',
 }
 
-VERSION = 'v2.0.0'
+try:
+    VERSION = subprocess.check_output(
+        ['git', '-C', BASE_DIR, 'rev-parse', '--short', 'HEAD'],
+        text=True, stderr=subprocess.DEVNULL).strip()
+except Exception:
+    VERSION = 'v2.0.0'
 
 _weather_cache = {'data': None, 'fetched': 0}
 WEATHER_TTL = 900  # 15 min
@@ -844,6 +849,10 @@ def notify_push():
         _notify_write(data['title'], data.get('msg', ''))
     return jsonify({'ok': True})
 
+@app.route('/api/version')
+def get_version():
+    return jsonify({'version': VERSION})
+
 # ── Reboot ────────────────────────────────────────────────────────────────────
 
 @app.route('/api/reboot', methods=['POST'])
@@ -880,7 +889,7 @@ def wifi_scan():
     try:
         subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
         time.sleep(1)
-        result   = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True)
+        result   = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True, timeout=15)
         networks = []
         for line in result.split('\n'):
             if 'ESSID:' in line:

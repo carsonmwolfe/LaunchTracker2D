@@ -97,7 +97,7 @@ echo "$LOG_PREFIX Chromium cache cleared"
 # Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null
-sudo fuser -k 5001/tcp 2>/dev/null
+fuser -k 5001/tcp 2>/dev/null || true
 sleep 2
 cd "$REPO_DIR/launch-timer/Phase2" || exit 1
 nohup python3 server.py >> /home/pi/server.log 2>&1 &
@@ -115,9 +115,8 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Reload Chromium on-screen only once server is confirmed up
-DISPLAY=:0 xdotool key ctrl+shift+r 2>/dev/null
-echo "$LOG_PREFIX Chromium reloaded"
+# Client reloads itself via /api/version polling — no xdotool needed
+echo "$LOG_PREFIX Server updated — client will reload on next version poll"
 
 # ── Log the update ─────────────────────────────────────────────────────────────
 

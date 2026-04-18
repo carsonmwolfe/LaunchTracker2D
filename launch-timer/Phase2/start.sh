@@ -71,7 +71,7 @@ while true; do
             nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
             SERVER_PID=$!
             sleep 5
-            xdotool key ctrl+shift+r 2>/dev/null || true
+            # Client detects server restart via watchdog and reloads itself
         fi
     else
         # Update may have restarted the server — re-acquire PID so supervisor stays accurate

@@ -2459,9 +2459,20 @@ function restoreState() {
     } catch(e) {}
     _wdFails++;
     if (_wdFails >= 3) {
-      window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
+      window.location = '/static/boot.html';
     }
   }, 10000);
+  // Version watchdog — reload page when server updates (new git commit)
+  let _appVersion = null;
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/version', { cache: 'no-store' });
+      if (!r.ok) return;
+      const { version } = await r.json();
+      if (_appVersion === null) { _appVersion = version; return; }
+      if (version !== _appVersion) window.location.reload(true);
+    } catch(e) {}
+  }, 30000);
   requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
 })();
