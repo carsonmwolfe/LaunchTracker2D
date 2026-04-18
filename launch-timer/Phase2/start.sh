@@ -25,8 +25,10 @@ CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
 export DISPLAY=${DISPLAY:-:0}
 
 # ── Kill any stale Chromium + singleton lock ──────────────────────────────────
-pkill -f chromium 2>/dev/null; sleep 1
-rm -f /home/pi/.config/chromium/SingletonLock 2>/dev/null
+pkill -f chromium 2>/dev/null; sleep 2
+rm -f /home/pi/.config/chromium/SingletonLock \
+      /home/pi/.config/chromium/SingletonCookie \
+      /home/pi/.config/chromium/SingletonSocket 2>/dev/null
 
 # ── Clear screen to dark ──────────────────────────────────────────────────────
 xsetroot -solid '#060a10' 2>/dev/null || true
