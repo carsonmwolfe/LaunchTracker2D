@@ -19,8 +19,15 @@ CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
   --disable-gpu --enable-virtual-keyboard --window-size=800,480 \
   --disable-notifications --disable-popup-blocking"
 
+# ── Ensure DISPLAY is set ────────────────────────────────────────────────────
+export DISPLAY=${DISPLAY:-:0}
+
+# ── Kill any stale Chromium + singleton lock ──────────────────────────────────
+pkill -f chromium 2>/dev/null; sleep 1
+rm -f /home/pi/.config/chromium/SingletonLock 2>/dev/null
+
 # ── Clear screen to dark ──────────────────────────────────────────────────────
-xsetroot -solid '#060a10'
+xsetroot -solid '#060a10' 2>/dev/null || true
 
 # ── Kill anything already on port 5001 ───────────────────────────────────────
 sudo fuser -k 5001/tcp 2>/dev/null
