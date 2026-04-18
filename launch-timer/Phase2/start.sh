@@ -13,21 +13,13 @@ fi
 APP_URL="http://localhost:5001/"
 BOOT_URL="file://$APP_DIR/static/boot.html"
 
-# Detect Wayland vs X11
-if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-  CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
-    --disable-features=ChromeWhatsNew --no-default-browser-check \
-    --disable-background-networking --disable-session-crashed-bubble \
-    --enable-virtual-keyboard --window-size=800,480 \
-    --disable-notifications --disable-popup-blocking \
-    --ozone-platform=wayland --no-first-run"
-else
-  CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
-    --disable-features=ChromeWhatsNew --no-default-browser-check \
-    --disable-background-networking --disable-session-crashed-bubble \
-    --disable-gpu --enable-virtual-keyboard --window-size=800,480 \
-    --disable-notifications --disable-popup-blocking --no-first-run"
-fi
+CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+  --disable-features=ChromeWhatsNew --no-default-browser-check \
+  --disable-background-networking --disable-session-crashed-bubble \
+  --enable-virtual-keyboard --window-size=800,480 \
+  --disable-notifications --disable-popup-blocking \
+  --no-first-run --use-angle=gles \
+  --ozone-platform=wayland"
 
 # ── Ensure DISPLAY is set ────────────────────────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
