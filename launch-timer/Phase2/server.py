@@ -514,7 +514,7 @@ def _execute_command(cmd):
             subprocess.Popen(['bash', '/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh'])
         elif cmd == 'reboot':
             _notify_write('REBOOTING', 'System reboot in progress...')
-            subprocess.Popen(['bash', '-c', 'sleep 2 && sudo shutdown -r now'])
+            subprocess.Popen(['bash', '-c', 'sleep 2 && sudo /sbin/reboot'])
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 

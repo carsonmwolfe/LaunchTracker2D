@@ -19,7 +19,8 @@ CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
   --enable-virtual-keyboard --window-size=800,480 \
   --disable-notifications --disable-popup-blocking \
   --no-first-run --use-angle=gles \
-  --ozone-platform=wayland"
+  --ozone-platform=wayland \
+  --password-store=basic"
 
 # ── Ensure DISPLAY is set ────────────────────────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
