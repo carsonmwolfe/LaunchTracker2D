@@ -79,12 +79,58 @@ log "Timezone set to $TZ_SET"
 
 # ── 4. Autostart ──────────────────────────────────────────────────────────────
 log "Setting up autostart..."
-AUTOSTART_DIR="/home/pi/.config/lxsession/LXDE-pi"
-mkdir -p "$AUTOSTART_DIR"
 
-cat > "$AUTOSTART_DIR/autostart" << AUTOEOF
-@bash $SERVER_DIR/start.sh
-AUTOEOF
+# Detect compositor: newer Pi OS (Bookworm/Trixie) uses labwc (Wayland),
+# older uses lxsession (LXDE). Write to all locations to cover both.
+
+# labwc (Wayland — newer Pi OS)
+if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
+    mkdir -p /home/pi/.config/labwc
+    echo "bash $SERVER_DIR/start.sh &" > /home/pi/.config/labwc/autostart
+    log "labwc autostart configured"
+fi
+
+# lxsession (X11 — older Pi OS) — write to both session names
+for SESSION in LXDE-pi rpd-x; do
+    mkdir -p "/home/pi/.config/lxsession/$SESSION"
+    echo "@bash $SERVER_DIR/start.sh" > "/home/pi/.config/lxsession/$SESSION/autostart"
+done
+log "lxsession autostart configured (LXDE-pi + rpd-x)"
+
+# Desktop wallpaper — dark background matching app aesthetic
+mkdir -p /home/pi/.config/pcmanfm/LXDE-pi
+cat > /home/pi/.config/pcmanfm/LXDE-pi/desktop-items-0.conf << PCEOF
+[*]
+wallpaper_mode=color
+wallpaper_common=1
+desktop_bg=#060a10
+desktop_fg=#060a10
+desktop_shadow=#060a10
+show_documents=0
+show_trash=0
+show_mounts=0
+PCEOF
+log "Wallpaper set to dark (#060a10)"
+
+# Hide taskbar — set lxpanel to auto-hide with 0px size when hidden
+mkdir -p /home/pi/.config/lxpanel/LXDE-pi/panels
+if [ ! -f /home/pi/.config/lxpanel/LXDE-pi/panels/panel ]; then
+    cat > /home/pi/.config/lxpanel/LXDE-pi/panels/panel << PEOF
+Global {
+  edge=bottom
+  autohide=1
+  heightwhenhidden=0
+  height=28
+}
+PEOF
+fi
+log "Taskbar set to auto-hide"
+
+# Plymouth boot splash — use the dark 'pix' theme if available
+if command -v plymouth-set-default-theme &>/dev/null; then
+    sudo plymouth-set-default-theme pix 2>/dev/null || true
+    log "Plymouth splash set"
+fi
 
 log "Autostart configured"
 
