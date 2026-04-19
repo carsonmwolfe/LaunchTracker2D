@@ -1132,15 +1132,13 @@ function drawRTLSBanner() {
   ctx.save();
   ctx.globalAlpha = 0.82 * breath;
   ctx.fillStyle = '#050e14';
-  roundRectPath(8, BAN_Y, W - 16, BAN_H, 4);
-  ctx.fill();
+  ctx.beginPath(); roundRectPath(8, BAN_Y, W - 16, BAN_H, 4); ctx.fill();
 
   // Cyan border
   ctx.globalAlpha = breath;
   ctx.strokeStyle = landed ? '#44ff88' : '#00d4ff';
   ctx.lineWidth = 1.2;
-  roundRectPath(8, BAN_Y, W - 16, BAN_H, 4);
-  ctx.stroke();
+  ctx.beginPath(); roundRectPath(8, BAN_Y, W - 16, BAN_H, 4); ctx.stroke();
 
   // Text
   ctx.globalAlpha = breath;
