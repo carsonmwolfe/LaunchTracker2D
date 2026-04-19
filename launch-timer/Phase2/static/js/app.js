@@ -1442,61 +1442,73 @@ function drawCountdown() {
   }
 
   if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
+    const _hasCooldown = !!state.postLaunchCooldown;
+    const _boxH = _hasCooldown ? BH + 65 : BH + 30;
+    const _cx   = BX + TOTAL_W / 2;
+
+    // Extend background for cooldown content
+    if (_hasCooldown) {
+      ctx.fillStyle = 'rgba(20,20,28,0.88)';
+      ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, _boxH, 5); ctx.fill();
+    }
+
     // Glowing red border
     ctx.shadowColor = '#ff3300'; ctx.shadowBlur = 12;
     ctx.strokeStyle = 'rgba(255,68,34,0.7)'; ctx.lineWidth = 2;
-    ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
+    ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, _boxH, 5); ctx.stroke();
     ctx.shadowBlur = 0;
 
     // "LIFTOFF" header label
     ctx.fillStyle = 'rgba(255,100,50,0.5)';
     ctx.font = 'bold 6px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.fillText('— LIFTOFF —', BX+TOTAL_W/2, BY+8);
+    ctx.fillText('— LIFTOFF —', _cx, BY + 8);
 
     // Big LAUNCHED text
     ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 18;
     ctx.fillStyle = '#ff4422';
     ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.fillText('LAUNCHED', BX+TOTAL_W/2, BY+36);
+    ctx.fillText('LAUNCHED', _cx, BY + 36);
     ctx.shadowBlur = 0;
 
-    // Mission name
+    // Mission name — clipped to one line below LAUNCHED
     const _lFull  = state.launchedMissionName || '';
     const _lPipe  = _lFull.indexOf(' | ');
     const _lShort = (_lPipe >= 0 ? _lFull.slice(_lPipe + 3) : _lFull).toUpperCase();
-    ctx.fillStyle = 'rgba(255,200,150,0.8)';
-    ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.save();
-    ctx.beginPath(); ctx.rect(BX-16, BY, TOTAL_W+32, 20); ctx.clip();
-    ctx.fillText(_lShort, BX+TOTAL_W/2, BY+50);
-    ctx.restore();
+    if (_lShort) {
+      ctx.fillStyle = 'rgba(255,200,150,0.85)';
+      ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
+      ctx.save();
+      ctx.beginPath(); ctx.rect(BX-16, BY+44, TOTAL_W+32, 14); ctx.clip();
+      ctx.fillText(_lShort, _cx, BY + 54);
+      ctx.restore();
+    }
 
-    if (state.postLaunchCooldown) {
+    if (_hasCooldown) {
       const remSec = Math.max(0, Math.floor((state.cooldownEndsAt - Date.now()) / 1000));
       const remM = Math.floor(remSec / 60), remS = remSec % 60;
 
       // Divider
-      ctx.strokeStyle = 'rgba(255,68,34,0.25)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(BX, BY+56); ctx.lineTo(BX+TOTAL_W, BY+56); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,68,34,0.3)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(BX, BY+64); ctx.lineTo(BX+TOTAL_W, BY+64); ctx.stroke();
 
-      // Next mission (if known)
+      // Next mission
       if (state.nextMissionName) {
         const _nFull  = state.nextMissionName;
         const _nPipe  = _nFull.indexOf(' | ');
         const _nShort = (_nPipe >= 0 ? _nFull.slice(_nPipe + 3) : _nFull).toUpperCase();
-        ctx.fillStyle = 'rgba(0,232,122,0.7)';
-        ctx.font = '5px "Press Start 2P"'; ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,232,122,0.85)';
+        ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
         ctx.save();
-        ctx.beginPath(); ctx.rect(BX-16, BY+56, TOTAL_W+32, 14); ctx.clip();
-        ctx.fillText('NEXT  ›  ' + _nShort, BX+TOTAL_W/2, BY+66);
+        ctx.beginPath(); ctx.rect(BX-16, BY+66, TOTAL_W+32, 16); ctx.clip();
+        ctx.fillText('NEXT  ›  ' + _nShort, _cx, BY + 77);
         ctx.restore();
       }
 
-      // Countdown
+      // Stand-up countdown
       ctx.shadowColor = '#ffd93d'; ctx.shadowBlur = 6;
       ctx.fillStyle = '#ffd93d';
-      ctx.font = '7px "Press Start 2P"'; ctx.textAlign = 'center';
-      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), BX+TOTAL_W/2, BY+82);
+      ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center';
+      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), _cx, BY + 97);
       ctx.shadowBlur = 0;
     }
     return;
