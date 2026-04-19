@@ -86,6 +86,22 @@ bash $SERVER_DIR/start.sh &
 LABWCEOF
     log "labwc autostart configured (start.sh + panel kill)"
 
+    # Wallpaper — default profile is what pcmanfm actually reads on Trixie
+    mkdir -p /home/pi/.config/pcmanfm/default
+    cat > /home/pi/.config/pcmanfm/default/desktop-items-0.conf << PCEOF
+[*]
+wallpaper_mode=4
+wallpaper=$SERVER_DIR/static/assets/BootLOGO.png
+wallpaper_common=1
+desktop_bg=#060a10
+desktop_fg=#060a10
+desktop_shadow=#060a10
+show_documents=0
+show_trash=0
+show_mounts=0
+show_desktop=0
+PCEOF
+
     # Wallpaper for labwc/rpd-labwc session (pcmanfm fallback)
     for SESSION in rpd-labwc LXDE-pi; do
         mkdir -p "/home/pi/.config/pcmanfm/$SESSION"
