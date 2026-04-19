@@ -94,6 +94,11 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null
 echo "$LOG_PREFIX Chromium cache cleared"
 
+# Rotate server log — keep last 500 lines to prevent SD card fill
+if [ -f /home/pi/server.log ]; then
+    tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
+fi
+
 # Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null

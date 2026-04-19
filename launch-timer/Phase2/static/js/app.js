@@ -2271,17 +2271,6 @@ function startPolling() {
     }
   }, 5 * 60 * 1000);
 
-  // Canvas snapshot for launches page (every 30s — Pi performance)
-  setInterval(() => {
-    try {
-      fetch('/api/snapshot', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ data: canvas.toDataURL('image/jpeg', 0.6) })
-      });
-    } catch(e) {}
-  }, 30 * 1000);
-
   // Update HTML info bar every second
   setInterval(updateInfoBar, 1000);
 }
