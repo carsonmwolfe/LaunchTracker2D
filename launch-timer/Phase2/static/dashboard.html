@@ -136,7 +136,9 @@
     .dot-warn    { background: #ffd93d; }
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-    .unit-id { font-size: 10px; color: #fff; width: 70px; flex-shrink: 0; }
+    .unit-id { font-size: 10px; color: #fff; width: 110px; flex-shrink: 0; line-height: 1.5; }
+    .unit-nick { font-size: 10px; color: #fff; }
+    .unit-raw-id { font-size: 6px; color: rgba(255,255,255,0.3); margin-top: 1px; }
     .unit-loc { flex: 2; font-size: 7px; color: rgba(255,255,255,0.4); }
     .unit-wifi { flex: 1.5; font-size: 7px; color: rgba(255,255,255,0.3); }
     .unit-launch { flex: 2; font-size: 7px; color: rgba(255,211,61,0.7); text-align: right; padding-right: 10px; }
@@ -346,6 +348,21 @@
       document.getElementById('alert-count').textContent    = offline + outdated;
     }
 
+    // ── Nicknames (stored in localStorage) ───────────────────────────────────
+    function getNick(id) { return localStorage.getItem('nick_' + id) || ''; }
+    function setNick(id, nick) {
+      nick = nick.trim();
+      if (nick) localStorage.setItem('nick_' + id, nick);
+      else localStorage.removeItem('nick_' + id);
+      renderUnits();
+    }
+    function promptNick(id, event) {
+      event.stopPropagation();
+      const current = getNick(id);
+      const nick = prompt(`Nickname for ${id}:\n(leave blank to clear)`, current);
+      if (nick !== null) setNick(id, nick);
+    }
+
     // ── Render units ──────────────────────────────────────────────────────────
     function renderUnits() {
       const search = document.getElementById('search-input').value.toLowerCase();
@@ -353,7 +370,7 @@
         if (currentFilter === 'online'   && u.status !== 'online') return false;
         if (currentFilter === 'offline'  && u.status !== 'offline') return false;
         if (currentFilter === 'outdated' && u.version === 'v1.0.0') return false;
-        if (search && !u.id.toLowerCase().includes(search) && !u.location.toLowerCase().includes(search)) return false;
+        if (search && !u.id.toLowerCase().includes(search) && !u.location.toLowerCase().includes(search) && !getNick(u.id).toLowerCase().includes(search)) return false;
         return true;
       });
 
@@ -364,9 +381,14 @@
         const verCls    = u.version === 'v1.0.0' ? 'ver-ok' : 'ver-old';
         const seenStr   = isOnline ? Math.round((Date.now()-u.lastSeen)/1000)+'s ago' : 'offline';
 
+        const nick = getNick(u.id);
+        const nameHtml = nick
+          ? `<div class="unit-nick">${nick}</div><div class="unit-raw-id">${u.id}</div>`
+          : `<div class="unit-nick">${u.id}</div>`;
+
         let html = `<div class="unit-row ${isExpanded?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${u.id}')">
           <div class="status-dot ${dotCls}"></div>
-          <div class="unit-id">${u.id}</div>
+          <div class="unit-id">${nameHtml}</div>
           <div class="unit-loc">${u.location}</div>
           <div class="unit-wifi">${u.wifi}</div>
           <div class="unit-launch">${isOnline?(u.launch||'—'):'—'}</div>
@@ -377,10 +399,16 @@
         if (isExpanded) {
           html += `<div class="unit-detail">
             <div class="detail-grid">
-              <div class="detail-field"><div class="detail-label">MAC ADDRESS</div><div class="detail-val">${u.mac}</div></div>
+              <div class="detail-field">
+                <div class="detail-label">NICKNAME</div>
+                <div class="detail-val" style="display:flex;align-items:center;gap:6px;">
+                  <span style="color:${nick?'#fff':'rgba(255,255,255,0.2)'};">${nick||'—'}</span>
+                  <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);font-size:5px;padding:2px 6px;" onclick="promptNick('${u.id}',event)">${nick?'EDIT':'SET'}</button>
+                </div>
+              </div>
+              <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${u.id}</div></div>
               <div class="detail-field"><div class="detail-label">IP ADDRESS</div><div class="detail-val">${u.ip}</div></div>
               <div class="detail-field"><div class="detail-label">UPTIME</div><div class="detail-val green">${u.uptime}</div></div>
-              <div class="detail-field"><div class="detail-label">BRIGHTNESS</div><div class="detail-val">${u.brightness}%</div></div>
               <div class="detail-field"><div class="detail-label">CURRENT LAUNCH</div><div class="detail-val yellow">${u.launch||'—'}</div></div>
             </div>
             <div style="display:flex;gap:12px;align-items:flex-start;">
