@@ -2611,7 +2611,7 @@ window.triggerTestRTLS = () => triggerTestLaunch(true);
 window.testRTLS = () => {
   console.log(`[${ts()}] RTLS direct test`);
   state.rtlsActive    = true;
-  state.rtlsFrame     = 0;
+  state.rtlsFrame     = 80;   // skip 60-frame pre-delay so booster + banner appear immediately
   state.rtlsBoosterY  = -220;
   state._lastLaunchVehicle = (currentLaunch() || {}).vehicle || 'Falcon 9';
 };
