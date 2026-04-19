@@ -83,6 +83,7 @@ if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
     cat > /home/pi/.config/labwc/autostart << LABWCEOF
 swaybg -c '#060a10' &
 bash $SERVER_DIR/start.sh &
+(sleep 5 && DESKTOP_SESSION=rpd-labwc pcmanfm --desktop --reconfigure) &
 LABWCEOF
     log "labwc autostart configured (swaybg wallpaper + start.sh)"
 
@@ -90,7 +91,7 @@ LABWCEOF
     mkdir -p /home/pi/.config
     cat > /home/pi/.config/wf-panel-pi.ini << WPEOF
 [panel]
-autohide=true
+autohide=1
 WPEOF
     log "wf-panel-pi set to autohide"
 
@@ -156,7 +157,17 @@ CRON_LINE="0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"
 ( crontab -l 2>/dev/null | grep -v "update.sh"; echo "$CRON_LINE" ) | crontab -
 log "Cron installed — runs every hour"
 
-# ── 6. Passwordless sudo for reboot ───────────────────────────────────────────
+# ── 6. Remove boot splash ─────────────────────────────────────────────────────
+log "Removing boot splash..."
+if [ -f /boot/firmware/cmdline.txt ]; then
+    sudo sed -i 's/ splash//g; s/splash //g' /boot/firmware/cmdline.txt
+    log "Splash removed from /boot/firmware/cmdline.txt"
+elif [ -f /boot/cmdline.txt ]; then
+    sudo sed -i 's/ splash//g; s/splash //g' /boot/cmdline.txt
+    log "Splash removed from /boot/cmdline.txt"
+fi
+
+# ── 7. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."
 printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 log "Done"
