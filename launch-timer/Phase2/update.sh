@@ -120,8 +120,10 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Client reloads itself via /api/version polling — no xdotool needed
-echo "$LOG_PREFIX Server updated — client will reload on next version poll"
+# Kill Chromium so start.sh supervisor relaunches it fresh with new JS
+# (version watchdog is unreliable on Wayland — hard kill is guaranteed)
+pkill -f chromium 2>/dev/null && echo "$LOG_PREFIX Chromium killed — supervisor will relaunch"
+echo "$LOG_PREFIX Server updated — Chromium will relaunch automatically"
 
 # ── Log the update ─────────────────────────────────────────────────────────────
 
