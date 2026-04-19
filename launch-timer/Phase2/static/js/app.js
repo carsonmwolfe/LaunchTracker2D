@@ -2510,6 +2510,23 @@ function startPolling() {
     }
   }, 5 * 60 * 1000);
 
+  // Poll server for push notifications (update complete, reboots, etc.)
+  let _lastNotifyMsg = null;
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/notify', { cache: 'no-store' });
+      if (!r.ok) return;
+      const msgs = await r.json();
+      if (!msgs.length) return;
+      const m = msgs[0];
+      const key = m.title + '|' + m.msg;
+      if (key === _lastNotifyMsg) return; // don't re-show same message
+      _lastNotifyMsg = key;
+      const text = m.msg ? `${m.title}: ${m.msg}` : m.title;
+      showNotification(text);
+    } catch(e) {}
+  }, 5000);
+
   // Update HTML info bar every second
   setInterval(updateInfoBar, 1000);
 }
