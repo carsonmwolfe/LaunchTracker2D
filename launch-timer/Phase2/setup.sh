@@ -131,6 +131,9 @@ PCEOF
 done
 log "Wallpaper configured"
 
+# Hide desktop icons (repo folder etc)
+echo "LaunchTracker2D" > /home/pi/Desktop/.hidden
+
 # ── 6. Hide taskbar (lxsession only — labwc taskbar killed via autostart) ──────
 mkdir -p /home/pi/.config/lxpanel/LXDE-pi/panels
 if [ ! -f /home/pi/.config/lxpanel/LXDE-pi/panels/panel ]; then
