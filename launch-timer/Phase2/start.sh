@@ -21,10 +21,12 @@ CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
   --no-first-run --use-angle=gles \
   --ozone-platform=wayland \
   --password-store=basic \
-  --disable-renderer-accessibility"
+  --disable-renderer-accessibility \
+  --enable-wayland-ime"
 
-# ── Ensure DISPLAY is set ────────────────────────────────────────────────────
+# ── Ensure DISPLAY / WAYLAND_DISPLAY are set ─────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
+export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
 
 # ── Kill any stale Chromium + singleton lock ──────────────────────────────────
 pkill -f chromium 2>/dev/null; sleep 2
