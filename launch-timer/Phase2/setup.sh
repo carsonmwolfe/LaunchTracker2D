@@ -8,9 +8,11 @@
 #   2. Clones the repo (or updates if already present)
 #   3. Prompts for timezone
 #   4. Sets up autostart (server + chromium kiosk)
-#   5. Sets up hourly auto-updater cron
-#   6. Configures passwordless sudo for reboot
-#   7. Installs unclutter (hides cursor)
+#   5. Sets up wallpaper and hides taskbar
+#   6. Removes boot splash
+#   7. Sets up hourly auto-updater cron
+#   8. Configures passwordless sudo for reboot
+#   9. Installs unclutter (hides cursor)
 
 set -e
 
@@ -27,11 +29,10 @@ log "=== RangeTrack OS Setup ==="
 # ── 1. Dependencies ────────────────────────────────────────────────────────────
 log "Installing dependencies..."
 sudo apt-get update -qq
-sudo apt-get install -y python3 python3-pip chromium xdotool git psmisc swaybg -qq
-# unclutter not always available, skip if missing
+sudo apt-get install -y python3 python3-pip chromium xdotool git psmisc -qq
 sudo apt-get install -y unclutter -qq 2>/dev/null || true
 pip3 install flask requests --quiet --break-system-packages 2>/dev/null || pip3 install flask requests --quiet
-log "Dependencies installed (chromium pkg: $CHROMIUM_PKG)"
+log "Dependencies installed"
 
 # ── 2. Clone or update repo ────────────────────────────────────────────────────
 if [ -d "$REPO_DIR/.git" ]; then
@@ -46,6 +47,7 @@ else
 fi
 
 chmod +x "$SERVER_DIR/update.sh"
+chmod +x "$SERVER_DIR/start.sh"
 log "Repo ready at $REPO_DIR"
 
 # ── 3. Timezone ────────────────────────────────────────────────────────────────
@@ -74,9 +76,6 @@ log "Timezone set to $TZ_SET"
 # ── 4. Autostart ──────────────────────────────────────────────────────────────
 log "Setting up autostart..."
 
-# Detect compositor: newer Pi OS (Bookworm/Trixie) uses labwc (Wayland),
-# older uses lxsession (LXDE). Write to all locations to cover both.
-
 # labwc (Wayland — newer Pi OS Bookworm/Trixie)
 if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
     mkdir -p /home/pi/.config/labwc
@@ -84,11 +83,22 @@ if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
 bash $SERVER_DIR/start.sh &
 (sleep 3 && pkill -f 'lwrespawn.*wf-panel' && pkill -f 'wf-panel-pi') &
 LABWCEOF
-    log "labwc autostart configured (start.sh + panel kill)"
+    log "labwc autostart configured"
+fi
 
-    # Wallpaper — default profile is what pcmanfm actually reads on Trixie
-    mkdir -p /home/pi/.config/pcmanfm/default
-    cat > /home/pi/.config/pcmanfm/default/desktop-items-0.conf << PCEOF
+# lxsession (X11 — older Pi OS)
+for SESSION in LXDE-pi rpd-x; do
+    mkdir -p "/home/pi/.config/lxsession/$SESSION"
+    echo "@bash $SERVER_DIR/start.sh" > "/home/pi/.config/lxsession/$SESSION/autostart"
+done
+log "lxsession autostart configured"
+
+# ── 5. Wallpaper ──────────────────────────────────────────────────────────────
+log "Setting wallpaper..."
+
+# 'default' is the profile pcmanfm reads on Pi OS Trixie (Wayland/labwc)
+mkdir -p /home/pi/.config/pcmanfm/default
+cat > /home/pi/.config/pcmanfm/default/desktop-items-0.conf << PCEOF
 [*]
 wallpaper_mode=4
 wallpaper=$SERVER_DIR/static/assets/BootLOGO.png
@@ -102,12 +112,13 @@ show_mounts=0
 show_desktop=0
 PCEOF
 
-    # Wallpaper for labwc/rpd-labwc session (pcmanfm fallback)
-    for SESSION in rpd-labwc LXDE-pi; do
-        mkdir -p "/home/pi/.config/pcmanfm/$SESSION"
-        cat > "/home/pi/.config/pcmanfm/$SESSION/desktop-items-0.conf" << PCEOF
+# rpd-labwc and LXDE-pi profiles as fallback
+for SESSION in rpd-labwc LXDE-pi; do
+    mkdir -p "/home/pi/.config/pcmanfm/$SESSION"
+    cat > "/home/pi/.config/pcmanfm/$SESSION/desktop-items-0.conf" << PCEOF
 [*]
-wallpaper_mode=color
+wallpaper_mode=4
+wallpaper=$SERVER_DIR/static/assets/BootLOGO.png
 wallpaper_common=1
 desktop_bg=#060a10
 desktop_fg=#060a10
@@ -115,34 +126,12 @@ desktop_shadow=#060a10
 show_documents=0
 show_trash=0
 show_mounts=0
+show_desktop=0
 PCEOF
-    done
-    log "Wallpaper set to #060a10 (labwc sessions)"
-fi
-
-# lxsession (X11 — older Pi OS) — write to both session names
-for SESSION in LXDE-pi rpd-x; do
-    mkdir -p "/home/pi/.config/lxsession/$SESSION"
-    echo "@bash $SERVER_DIR/start.sh" > "/home/pi/.config/lxsession/$SESSION/autostart"
 done
-log "lxsession autostart configured (LXDE-pi + rpd-x)"
+log "Wallpaper configured"
 
-# Desktop wallpaper for lxsession
-mkdir -p /home/pi/.config/pcmanfm/LXDE-pi
-cat > /home/pi/.config/pcmanfm/LXDE-pi/desktop-items-0.conf << PCEOF
-[*]
-wallpaper_mode=color
-wallpaper_common=1
-desktop_bg=#060a10
-desktop_fg=#060a10
-desktop_shadow=#060a10
-show_documents=0
-show_trash=0
-show_mounts=0
-PCEOF
-log "Wallpaper set to dark (#060a10)"
-
-# Hide taskbar for lxsession
+# ── 6. Hide taskbar (lxsession only — labwc taskbar killed via autostart) ──────
 mkdir -p /home/pi/.config/lxpanel/LXDE-pi/panels
 if [ ! -f /home/pi/.config/lxpanel/LXDE-pi/panels/panel ]; then
     cat > /home/pi/.config/lxpanel/LXDE-pi/panels/panel << PEOF
@@ -156,15 +145,7 @@ PEOF
 fi
 log "Taskbar set to auto-hide"
 
-log "Autostart configured"
-
-# ── 5. Hourly updater cron ────────────────────────────────────────────────────
-log "Setting up auto-updater cron..."
-CRON_LINE="0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"
-( crontab -l 2>/dev/null | grep -v "update.sh"; echo "$CRON_LINE" ) | crontab -
-log "Cron installed — runs every hour"
-
-# ── 6. Remove boot splash ─────────────────────────────────────────────────────
+# ── 7. Remove boot splash ──────────────────────────────────────────────────────
 log "Removing boot splash..."
 if [ -f /boot/firmware/cmdline.txt ]; then
     sudo sed -i 's/ splash//g; s/splash //g' /boot/firmware/cmdline.txt
@@ -174,7 +155,13 @@ elif [ -f /boot/cmdline.txt ]; then
     log "Splash removed from /boot/cmdline.txt"
 fi
 
-# ── 7. Passwordless sudo for reboot ───────────────────────────────────────────
+# ── 8. Hourly updater cron ────────────────────────────────────────────────────
+log "Setting up auto-updater cron..."
+CRON_LINE="0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"
+( crontab -l 2>/dev/null | grep -v "update.sh"; echo "$CRON_LINE" ) | crontab -
+log "Cron installed — runs every hour"
+
+# ── 9. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."
 printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 log "Done"
