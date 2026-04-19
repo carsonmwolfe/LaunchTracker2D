@@ -27,13 +27,7 @@ log "=== RangeTrack OS Setup ==="
 # ── 1. Dependencies ────────────────────────────────────────────────────────────
 log "Installing dependencies..."
 sudo apt-get update -qq
-# chromium-browser on older Pi OS, chromium on newer
-if apt-cache show chromium-browser &>/dev/null; then
-    CHROMIUM_PKG="chromium-browser"
-else
-    CHROMIUM_PKG="chromium"
-fi
-sudo apt-get install -y python3 python3-pip $CHROMIUM_PKG xdotool git psmisc -qq
+sudo apt-get install -y python3 python3-pip chromium xdotool git psmisc swaybg -qq
 # unclutter not always available, skip if missing
 sudo apt-get install -y unclutter -qq 2>/dev/null || true
 pip3 install flask requests --quiet --break-system-packages 2>/dev/null || pip3 install flask requests --quiet
@@ -87,12 +81,20 @@ log "Setting up autostart..."
 if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
     mkdir -p /home/pi/.config/labwc
     cat > /home/pi/.config/labwc/autostart << LABWCEOF
+swaybg -c '#060a10' &
 bash $SERVER_DIR/start.sh &
-(sleep 3 && pkill -f 'lwrespawn.*wf-panel' && pkill -f 'wf-panel-pi') &
 LABWCEOF
-    log "labwc autostart configured (start.sh + panel kill)"
+    log "labwc autostart configured (swaybg wallpaper + start.sh)"
 
-    # Wallpaper for labwc/rpd-labwc session
+    # Configure wf-panel-pi to autohide — do NOT remove it, removing breaks the session
+    mkdir -p /home/pi/.config
+    cat > /home/pi/.config/wf-panel-pi.ini << WPEOF
+[panel]
+autohide=true
+WPEOF
+    log "wf-panel-pi set to autohide"
+
+    # Wallpaper for labwc/rpd-labwc session (pcmanfm fallback)
     for SESSION in rpd-labwc LXDE-pi; do
         mkdir -p "/home/pi/.config/pcmanfm/$SESSION"
         cat > "/home/pi/.config/pcmanfm/$SESSION/desktop-items-0.conf" << PCEOF
