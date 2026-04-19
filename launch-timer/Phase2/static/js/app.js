@@ -1119,6 +1119,42 @@ function drawRTLS() {
 
 }
 
+function drawRTLSBanner() {
+  if (!state.rtlsActive || state.rtlsFrame < 60) return;
+  const frame  = state.rtlsFrame - 60;
+  const landed = frame >= 140;
+
+  const breath = 0.7 + 0.3 * Math.sin(Date.now() / 700);
+  const BAN_H  = 22;
+  const BAN_Y  = H - BAN_H - 4;
+
+  // Background bar
+  ctx.save();
+  ctx.globalAlpha = 0.82 * breath;
+  ctx.fillStyle = '#050e14';
+  roundRectPath(8, BAN_Y, W - 16, BAN_H, 4);
+  ctx.fill();
+
+  // Cyan border
+  ctx.globalAlpha = breath;
+  ctx.strokeStyle = landed ? '#44ff88' : '#00d4ff';
+  ctx.lineWidth = 1.2;
+  roundRectPath(8, BAN_Y, W - 16, BAN_H, 4);
+  ctx.stroke();
+
+  // Text
+  ctx.globalAlpha = breath;
+  ctx.fillStyle   = landed ? '#44ff88' : '#00d4ff';
+  ctx.font        = 'bold 11px "Share Tech Mono", monospace';
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  const label = landed
+    ? '★  STAGE 1 BOOSTER — TOUCHDOWN CONFIRMED  ★'
+    : '⬇   STAGE 1 BOOSTER — RETURN TO LAUNCH SITE IN PROGRESS   ⬇';
+  ctx.fillText(label, W / 2, BAN_Y + BAN_H / 2);
+  ctx.restore();
+}
+
 function drawGenericRocket(x, y) {
   // Simple white cylinder rocket
   drawRect(x-8, y-100, 16, 100, '#f0f0f0', '#aaaaaa', 1);
@@ -2459,6 +2495,7 @@ function render(now) {
   updateInfoBar();
   drawCountdown();
   drawMilestoneTimeline();
+  drawRTLSBanner();
   drawGearIcon();
   drawNoSignal();
   if (state.notification) drawNotification();
