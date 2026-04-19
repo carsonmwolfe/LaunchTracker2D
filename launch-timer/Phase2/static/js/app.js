@@ -1119,43 +1119,6 @@ function drawRTLS() {
 
 }
 
-function drawRTLSBanner() {
-  if (!state.rtlsActive || state.rtlsFrame < 60) return;
-  const frame  = state.rtlsFrame - 60;
-  const landed = frame >= 140;
-
-  const breath  = 0.7 + 0.3 * Math.sin(Date.now() / 700);
-  const BAN_H   = 24;
-  const BAN_Y   = H - BAN_H - 5;
-  const color   = landed ? '#44ff88' : '#00d4ff';
-
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any transform/clip state
-
-  // Background
-  ctx.globalAlpha = 0.88;
-  ctx.fillStyle = '#050e14';
-  ctx.fillRect(4, BAN_Y, W - 8, BAN_H);
-
-  // Border
-  ctx.globalAlpha = breath;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(4.75, BAN_Y + 0.75, W - 9.5, BAN_H - 1.5);
-
-  // Text
-  ctx.globalAlpha = breath;
-  ctx.fillStyle = color;
-  ctx.font = 'bold 10px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const label = landed
-    ? 'STAGE 1  -  BOOSTER TOUCHDOWN CONFIRMED'
-    : 'STAGE 1 BOOSTER  -  RETURN TO LAUNCH SITE';
-  ctx.fillText(label, W / 2, BAN_Y + BAN_H / 2);
-
-  ctx.restore();
-}
 
 function drawGenericRocket(x, y) {
   // Simple white cylinder rocket
@@ -2509,7 +2472,6 @@ function render(now) {
   updateInfoBar();
   drawCountdown();
   drawMilestoneTimeline();
-  drawRTLSBanner();
   drawGearIcon();
   drawNoSignal();
   if (state.notification) drawNotification();
