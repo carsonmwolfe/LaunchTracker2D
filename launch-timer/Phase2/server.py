@@ -217,13 +217,14 @@ def _normalize_launch(r):
         'booster_last_flight':  stage.get('previous_flight_date') or None,
         'booster_prev_mission': booster_prev_mission,
         'recovery_vessel':      landing_loc.get('name') or None,
+        'landing_type':         _d(landing.get('type')).get('abbrev') or None,
         'pad_launches':         pad.get('total_launch_count'),
         'last_updated':         r.get('last_updated', ''),
         'patch_url':            patch_url,
     }
 
 _TBD_NAMES = {'unknown', 'tbd', 'to be determined', 'to be confirmed', 'n/a', ''}
-_DONE_STATUSES = {'launch successful', 'launch failure', 'partial failure'}
+_DONE_STATUSES = {'launch successful', 'launch failure', 'partial failure', 'launch in flight', 'in flight'}
 
 def _is_valid(launch):
     """Return False if this launch should be skipped (TBD vehicle, no time, past t0, or already launched)."""
@@ -236,10 +237,10 @@ def _is_valid(launch):
         return False
     if any(s in status for s in _DONE_STATUSES):
         return False
-    # Drop launches whose T-0 has passed by more than 1 hour (API may not have updated status yet)
+    # Drop launches whose T-0 has passed by more than 10 minutes (API may not have updated status yet)
     try:
         t0_dt = datetime.fromisoformat(t0.replace('Z', '+00:00'))
-        if t0_dt < datetime.now(timezone.utc) - timedelta(hours=1):
+        if t0_dt < datetime.now(timezone.utc) - timedelta(minutes=10):
             return False
     except Exception:
         pass
@@ -417,11 +418,25 @@ def _refresh_all(force_hourly=False):
         _refresh_in_progress = False
 
 def _background_thread():
-    """Single background thread — refreshes all data and weather every 5 minutes."""
+    """Single background thread — refreshes all data and weather every 5 minutes.
+    Switches to 60-second refresh when the next launch is within 10 minutes."""
     time.sleep(2)
     _refresh_all(force_hourly=True)   # full fetch on startup
     while True:
-        time.sleep(300)               # every 5 minutes
+        # Adaptive interval: 60s when next launch is within 10 min (before or after T-0)
+        interval = 300
+        launches = _data_cache.get('launches') or []
+        if launches:
+            try:
+                t0_str = (launches[0].get('t0') or '').strip()
+                if t0_str:
+                    t0_dt = datetime.fromisoformat(t0_str.replace('Z', '+00:00'))
+                    diff  = (t0_dt - datetime.now(timezone.utc)).total_seconds()
+                    if -300 <= diff <= 600:   # 10 min before → 5 min after
+                        interval = 60
+            except Exception:
+                pass
+        time.sleep(interval)
         _refresh_all()
         # Refresh weather in background so /api/data never blocks on a network call
         now = time.time()
@@ -614,7 +629,9 @@ def api_assets():
 
 @app.route('/api/data')
 def api_data():
-    launches    = _data_cache.get('launches', [])
+    # Re-apply validity filter on cached data so status changes (e.g. "Launch in Flight")
+    # are reflected immediately without waiting for the next LL2 fetch
+    launches    = [l for l in _data_cache.get('launches', []) if _is_valid(l)]
     year_raw    = _data_cache.get('year_launches', [])
     events      = _data_cache.get('events', [])
     weather     = _get_weather()
@@ -768,6 +785,23 @@ def set_brightness():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
     return jsonify({'ok': True})
+
+
+@app.route('/api/osk')
+def api_osk():
+    """Show or hide squeekboard on-screen keyboard via D-Bus (Pi 2 / Wayland)."""
+    show = request.args.get('show', '1') == '1'
+    value = 'true' if show else 'false'
+    try:
+        env = os.environ.copy()
+        env.setdefault('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus')
+        subprocess.run(
+            ['dbus-send', '--session', '--dest=sm.puri.OSK0',
+             '/sm/puri/OSK0', 'sm.puri.OSK0.SetVisible', f'boolean:{value}'],
+            timeout=2, env=env, capture_output=True)
+    except Exception as e:
+        print(f'[{_ts()}] OSK toggle error: {e}')
+    return jsonify({'ok': True, 'visible': show})
 
 
 @app.route('/api/settings/timezone', methods=['POST'])

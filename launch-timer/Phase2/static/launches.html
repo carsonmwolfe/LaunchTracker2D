@@ -255,10 +255,17 @@
         .replace('Jiuquan Satellite Launch Center','Jiuquan')
         .replace('Wenchang Space Launch Center','Wenchang');
     }
-    function countdown(t0) {
+    function countdown(t0, status) {
       if (!t0) return { str:'TBD', cls:'cd-yellow' };
+      const sl = (status||'').toLowerCase();
+      if (sl.includes('hold')) return { str:'ON HOLD', cls:'cd-red' };
       const diff = new Date(t0) - new Date();
-      if (diff <= 0) return { str:'LAUNCHED', cls:'cd-red' };
+      if (diff <= 0) {
+        // Don't show LAUNCHED until LL2 confirms — show elapsed T+ instead
+        const elapsed = Math.floor((new Date() - new Date(t0)) / 1000);
+        const h=Math.floor(elapsed/3600), m=Math.floor((elapsed%3600)/60), s=elapsed%60;
+        return { str:`T+${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`, cls:'cd-red' };
+      }
       const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
       const m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
       const str = d>0
@@ -276,23 +283,28 @@
     }
 
     // ── Countdown tickers ─────────────────────────────────────────────────────
-    const cdEls = {}; // keyed by launch ID
+    const cdEls = {}; // keyed by launch ID, stores {el, t0, status}
     function startTicker() {
       setInterval(() => {
-        Object.entries(cdEls).forEach(([id, {el, t0}]) => {
-          const cd = countdown(t0);
+        Object.entries(cdEls).forEach(([id, {el, t0, status}]) => {
+          const cd = countdown(t0, status);
           el.textContent = cd.str;
           el.className = 'lc-countdown ' + cd.cls;
         });
         const first = Object.values(cdEls)[0];
-        if (first) document.getElementById('ss-next').textContent = countdown(first.t0).str;
+        if (first) document.getElementById('ss-next').textContent = countdown(first.t0, first.status).str;
       }, 1000);
     }
 
     // ── Render upcoming ───────────────────────────────────────────────────────
     function renderUpcoming(launches) {
       const row = document.getElementById('upcoming-row');
-      const upcoming = launches.filter(l => l.t0 && new Date(l.t0) > new Date());
+      const upcoming = launches.filter(l => {
+        if (!l.t0) return false;
+        const sl = (l.status||'').toLowerCase();
+        if (sl.includes('hold')) return true;   // holds always shown even past T-0
+        return new Date(l.t0) > new Date();
+      });
       if (!upcoming.length) { row.innerHTML='<div class="loading-msg">NO UPCOMING LAUNCHES</div>'; return; }
       const cards = upcoming.slice(0,5).map(l => {
         const sl  = (l.status||'').toLowerCase();
@@ -300,7 +312,7 @@
         const ac  = sl.includes('go')?'#00e87a':sl.includes('hold')?'#ff4422':'#ffd93d';
         const sc  = cls;
         const st  = sl.includes('go')?'GO':sl.includes('hold')?'HOLD':'TBD';
-        const cd  = countdown(l.t0);
+        const cd  = countdown(l.t0, l.status);
         const veh = escHtml((l.vehicle||'').replace('Block 5','').replace('Falcon ','F').trim());
         const nm  = l.name||'TBD';
         const nmShort = escHtml(nm.length>18 ? nm.slice(0,16)+'…' : nm);
@@ -312,7 +324,7 @@
           <div class="lc-vehicle">${veh}</div>
           <div class="lc-bottom">
             <div class="lc-pad">${padTxt}</div>
-            <div class="lc-countdown ${cd.cls}" data-id="${Number(l.id)||0}" data-t0="${escHtml(l.t0||'')}">${escHtml(cd.str)}</div>
+            <div class="lc-countdown ${cd.cls}" data-id="${Number(l.id)||0}" data-t0="${escHtml(l.t0||'')}" data-status="${escHtml(l.status||'')}">${escHtml(cd.str)}</div>
           </div>
         </div>`;
       });
@@ -322,7 +334,7 @@
       row.querySelectorAll('.launch-card[data-lid]').forEach(card => {
         card.addEventListener('click', () => goMission(Number(card.dataset.lid), card.dataset.lname));
       });
-      row.querySelectorAll('[data-id]').forEach(el => { const id=el.getAttribute('data-id'); const t0=el.getAttribute('data-t0'); if(id&&t0) cdEls[id]={el,t0}; });
+      row.querySelectorAll('[data-id]').forEach(el => { const id=el.getAttribute('data-id'); const t0=el.getAttribute('data-t0'); const status=el.getAttribute('data-status'); if(id&&t0) cdEls[id]={el,t0,status}; });
       document.getElementById('ss-upcoming').textContent = upcoming.length;
       if (upcoming[0]?.t0) document.getElementById('ss-next').textContent = countdown(upcoming[0].t0).str;
     }

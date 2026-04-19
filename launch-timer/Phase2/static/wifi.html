@@ -226,7 +226,9 @@
           <input type="password" class="pw-field" id="password"
                  placeholder="••••••••"
                  autocomplete="off" autocorrect="off"
-                 autocapitalize="off" spellcheck="false">
+                 autocapitalize="off" spellcheck="false"
+                 onfocus="fetch('/api/osk?show=1').catch(()=>{})"
+                 onblur="fetch('/api/osk?show=0').catch(()=>{})" >
           <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
         </div>
       </div>
@@ -257,8 +259,9 @@
       document.getElementById('ssid-display').classList.add('has-selection');
       document.getElementById('btn-connect').disabled = false;
       setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), '');
-      // Focus the password field — triggers native keyboard
+      // Focus the password field and show OSK
       document.getElementById('password').focus();
+      fetch('/api/osk?show=1').catch(() => {});
     }
 
     function setStatus(msg, type) {
@@ -278,6 +281,7 @@
       const password = document.getElementById('password').value;
       // Dismiss keyboard before connecting
       document.getElementById('password').blur();
+      fetch('/api/osk?show=0').catch(() => {});
       setConnecting(true);
       setStatus('CONNECTING TO ' + selectedSsid.toUpperCase() + '...', '');
       fetch('/api/wifi/connect', {

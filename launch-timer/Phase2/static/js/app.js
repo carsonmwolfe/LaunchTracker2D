@@ -51,6 +51,7 @@ const ASSETS = {
   rocket_spectrum:     'rocket-Spectrum.png',
   rocket_tianlong:     'rocket-tianlong3.png',
   rocket_kinetica:     'rocket-Kinetica.png',
+  rocket_falcon1st:    'rocket-Falcon1st.png',
   moon:                'moon.png',
 };
 
@@ -134,6 +135,11 @@ let state = {
   nextMissionName:      '',
   nextMissionT0:        null,
   buriedLaunchIds: [],
+
+  // RTLS booster return animation
+  rtlsActive:    false,
+  rtlsFrame:     0,
+  rtlsBoosterY:  -200,   // starts offscreen above
 
   // Notification banner
   notification: null,
@@ -1006,6 +1012,113 @@ function drawRocket() {
   else drawGenericRocket(NOZZLE_X, PAD_Y_BASE + launchOffset);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  RTLS BOOSTER RETURN  (Return-to-Launch-Site landing animation)
+//  Draws the first stage coming back down inverted, then landing ~80px left of pad
+// ─────────────────────────────────────────────────────────────────────────────
+function updateRTLS() {
+  if (!state.rtlsActive) return;
+  state.rtlsFrame++;
+  // Delay ~3s before booster re-appears (60 frames @ 20fps)
+  if (state.rtlsFrame < 60) return;
+  const frame = state.rtlsFrame - 60;
+  // Phase 1: descend from top (decelerate into landing)
+  const LAND_Y = 380;  // bottom of booster sits on visual grass line
+  const totalFrames = 140;
+  const t = Math.min(frame / totalFrames, 1);
+  const easedT = 1 - Math.pow(1 - t, 3); // ease-out cubic — fast at top, slow at bottom
+  state.rtlsBoosterY = -220 + (LAND_Y + 220) * easedT;
+  state.rtlsBoosterY = Math.min(state.rtlsBoosterY, 380); // never go below ground
+  if (t >= 1) {
+    // Landed — keep for 90 minutes then clear
+    if (frame > totalFrames + (90 * 60 * 20)) {
+      state.rtlsActive = false;
+    }
+  }
+}
+
+function spawnRTLSFlame(flameX, flameY, intensity, distToGround) {
+  // Airborne jet — same core/outer particles as launch but pointing DOWN (vy positive)
+  const slots = MAX_FLAME_PARTICLES - state.flameParticles.length;
+  const n = Math.min(Math.floor(20 * intensity), slots);
+  for (let i = 0; i < n; i++) {
+    const r = Math.random();
+    if (r < 0.55) {
+      state.flameParticles.push({
+        type: 'core',
+        x: Math.round((flameX + (Math.random()-0.5) * 6) / 2) * 2,
+        y: flameY,
+        vx: (Math.random()-0.5) * 0.4,
+        vy: 3.5 + Math.random() * 2.5,   // downward
+        age: 0, life: 8 + Math.floor(Math.random() * 6), sz: 4,
+      });
+    } else {
+      state.flameParticles.push({
+        type: 'outer',
+        x: Math.round((flameX + (Math.random()-0.5) * 12) / 2) * 2,
+        y: flameY + Math.random() * 4,
+        vx: (Math.random()-0.5) * 1.2,
+        vy: 1.8 + Math.random() * 1.8,
+        age: 0, life: 10 + Math.floor(Math.random() * 8), sz: 6,
+      });
+    }
+  }
+  // Trench plumes when very close to ground (last 30px)
+  if (distToGround < 30) {
+    const trenchIntensity = (30 - distToGround) / 30;
+    const trenchSlots = 900 - state.trenchParticles.length;
+    const tn = Math.min(Math.ceil(20 * trenchIntensity), trenchSlots);
+    for (let i = 0; i < tn; i++) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const lowRiser = Math.random() < 0.65;
+      state.trenchParticles.push({
+        type: 'trench_smoke',
+        x: flameX + side * (28 + Math.random() * 30),
+        y: PAD_Y_BASE - Math.random() * 6,
+        vx: side * (1.5 + Math.random() * 5),
+        vy: lowRiser ? -(0.2 + Math.random() * 1.0) : -(1.2 + Math.random() * 2.5),
+        age: 0, life: 10 + Math.floor(Math.random() * 40),
+        sz: 8 + Math.floor(Math.random() * 3) * 2,
+        dark: Math.random() < 0.18, side,
+      });
+    }
+  }
+}
+
+function drawRTLS() {
+  if (!state.rtlsActive) return;
+  if (state.rtlsFrame < 60) return;
+  const frame  = state.rtlsFrame - 60;
+  const LAND_X = NOZZLE_X + 220;   // right of the primary pad, stays on screen
+  const y      = state.rtlsBoosterY;
+  const landed = (frame / 140) >= 1;
+
+  const img = IMG.rocket_falcon1st;
+  const h        = 90;  // booster height (stage 1 only)
+
+  // Draw booster — upright (nose up, nozzle down), bottom edge at y
+  if (img) {
+    const w = Math.round(img.width * (h / img.height));
+    ctx.globalAlpha = 0.88;
+    ctx.drawImage(img, LAND_X - w / 2, y - h, w, h);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(LAND_X - 6, y - h, 12, h);
+  }
+
+  // Landing burn — use the same particle system as launch, pointing downward
+  if (!landed) {
+    const distToGround = PAD_Y_BASE - y;
+    // Throttle up from 120px above ground (entry burn style)
+    const intensity = Math.min(1, Math.max(0, (120 - distToGround) / 100));
+    if (intensity > 0) {
+      spawnRTLSFlame(LAND_X, y, intensity, distToGround);
+    }
+  }
+
+}
+
 function drawGenericRocket(x, y) {
   // Simple white cylinder rocket
   drawRect(x-8, y-100, 16, 100, '#f0f0f0', '#aaaaaa', 1);
@@ -1258,6 +1371,40 @@ function drawCountdown() {
   ctx.fillStyle = 'rgba(20,20,28,0.88)';
   ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.fill();
 
+  const _onHold = (launch.status || '').toLowerCase().includes('hold');
+
+  if (_onHold && cd === 'LAUNCHED') {
+    // Launch is on hold — slow breathing yellow ON HOLD banner
+    const _holdBreath = 0.65 + 0.35 * Math.sin(Date.now() / 800);
+    const _boxCX = BX - 16 + (TOTAL_W + 32) / 2;  // true center of box
+    const _boxH  = BH + 30;
+
+    ctx.shadowColor = `rgba(255,211,61,${_holdBreath * 0.6})`; ctx.shadowBlur = 10;
+    ctx.strokeStyle = `rgba(255,211,61,${_holdBreath * 0.75})`; ctx.lineWidth = 2;
+    ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, _boxH, 5); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Box center = BY-6 + (BH+30)/2 = BY+49. Lay out 3 lines centered on that.
+    ctx.fillStyle = `rgba(255,211,61,${_holdBreath * 0.5})`;
+    ctx.font = 'bold 6px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText('— COUNTDOWN —', _boxCX, BY + 30);
+
+    ctx.shadowColor = `rgba(255,180,0,${_holdBreath * 0.8})`; ctx.shadowBlur = 14;
+    ctx.fillStyle = `rgba(255,211,61,${_holdBreath})`;
+    ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText('ON HOLD', _boxCX, BY + 54);
+    ctx.shadowBlur = 0;
+
+    // Elapsed time since original NET — "HELD AT T+MM:SS"
+    const _holdElapsed = Math.floor((Date.now() - new Date(launch.t0).getTime()) / 1000);
+    const _hm = Math.floor(_holdElapsed / 60), _hs = _holdElapsed % 60;
+    const _holdStr = `HELD AT T+${String(_hm).padStart(2,'0')}:${String(_hs).padStart(2,'0')}`;
+    ctx.fillStyle = `rgba(255,200,130,${_holdBreath * 0.75})`;
+    ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText(_holdStr, _boxCX, BY + 70);
+    return;
+  }
+
   if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
     // Glowing red border
     ctx.shadowColor = '#ff3300'; ctx.shadowBlur = 12;
@@ -1382,6 +1529,35 @@ function drawCountdown() {
     ctx.fillStyle='#4a7aaa'; ctx.font='bold 8px "Press Start 2P"'; ctx.textAlign='center';
     ctx.fillText(lbl, bx+BW/2, by+BH-4);
   });
+
+  // Simultaneous launch banner — shown when the next launch has the same NET (within 5 min)
+  if (state.launches.length > 1) {
+    const primary = state.launches[state.currentIdx];
+    const next    = state.launches.find((l, i) => i !== state.currentIdx && l.t0 && !state.buriedLaunchIds.includes(l.id));
+    if (primary && next && primary.t0 && next.t0) {
+      const diff = Math.abs(new Date(primary.t0) - new Date(next.t0)) / 60000;
+      if (diff <= 5) {
+        const _simY  = BY + BH + 26;
+        const _simW  = TOTAL_W + 32;
+        const _simCX = BX - 16 + _simW / 2;
+        ctx.fillStyle = 'rgba(20,20,28,0.85)';
+        ctx.beginPath(); roundRectPath(BX-16, _simY, _simW, 20, 3); ctx.fill();
+        ctx.strokeStyle = 'rgba(74,158,222,0.4)'; ctx.lineWidth = 1;
+        ctx.beginPath(); roundRectPath(BX-16, _simY, _simW, 20, 3); ctx.stroke();
+
+        ctx.fillStyle = 'rgba(74,158,222,0.6)';
+        ctx.font = 'bold 5px "Press Start 2P"'; ctx.textAlign = 'center';
+        ctx.fillText('SIMULTANEOUS LAUNCH', _simCX, _simY + 7);
+
+        const _sName = (next.name || '').split(' | ').pop().toUpperCase();
+        const _sLoc  = (next.location || next.pad || '').toUpperCase().slice(0, 30);
+        const _sTxt  = (_sName.length > 24 ? _sName.slice(0, 22) + '…' : _sName) + '  ·  ' + _sLoc;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = '5px "Press Start 2P"'; ctx.textAlign = 'center';
+        ctx.fillText(_sTxt, _simCX, _simY + 16);
+      }
+    }
+  }
 }
 
 
@@ -1505,8 +1681,10 @@ function updateInfoBar() {
         }
       }
     } else if (cd === 'LAUNCHED') {
-      document.getElementById('ib-cd').textContent = 'LAUNCHED';
-      document.getElementById('ib-cd').style.color = '#4a9ede';
+      const _ibLaunch = currentLaunch();
+      const _ibHold = _ibLaunch && (_ibLaunch.status || '').toLowerCase().includes('hold');
+      document.getElementById('ib-cd').textContent = _ibHold ? 'ON HOLD' : 'LAUNCHED';
+      document.getElementById('ib-cd').style.color = '#ff4422';
       const infoBar = document.getElementById('info-bar');
       if (infoBar) infoBar.classList.remove('t10-alert');
     }
@@ -1622,21 +1800,37 @@ function checkLaunchTrigger() {
   const launch = currentLaunch();
   if (!launch || !launch.t0) return;
 
+  // If the launch is on hold, never trigger the LAUNCHED banner (skip in test mode)
+  if (!state.testMode && (launch.status || '').toLowerCase().includes('hold')) return;
+
   const cd = computeCountdown(launch.t0);
 
   if (cd === 'LAUNCHED') {
     const launchTime = new Date(launch.t0).getTime();
     const minsAgo = (Date.now() - launchTime) / 60000;
 
+    // Only act if we've had at least one successful data fetch and the page has been
+    // open for >5s — prevents false triggers on stale cache at startup
+    const pageAge = (Date.now() - state.lastFetchAt) / 1000;
+    if (pageAge > 30 * 60) return; // data is too old to trust — wait for refresh
+
     if (minsAgo > 30) {
+      // Old launch — just bury it silently, no cooldown banner
       console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
       state.launchTriggered = true;
       if (!state.buriedLaunchIds.includes(launch.id)) state.buriedLaunchIds.push(launch.id);
-      fetchLaunches(true);
+      // Advance to next without triggering postLaunchCooldown
+      const nextIdx = state.launches.findIndex(l => !state.buriedLaunchIds.includes(l.id));
+      state.currentIdx = nextIdx >= 0 ? nextIdx : 0;
+      state.launchTriggered = false;
       return;
     }
 
-    console.log(`[${ts()}] Missed launch detected — starting cooldown`);
+    // Within 30 min of T-0 — genuinely just launched. But don't trigger missed-launch
+    // if data is very fresh (< 10s old) — could be a fetch-race causing a false positive
+    if (state.lastFetchAt && (Date.now() - state.lastFetchAt) < 10000) return;
+
+    console.log(`[${ts()}] Missed launch detected (${Math.floor(minsAgo)}m ago) — starting cooldown`);
     state.launchTriggered     = true;
     state.launchComplete      = true;
     state.rocketOffscreen     = true;
@@ -1644,8 +1838,9 @@ function checkLaunchTrigger() {
     state.launchedMissionName = launch.name || '';
     state._lastLaunchT0       = launch.t0 || null;
     state._lastLaunchVehicle  = launch.vehicle || '';
+    state.postLaunchCooldown  = true;
+    state.cooldownEndsAt      = Date.now() + 3 * 60 * 1000; // 3 min cooldown for missed launches (not 10)
 
-    // Fetch latest launches to determine the next mission
     fetch('/api/launches').then(r => r.json()).then(data => {
       const all = data.launches || [];
       const next = all.find(l => l.id !== launch.id && l.t0 && new Date(l.t0) > new Date()) || null;
@@ -1702,6 +1897,12 @@ function updateLaunch() {
       state.launchComplete  = true;
       state.flameParticles  = [];
       const _launched           = currentLaunch();
+      // Trigger RTLS booster return if landing type is RTLS
+      if (_launched && (_launched.landing_type || '').toUpperCase() === 'RTLS') {
+        state.rtlsActive   = true;
+        state.rtlsFrame    = 0;
+        state.rtlsBoosterY = -220;
+      }
       if (_launched && !state.buriedLaunchIds.includes(_launched.id)) state.buriedLaunchIds.push(_launched.id);
       state.launchedMissionName = _launched ? (_launched.name || '') : '';
       state._lastLaunchT0       = _launched ? (_launched.t0 || null) : null;
@@ -1805,6 +2006,12 @@ async function fetchData(afterLaunch=false) {
     } else {
       const firstValid = state.launches.findIndex(l => !state.buriedLaunchIds.includes(l.id));
       state.currentIdx = firstValid >= 0 ? firstValid : 0;
+      // If the current launch has a future T-0, reset trigger so countdown runs normally.
+      // This prevents a stale launchTriggered=true from blocking the next mission's animation.
+      const cur = state.launches[state.currentIdx];
+      if (cur && cur.t0 && new Date(cur.t0) > new Date() && !state.isLaunching && !state.postLaunchCooldown) {
+        state.launchTriggered = false;
+      }
     }
 
     // Update probability badge directly from launch data (no separate /api/ll2 call)
@@ -2069,13 +2276,16 @@ function drawMilestoneTimeline() {
   const launch = currentLaunch() || (state.postLaunchCooldown ? { t0: state._lastLaunchT0, vehicle: state._lastLaunchVehicle } : null);
   if (!launch || !launch.t0) return;
   const cd = computeCountdown(launch.t0);
+  const isHold = (launch.status || '').toLowerCase().includes('hold');
   const elapsed = (Date.now() - new Date(launch.t0).getTime()) / 1000;
   // Show timeline from T-30min until end of milestones sequence (~75 min post launch)
-  if (cd && cd !== 'LAUNCHED' && cd.total_seconds > 1800) return;
+  if (!isHold && cd && cd !== 'LAUNCHED' && cd.total_seconds > 1800) return;
   if (elapsed > 4500) return;
   const milestones = getMilestones(launch.vehicle || '');
-  // currentIdx = index of the next upcoming milestone (first one not yet reached)
-  let currentIdx = milestones.findIndex(m => elapsed < m.t);
+  // On hold: lock display to the LIFTOFF milestone (t=0)
+  let currentIdx = isHold
+    ? milestones.findIndex(m => m.t === 0) ?? 0
+    : milestones.findIndex(m => elapsed < m.t);
   if (currentIdx === -1) currentIdx = milestones.length - 1; // all done
 
   _tlSmooth += (currentIdx * 62 - _tlSmooth) * 0.08;
@@ -2095,8 +2305,8 @@ function drawMilestoneTimeline() {
     const y   = centerY + (i * spacing) - _tlSmooth;
     if (y < 15 || y > 365) return;
 
-    const isDone    = elapsed >= m.t;
-    const isCurrent = i === currentIdx && !isDone;
+    const isDone    = !isHold && elapsed >= m.t;
+    const isCurrent = i === currentIdx;
     const dist      = i - currentIdx;
     const opacity   = opacities[String(dist)] ?? 0.15;
     const scale     = scales[String(dist)] ?? 0.6;
@@ -2109,7 +2319,7 @@ function drawMilestoneTimeline() {
         const lineTop = y + 7;
         const lineBot = Math.min(ny - 7, 365);
         const lineLen = lineBot - lineTop;
-        if (isDone) {
+        if (!isHold && isDone) {
           // Fill based on progress toward next milestone
           const nextM = milestones[ni];
           const progress = Math.min(1, Math.max(0, (elapsed - m.t) / (nextM.t - m.t)));
@@ -2146,7 +2356,20 @@ function drawMilestoneTimeline() {
     const r = Math.max(2, Math.round(5*scale));
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.beginPath(); ctx.arc(dotX, y, r+2, 0, Math.PI*2); ctx.fill();
-    if (isDone) {
+    if (isHold) {
+      // Hold state: current (LIFTOFF) pulses amber, rest are dim amber
+      if (isCurrent) {
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 800);
+        ctx.fillStyle = `rgba(255,211,61,${0.12 * pulse})`;
+        ctx.beginPath(); ctx.arc(dotX, y, r+5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = `rgba(255,211,61,${0.7 + 0.3 * pulse})`;
+        ctx.beginPath(); ctx.arc(dotX, y, r, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.strokeStyle = `rgba(255,211,61,${opacity * 0.5})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(dotX, y, r, 0, Math.PI*2); ctx.stroke();
+      }
+    } else if (isDone) {
       ctx.fillStyle=`rgba(0,232,122,${opacity})`;
       ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
     } else if (isCurrent) {
@@ -2168,10 +2391,11 @@ function drawMilestoneTimeline() {
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 4;
     ctx.font=`bold ${ls}px Courier New`;
-    ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:isDone?`rgba(0,232,122,${opacity})`:`rgba(255,255,255,${opacity})`;
+    const _holdTint = `rgba(255,211,61,${opacity * (isCurrent ? 1.0 : 0.5)})`;
+    ctx.fillStyle = isHold ? _holdTint : isCurrent ? `rgba(255,211,61,${opacity})` : isDone ? `rgba(0,232,122,${opacity})` : `rgba(255,255,255,${opacity})`;
     ctx.fillText(m.label, dotX-12, y+3);
     ctx.font=`${ts}px Courier New`;
-    ctx.fillStyle=isCurrent?`rgba(255,211,61,${opacity})`:`rgba(0,232,122,${Math.min(1,opacity*1.1)})`;
+    ctx.fillStyle = isHold ? `rgba(255,211,61,${opacity * 0.4})` : isCurrent ? `rgba(255,211,61,${opacity})` : `rgba(0,232,122,${Math.min(1,opacity*1.1)})`;
     ctx.fillText(tStr(m.t), dotX-12, y+ls+4);
     ctx.shadowBlur = 0;
   });
@@ -2193,6 +2417,7 @@ function render(now) {
   // ── Updates ──
   updateClouds();
   updateBirds();
+  updateRTLS();
   updateCars();
   updateGator();
   updateTowerLights();
@@ -2221,6 +2446,7 @@ function render(now) {
   ctx.drawImage(getGrassCache(), 0, 0);  // grass/road covers base of exhaust
   drawBackgroundPad();  // ← Next rocket on distant pad
   drawRocket();         // ← Active pad rocket (behind tower)
+  drawRTLS();           // ← RTLS booster return (after grass, sits on ground)
   drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
@@ -2278,16 +2504,18 @@ function startPolling() {
 // ─────────────────────────────────────────────────────────────────────────────
 //  TEST LAUNCH  (click rocket on pad to trigger)
 // ─────────────────────────────────────────────────────────────────────────────
-function triggerTestLaunch() {
+function triggerTestLaunch(rtls = false) {
   if (state.isLaunching || state.testMode) return;
   const launch = currentLaunch();
   if (!launch) return;
-  console.log(`[${ts()}] TEST MODE — overriding t0 to T-3s`);
-  const originalT0        = launch.t0;
-  const originalTriggered = state.launchTriggered;
-  state.testMode          = true;
-  launch.t0               = new Date(Date.now() + 3000).toISOString();
-  state.launchTriggered   = false;
+  console.log(`[${ts()}] TEST MODE — overriding t0 to T-3s${rtls ? ' (RTLS)' : ''}`);
+  const originalT0          = launch.t0;
+  const originalTriggered   = state.launchTriggered;
+  const originalLandingType = launch.landing_type;
+  state.testMode            = true;
+  launch.t0                 = new Date(Date.now() + 3000).toISOString();
+  state.launchTriggered     = false;
+  if (rtls) launch.landing_type = 'RTLS';
 
   const checkReset = setInterval(() => {
     if (!state.rocketOffscreen) return;
@@ -2305,6 +2533,7 @@ function triggerTestLaunch() {
       if (Date.now() < state.cooldownEndsAt) return;
       clearInterval(cooldownEnd);
       launch.t0                 = originalT0;
+      launch.landing_type       = originalLandingType;
       state.launchTriggered     = originalTriggered;
       state.testMode            = false;
       state.postLaunchCooldown  = false;
@@ -2327,6 +2556,41 @@ function triggerTestLaunch() {
 }
 
 document.getElementById('btn-test').addEventListener('click', triggerTestLaunch);
+window.triggerTestRTLS = () => triggerTestLaunch(true);
+
+// Direct RTLS-only test — skips full launch sequence, just plays the booster return
+window.testRTLS = () => {
+  console.log(`[${ts()}] RTLS direct test`);
+  state.rtlsActive    = true;
+  state.rtlsFrame     = 0;
+  state.rtlsBoosterY  = -220;
+  state._lastLaunchVehicle = (currentLaunch() || {}).vehicle || 'Falcon 9';
+};
+
+// Force reset stuck post-launch state
+window.ltReset = () => {
+  state.postLaunchCooldown = false;
+  state.launchComplete     = false;
+  state.rocketOffscreen    = false;
+  state.launchTriggered    = false;
+  state.isLaunching        = false;
+  state.testMode           = false;
+  state.rocketY            = PAD_Y_BASE;
+  state.flameParticles     = [];
+  state.flameIntensity     = 0;
+  state.buriedLaunchIds    = [];
+  state.launchedMissionName = '';
+  state.rtlsActive         = false;
+  fetchData().then(() => console.log('[ltReset] done'));
+};
+
+// Debug helper — print key state
+window.ltState = () => console.log(JSON.stringify({
+  testMode: state.testMode, isLaunching: state.isLaunching,
+  launchTriggered: state.launchTriggered, rocketOffscreen: state.rocketOffscreen,
+  rtlsActive: state.rtlsActive, rtlsFrame: state.rtlsFrame,
+  currentLaunch: currentLaunch() ? { id: currentLaunch().id, status: currentLaunch().status, landing_type: currentLaunch().landing_type, t0: currentLaunch().t0 } : null
+}, null, 2));
 
 canvas.addEventListener('click', function(e) {
   const rect = canvas.getBoundingClientRect();
