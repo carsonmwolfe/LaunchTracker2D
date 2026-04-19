@@ -81,19 +81,10 @@ log "Setting up autostart..."
 if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
     mkdir -p /home/pi/.config/labwc
     cat > /home/pi/.config/labwc/autostart << LABWCEOF
-swaybg -c '#060a10' &
 bash $SERVER_DIR/start.sh &
-(sleep 5 && DESKTOP_SESSION=rpd-labwc pcmanfm --desktop --reconfigure) &
+(sleep 3 && pkill -f 'lwrespawn.*wf-panel' && pkill -f 'wf-panel-pi') &
 LABWCEOF
-    log "labwc autostart configured (swaybg wallpaper + start.sh)"
-
-    # Configure wf-panel-pi to autohide — do NOT remove it, removing breaks the session
-    mkdir -p /home/pi/.config
-    cat > /home/pi/.config/wf-panel-pi.ini << WPEOF
-[panel]
-autohide=1
-WPEOF
-    log "wf-panel-pi set to autohide"
+    log "labwc autostart configured (start.sh + panel kill)"
 
     # Wallpaper for labwc/rpd-labwc session (pcmanfm fallback)
     for SESSION in rpd-labwc LXDE-pi; do
