@@ -13,7 +13,6 @@ import time
 import requests
 import json
 import subprocess
-import base64
 from datetime import datetime, timezone, timedelta
 from flask import Flask, jsonify, send_from_directory, request, redirect
 import os
@@ -357,39 +356,30 @@ def _fetch_upcoming():
         print(f'[{_ts()}] Error fetching upcoming launches: {e}')
         return None
 
-def _fetch_year_launches():
+def _fetch_ll2(url, label):
+    """Generic LL2 GET — returns results list or None on error/rate-limit."""
     try:
-        year_str = datetime.now().strftime('%Y-01-01')
-        url = (f'{LL2_BASE}/launches/'
-               f'?window_start__gte={year_str}&limit=100&ordering=window_start&format=json')
         r = requests.get(url, timeout=LL2_TIMEOUT)
         if r.status_code == 429:
-            print(f'[{_ts()}] LL2 rate limited (year launches)')
+            print(f'[{_ts()}] LL2 rate limited ({label})')
             return None
         r.raise_for_status()
         payload = r.json()
         results = payload.get('results', []) if isinstance(payload, dict) else []
-        print(f'[{_ts()}] Year launches: {len(results)}')
+        print(f'[{_ts()}] {label}: {len(results)}')
         return results
     except Exception as e:
-        print(f'[{_ts()}] Error fetching year launches: {e}')
+        print(f'[{_ts()}] Error fetching {label}: {e}')
         return None
 
+def _fetch_year_launches():
+    year_str = datetime.now().strftime('%Y-01-01')
+    return _fetch_ll2(
+        f'{LL2_BASE}/launches/?window_start__gte={year_str}&limit=100&ordering=window_start&format=json',
+        'year launches')
+
 def _fetch_events():
-    try:
-        url = f'{LL2_BASE}/events/upcoming/?limit=5&format=json'
-        r   = requests.get(url, timeout=LL2_TIMEOUT)
-        if r.status_code == 429:
-            print(f'[{_ts()}] LL2 rate limited (events)')
-            return None
-        r.raise_for_status()
-        payload = r.json()
-        results = payload.get('results', []) if isinstance(payload, dict) else []
-        print(f'[{_ts()}] Events: {len(results)}')
-        return results
-    except Exception as e:
-        print(f'[{_ts()}] Error fetching events: {e}')
-        return None
+    return _fetch_ll2(f'{LL2_BASE}/events/upcoming/?limit=5&format=json', 'events')
 
 _refresh_in_progress = False
 
@@ -808,7 +798,6 @@ def api_device():
 
 # ── Pi notification (shown on all pages) ──────────────────────────────────────
 
-_pending_notify = []
 _NOTIFY_FILE = '/tmp/rangetrack_notify.json'
 _NOTIFY_TTL  = 16  # seconds — just over the 15s display time; survives page reloads but doesn't bleed into next update
 
@@ -821,26 +810,21 @@ def _notify_write(title, msg):
             _json.dump([entry], f)
     except Exception:
         pass
-    _pending_notify.append({'title': title, 'msg': msg})
 
 @app.route('/api/notify')
 def get_notify():
     import json as _json
     now = time.time()
-    msgs = list(_pending_notify)
-    _pending_notify.clear()
-    # Check file — only return if not expired, keep it until it is
     try:
         with open(_NOTIFY_FILE) as f:
             file_msgs = _json.load(f)
         live = [m for m in file_msgs if m.get('expires', 0) > now]
         if live:
-            msgs = live + msgs
-        else:
-            os.remove(_NOTIFY_FILE)  # all expired — clean up
+            return jsonify([{'title': m['title'], 'msg': m['msg']} for m in live])
+        os.remove(_NOTIFY_FILE)
     except Exception:
         pass
-    return jsonify([{'title': m['title'], 'msg': m['msg']} for m in msgs])
+    return jsonify([])
 
 @app.route('/api/notify-push', methods=['POST'])
 def notify_push():
@@ -862,24 +846,6 @@ def reboot():
         daemon=True).start()
     return jsonify({'ok': True})
 
-
-# ── Snapshot ──────────────────────────────────────────────────────────────────
-
-_snapshot = None
-
-@app.route('/api/snapshot', methods=['GET', 'POST'])
-def api_snapshot():
-    global _snapshot
-    if request.method == 'POST':
-        _snapshot = (request.get_json() or {}).get('data', '')
-        return jsonify({'ok': True})
-    if not _snapshot:
-        return '', 404
-    try:
-        parts = _snapshot.split(',', 1)
-        return app.response_class(base64.b64decode(parts[1]), mimetype='image/jpeg')
-    except Exception:
-        return '', 400
 
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────

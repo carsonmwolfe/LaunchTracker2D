@@ -389,12 +389,12 @@
 
     async function saveSettings() {
       try {
-        await fetch('/api/settings', {
+        const r = await fetch('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(settings)
         });
-        showSaved();
+        if (r.ok) showSaved();
       } catch(e) {}
     }
 
