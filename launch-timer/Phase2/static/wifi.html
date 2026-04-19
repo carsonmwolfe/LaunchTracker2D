@@ -7,14 +7,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
     body {
-      background: #0a0e14;
-      color: #fff;
+      background: #0a0e14; color: #fff;
       font-family: 'Press Start 2P', monospace;
       width: 800px; height: 480px;
-      overflow: hidden;
-      display: flex; flex-direction: column;
+      overflow: hidden; display: flex; flex-direction: column;
     }
-
     .scanlines {
       position: absolute; inset: 0;
       background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
@@ -24,14 +21,11 @@
     /* TOP BAR */
     .topbar {
       height: 36px; flex-shrink: 0;
-      background: #0d1620;
-      border-bottom: 3px solid #00e87a;
-      display: flex; align-items: center;
-      padding: 0 12px; gap: 10px;
+      background: #0d1620; border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center; padding: 0 12px; gap: 10px;
     }
     .back-btn {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 7px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
       background: #0a1a10; border: 2px solid #00e87a;
       color: #00e87a; padding: 4px 8px; cursor: pointer;
     }
@@ -53,41 +47,33 @@
 
     /* LEFT — network list */
     .left-col {
-      width: 360px; flex-shrink: 0;
+      width: 310px; flex-shrink: 0;
       display: flex; flex-direction: column;
-      border-right: 3px solid #2a3a50;
-      background: #0e1520;
+      border-right: 3px solid #2a3a50; background: #0e1520;
     }
     .phdr {
       font-size: 6px; color: #00e87a;
       background: #141e2e; padding: 6px 10px;
       border-bottom: 2px solid #2a3a50;
-      display: flex; align-items: center; justify-content: space-between;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
     }
     .phdr-left { display: flex; align-items: center; gap: 6px; }
     .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
     .btn-scan-sm {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 5px; background: #141e2e;
-      border: 2px solid #6ab4f8; color: #6ab4f8;
-      padding: 3px 6px; cursor: pointer;
+      font-family: 'Press Start 2P', monospace; font-size: 5px;
+      background: #141e2e; border: 2px solid #6ab4f8;
+      color: #6ab4f8; padding: 3px 6px; cursor: pointer;
     }
     .btn-scan-sm:disabled { opacity: 0.4; cursor: not-allowed; }
-
     .networks-list {
       flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding: 6px;
-      display: flex; flex-direction: column; gap: 5px;
+      padding: 5px; display: flex; flex-direction: column; gap: 4px;
     }
     .network {
-      background: #1a2535;
-      border: 2px solid #344558;
-      padding: 9px 10px;
-      cursor: pointer;
+      background: #1a2535; border: 2px solid #344558;
+      padding: 8px 10px; cursor: pointer;
       font-size: 7px; color: #ffffff;
-      display: flex; align-items: center; gap: 8px;
-      flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
     .network:hover { background: #1f2e42; border-color: rgba(0,232,122,0.6); }
     .network.selected { background: #0a1f10; border-color: #00e87a; color: #00e87a; }
@@ -97,78 +83,73 @@
     .network-badge { font-size: 5px; color: #ffd93d; flex-shrink: 0; background: rgba(255,211,61,0.1); border: 1px solid #ffd93d; padding: 2px 4px; }
     .scan-msg { font-size: 6px; color: rgba(255,255,255,0.5); text-align: center; padding: 20px 8px; }
 
-    /* RIGHT — connect panel */
+    /* RIGHT — connect + keyboard */
     .right-col {
-      flex: 1;
-      display: flex; flex-direction: column;
-      padding: 16px 18px 12px;
-      background: #0c1018;
+      flex: 1; display: flex; flex-direction: column;
+      padding: 10px 12px 8px; background: #0c1018;
     }
+    .connect-hdr { font-size: 6px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 8px; flex-shrink: 0; }
 
-    .connect-hdr {
-      font-size: 6px; color: #4a9ede; letter-spacing: 2px;
-      margin-bottom: 12px; flex-shrink: 0;
-    }
-
-    /* Selected network display */
     .ssid-display {
-      background: #141e2e;
-      border: 2px solid #2a3a50;
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      flex-shrink: 0;
+      background: #141e2e; border: 2px solid #2a3a50;
+      padding: 6px 10px; margin-bottom: 8px; flex-shrink: 0;
     }
-    .ssid-display-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 6px; }
-    .ssid-display-val { font-size: 9px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 7px; }
     .ssid-display.has-selection { border-color: #00e87a; }
+    .ssid-display-label { font-size: 4px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 4px; }
+    .ssid-display-val { font-size: 8px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 7px; }
 
-    /* Password field */
-    .pw-block { flex-shrink: 0; margin-bottom: 16px; }
-    .pw-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .pw-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; }
-    .pw-hint { font-size: 5px; color: rgba(255,255,255,0.3); }
-    .pw-input-wrap { position: relative; }
+    /* Password row */
+    .pw-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; flex-shrink: 0; }
+    .pw-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
+    .pw-input-wrap { flex: 1; position: relative; }
     input.pw-field {
-      width: 100%;
-      background: #1a2535;
-      border: 2px solid #344558;
-      padding: 11px 44px 11px 10px;
-      color: #ffffff;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 9px;
-      outline: none;
-      caret-color: #00e87a;
+      width: 100%; background: #1a2535; border: 2px solid #344558;
+      padding: 7px 38px 7px 8px; color: #ffffff;
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      outline: none; caret-color: #00e87a;
     }
-    input.pw-field:focus {
-      border-color: #00e87a;
-      background: #0a1f12;
-    }
+    input.pw-field:focus { border-color: #00e87a; background: #0a1f12; }
     .show-toggle {
-      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-      font-family: 'Press Start 2P', monospace;
-      font-size: 5px; color: rgba(255,255,255,0.4);
-      cursor: pointer; user-select: none; background: none; border: none;
-      padding: 4px;
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      font-family: 'Press Start 2P', monospace; font-size: 5px;
+      color: rgba(255,255,255,0.4); cursor: pointer;
+      user-select: none; background: none; border: none; padding: 4px;
     }
     .show-toggle:hover { color: #ffd93d; }
 
-    /* Connect button */
+    /* Keyboard */
+    .kb { display: flex; flex-direction: column; gap: 3px; margin-bottom: 7px; flex-shrink: 0; }
+    .kb-row { display: flex; gap: 3px; }
+    .kb-key {
+      flex: 1; height: 38px;
+      background: #1a2535; border: 1px solid #2a3a50;
+      color: #d0d8e8; font-family: 'Press Start 2P', monospace;
+      font-size: 7px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; -webkit-user-select: none;
+      transition: background 0.05s;
+    }
+    .kb-key:active { background: #00e87a; color: #050a07; border-color: #00e87a; }
+    .kb-key.special { background: #141e2e; color: #4a9ede; border-color: #2a3a50; font-size: 6px; }
+    .kb-key.backspace { background: #1f0e0e; color: #ff4422; border-color: #3a1a1a; flex: 1.6; }
+    .kb-key.shift { background: #141e2e; color: #ffd93d; border-color: #2a3a50; flex: 1.4; }
+    .kb-key.shift.active { background: #1a1800; border-color: #ffd93d; }
+    .kb-key.space { flex: 4; }
+    .kb-key.sym-toggle { flex: 1.3; font-size: 5px; }
+
+    /* Connect btn + status */
     .connect-btn {
-      width: 100%;
-      padding: 13px;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 8px; cursor: pointer; border: none;
+      width: 100%; padding: 10px;
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      cursor: pointer; border: none;
       background: #00e87a; color: #050a07;
-      flex-shrink: 0; margin-bottom: 10px;
+      flex-shrink: 0; margin-bottom: 5px;
     }
     .connect-btn:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
-
-    /* Status */
     .status-bar {
-      flex-shrink: 0;
-      font-size: 6px; color: #ffd93d;
-      letter-spacing: 1px; min-height: 16px;
+      flex-shrink: 0; font-size: 5px; color: #ffd93d;
+      letter-spacing: 1px; min-height: 14px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .status-bar.success { color: #00e87a; }
@@ -208,7 +189,7 @@
       </div>
     </div>
 
-    <!-- RIGHT: connect panel -->
+    <!-- RIGHT: connect + keyboard -->
     <div class="right-col">
       <div class="connect-hdr">> CONNECT TO NETWORK</div>
 
@@ -217,24 +198,27 @@
         <div class="ssid-display-val placeholder" id="ssid-val">— TAP A NETWORK —</div>
       </div>
 
-      <div class="pw-block">
-        <div class="pw-label-row">
-          <div class="pw-label">PASSWORD</div>
-          <div class="pw-hint">TAP FIELD TO TYPE</div>
-        </div>
+      <div class="pw-row">
+        <div class="pw-label">PASSWORD</div>
         <div class="pw-input-wrap">
           <input type="password" class="pw-field" id="password"
                  placeholder="••••••••"
                  autocomplete="off" autocorrect="off"
-                 autocapitalize="off" spellcheck="false"
-                 onfocus="fetch('/api/osk?show=1').catch(()=>{})"
-                 onblur="fetch('/api/osk?show=0').catch(()=>{})" >
+                 autocapitalize="off" spellcheck="false" readonly>
           <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
         </div>
       </div>
 
-      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
+      <!-- On-screen keyboard -->
+      <div class="kb" id="kb">
+        <div class="kb-row" id="kb-row0"></div>
+        <div class="kb-row" id="kb-row1"></div>
+        <div class="kb-row" id="kb-row2"></div>
+        <div class="kb-row" id="kb-row3"></div>
+        <div class="kb-row" id="kb-row4"></div>
+      </div>
 
+      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
       <div class="status-bar" id="status"></div>
     </div>
 
@@ -243,6 +227,72 @@
   <script>
     let selectedSsid = '';
     let showPassword = false;
+    let shiftOn = false;
+    let symMode = false;
+
+    const ROWS_ALPHA = [
+      ['1','2','3','4','5','6','7','8','9','0','⌫'],
+      ['q','w','e','r','t','y','u','i','o','p'],
+      ['a','s','d','f','g','h','j','k','l'],
+      ['⇧','z','x','c','v','b','n','m','-'],
+      ['SYM','@','_','.','SPACE','!','✓'],
+    ];
+    const ROWS_SYM = [
+      ['1','2','3','4','5','6','7','8','9','0','⌫'],
+      ['!','@','#','$','%','^','&','*','(', ')'],
+      ['-','_','=','+','[',']','{','}','|'],
+      ['⇧',';',':','\'','"',',','.','?','⌫'],
+      ['ABC','~','`','\\','SPACE','/','✓'],
+    ];
+
+    function buildKeyboard() {
+      const rows = symMode ? ROWS_SYM : ROWS_ALPHA;
+      rows.forEach((row, ri) => {
+        const rowEl = document.getElementById('kb-row' + ri);
+        rowEl.innerHTML = '';
+        row.forEach(key => {
+          const btn = document.createElement('button');
+          btn.className = 'kb-key';
+          let label = key;
+
+          if (key === '⌫') { btn.classList.add('backspace'); }
+          else if (key === '⇧') { btn.classList.add('shift'); if (shiftOn) btn.classList.add('active'); }
+          else if (key === 'SPACE') { btn.classList.add('space'); label = ' '; btn.textContent = 'SPACE'; }
+          else if (key === '✓') { btn.classList.add('special'); label = '✓ DONE'; }
+          else if (key === 'SYM' || key === 'ABC') { btn.classList.add('special', 'sym-toggle'); }
+          else if (!symMode && shiftOn && key.match(/[a-z]/)) { label = key.toUpperCase(); }
+
+          if (key !== 'SPACE') btn.textContent = label;
+
+          btn.addEventListener('click', () => handleKey(key));
+          rowEl.appendChild(btn);
+        });
+      });
+    }
+
+    function handleKey(key) {
+      const input = document.getElementById('password');
+      if (key === '⌫') {
+        input.value = input.value.slice(0, -1);
+      } else if (key === '⇧') {
+        shiftOn = !shiftOn;
+        buildKeyboard();
+      } else if (key === 'SYM') {
+        symMode = true; shiftOn = false;
+        buildKeyboard();
+      } else if (key === 'ABC') {
+        symMode = false; shiftOn = false;
+        buildKeyboard();
+      } else if (key === 'SPACE') {
+        input.value += ' ';
+      } else if (key === '✓') {
+        // done — just dismiss focus
+      } else {
+        const ch = (!symMode && shiftOn) ? key.toUpperCase() : key;
+        input.value += ch;
+        if (shiftOn && !symMode) { shiftOn = false; buildKeyboard(); }
+      }
+    }
 
     function toggleShow() {
       showPassword = !showPassword;
@@ -258,10 +308,8 @@
       valEl.classList.remove('placeholder');
       document.getElementById('ssid-display').classList.add('has-selection');
       document.getElementById('btn-connect').disabled = false;
+      document.getElementById('password').value = '';
       setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), '');
-      // Focus the password field and show OSK
-      document.getElementById('password').focus();
-      fetch('/api/osk?show=1').catch(() => {});
     }
 
     function setStatus(msg, type) {
@@ -279,9 +327,6 @@
     function connect() {
       if (!selectedSsid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
       const password = document.getElementById('password').value;
-      // Dismiss keyboard before connecting
-      document.getElementById('password').blur();
-      fetch('/api/osk?show=0').catch(() => {});
       setConnecting(true);
       setStatus('CONNECTING TO ' + selectedSsid.toUpperCase() + '...', '');
       fetch('/api/wifi/connect', {
@@ -300,7 +345,6 @@
         }
       })
       .catch(() => {
-        // Fetch failing likely means network switched — treat as success
         setStatus('CONNECTED — RETURNING TO HOME', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
       });
@@ -365,6 +409,7 @@
       });
     }
 
+    buildKeyboard();
     scanNetworks();
   </script>
 </body>
