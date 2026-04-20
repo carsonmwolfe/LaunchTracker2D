@@ -1409,7 +1409,7 @@ function drawCountdown() {
   if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
     const _hasCooldown = !!state.postLaunchCooldown;
     const _boxH = _hasCooldown ? BH + 65 : BH + 30;
-    const _cx   = BX + TOTAL_W / 2;
+    const _cx   = BX - 16 + (TOTAL_W + 32) / 2;
 
     // Extend background for cooldown content
     if (_hasCooldown) {
