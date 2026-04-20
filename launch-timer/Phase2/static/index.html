@@ -66,6 +66,12 @@
     }
     #info-bar.t10-alert { animation: t10-flash 1s ease-in-out infinite; }
 
+    @keyframes t1hr-pulse {
+      0%, 100% { border-top-color: #ffd93d; }
+      50%       { border-top-color: #ffaa00; background: rgba(20,16,4,0.97); }
+    }
+    #info-bar.t1hr-alert { animation: t1hr-pulse 2s ease-in-out infinite; }
+
     /* LEFT panel — launch window */
     #ib-window {
       width: 185px; flex-shrink: 0;

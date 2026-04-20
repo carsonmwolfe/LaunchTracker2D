@@ -1685,12 +1685,18 @@ function updateInfoBar() {
       const hh=String(hours).padStart(2,'0'), mm=String(minutes).padStart(2,'0'), ss=String(seconds).padStart(2,'0');
       document.getElementById('ib-cd').textContent = days>0 ? `T− ${days}d ${hh}:${mm}:${ss}` : `T− ${hh}:${mm}:${ss}`;
       // T-10 alert: flash info bar red when under 10 minutes
+      // T-1hr alert: pulse info bar amber when under 1 hour
       const infoBar = document.getElementById('info-bar');
       if (infoBar) {
         if (cd.total_seconds <= 600 && cd.total_seconds > 0) {
           infoBar.classList.add('t10-alert');
+          infoBar.classList.remove('t1hr-alert');
+        } else if (cd.total_seconds <= 3600 && cd.total_seconds > 0) {
+          infoBar.classList.add('t1hr-alert');
+          infoBar.classList.remove('t10-alert');
         } else {
           infoBar.classList.remove('t10-alert');
+          infoBar.classList.remove('t1hr-alert');
         }
       }
     } else if (cd === 'LAUNCHED') {
@@ -1699,7 +1705,7 @@ function updateInfoBar() {
       document.getElementById('ib-cd').textContent = _ibHold ? 'ON HOLD' : 'LAUNCHED';
       document.getElementById('ib-cd').style.color = '#ff4422';
       const infoBar = document.getElementById('info-bar');
-      if (infoBar) infoBar.classList.remove('t10-alert');
+      if (infoBar) { infoBar.classList.remove('t10-alert'); infoBar.classList.remove('t1hr-alert'); }
     }
     const winOpen = launch.win_open || t0;
     const winClose = launch.win_close || null;
@@ -2734,6 +2740,18 @@ function restoreState() {
   startPolling();
   // Persist state every 5 seconds
   setInterval(saveState, 5000);
+  // Auto-dim: reduce canvas brightness between 10pm and 6am
+  (function autoDim() {
+    const canvas = document.getElementById('c');
+    if (!canvas) return;
+    function applyDim() {
+      const h = new Date().getHours();
+      const isNight = h >= 22 || h < 6;
+      canvas.style.filter = isNight ? 'brightness(0.45)' : '';
+    }
+    applyDim();
+    setInterval(applyDim, 60000);
+  })();
   // Server watchdog — redirect to boot page if server goes down
   let _wdFails = 0;
   setInterval(async () => {
