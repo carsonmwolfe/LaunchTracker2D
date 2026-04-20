@@ -820,10 +820,15 @@ def set_timezone():
 
 @app.route('/api/device')
 def api_device():
-    try:
-        mac = open('/sys/class/net/wlan0/address').read().strip()
-    except Exception:
-        mac = '??:??:??:??:??:??'
+    mac = '??:??:??:??:??:??'
+    for iface in ['wlan0', 'eth0', 'end0', 'ens0']:
+        try:
+            m = open(f'/sys/class/net/{iface}/address').read().strip()
+            if m and m != '00:00:00:00:00:00':
+                mac = m
+                break
+        except Exception:
+            continue
     auto_id = 'LT-' + mac.replace(':', '')[-4:].upper()
     unit_id = _load_settings().get('unit_id', '').strip() or auto_id
     lat, lon = _get_location()
