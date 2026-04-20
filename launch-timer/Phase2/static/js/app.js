@@ -2280,6 +2280,7 @@ function getMilestones(vehicle) {
   if (v.includes('falcon')) return [{label:'PROP LOAD',t:-2280},{label:'ENGINE CHILL',t:-420},{label:'STRONGBACK',t:-270},{label:'STARTUP',t:-60},{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:72},{label:'MECO',t:145},{label:'STAGE SEP',t:149},{label:'FAIRING SEP',t:178},{label:'ENTRY BURN',t:361},{label:'LANDING',t:500},{label:'SECO-1',t:532},{label:'DEPLOY',t:3691}];
   if (v.includes('electron')) return [{label:'AUTO SEQ',t:-120},{label:'IGNITION',t:-2},{label:'LIFTOFF',t:0},{label:'SUPERSONIC',t:60},{label:'MAX-Q',t:71},{label:'MECO',t:149},{label:'STAGE SEP',t:152},{label:'FAIRING SEP',t:191},{label:'SECO',t:570},{label:'DEPLOY',t:3180}];
   if (v.includes('starship')) return [{label:'PROP LOAD',t:-3600},{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:58},{label:'MECO',t:169},{label:'STAGE SEP',t:175},{label:'BOOSTER CATCH',t:420},{label:'SECO',t:540},{label:'DEPLOY',t:3600}];
+  if (v.includes('new glenn') || v.includes(' ng')) return [{label:'TERMINAL COUNT',t:-240},{label:'IGNITION',t:-6},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:96},{label:'MECO',t:185},{label:'STAGE SEP',t:189},{label:'FAIRING SEP',t:222},{label:'REENTRY BURN',t:426},{label:'BOOSTER LANDING',t:563},{label:'SECO-1',t:781},{label:'SECO-2',t:4249},{label:'DEPLOY',t:4544}];
   return [{label:'IGNITION',t:-3},{label:'LIFTOFF',t:0},{label:'MAX-Q',t:75},{label:'MECO',t:160},{label:'STAGE SEP',t:163},{label:'FAIRING SEP',t:200},{label:'SECO',t:520},{label:'DEPLOY',t:3600}];
 }
 
