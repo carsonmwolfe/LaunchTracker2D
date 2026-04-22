@@ -61,10 +61,10 @@
       z-index: 5;
     }
     @keyframes t10-flash {
-      0%, 100% { border-top-color: #ff2244; background: rgba(8,12,18,0.97); }
-      50%       { border-top-color: #ff6644; background: rgba(40,8,8,0.97); }
+      0%, 100% { border-top-color: #ff0022; background: rgba(8,12,18,0.97); }
+      50%       { border-top-color: #ff4400; background: rgba(60,6,6,0.97); }
     }
-    #info-bar.t10-alert { animation: t10-flash 1s ease-in-out infinite; }
+    #info-bar.t10-alert { animation: t10-flash 0.75s ease-in-out infinite; }
 
     @keyframes t1hr-pulse {
       0%, 100% { border-top-color: #ffd93d; }
@@ -75,15 +75,15 @@
     /* LEFT panel — launch window */
     #ib-window {
       width: 185px; flex-shrink: 0;
-      padding: 8px 12px 0;
+      padding: 0 12px;
       display: flex; flex-direction: column;
-      justify-content: center; gap: 7px;
+      justify-content: center; gap: 8px;
       border-right: 2px solid #0d1620;
     }
     #ib-win-label { font-size: 9px; color: rgba(0,232,122,0.5); letter-spacing: 0.05em; }
     #ib-win-times-row { display: flex; justify-content: space-between; align-items: center; }
-    .ib-win-time { font-size: 14px; color: #00e87a; line-height: 1; }
-    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    .ib-win-time { font-size: 11px; color: #00e87a; line-height: 1; }
+    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.45); margin-top: 4px; }
     #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
     #ib-win-track {
       height: 3px; background: rgba(255,255,255,0.08);
@@ -95,12 +95,12 @@
       background: #00e87a; border: 2px solid #080c12;
       left: 0%;
     }
-    #ib-win-t0 { font-size: 7px; color: #ffd93d; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-win-t0 { font-size: 9px; color: #ffd93d; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* CENTER panel — mission info */
     #ib-left {
       flex: 1;
-      padding: 6px 14px 0;
+      padding: 0 14px;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
       gap: 4px; min-width: 0; overflow: hidden;
@@ -112,11 +112,11 @@
     #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
     #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
     #ib-prob-badge { font-size: 8px; padding: 4px 8px; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 2px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
-    #ib-detail-row { font-size: 9px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
-    #ib-sub-row  { font-size: 9px; }
-    #ib-loc-row  { font-size: 9px; }
+    #ib-detail-row { font-size: 10px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
+    #ib-sub-row  { font-size: 10px; }
+    #ib-loc-row  { font-size: 10px; }
     #ib-sub      { color: #4a9ede; }
-    #ib-location { color: rgba(255,255,255,0.5); }
+    #ib-location { color: rgba(255,255,255,0.75); }
     #ib-t0       { color: #ffd93d; }
     .ib-sep      { color: rgba(255,255,255,0.2); }
 
@@ -135,10 +135,10 @@
       justify-content: center; gap: 10px;
       border-left: 2px solid #0d1620;
     }
-    #ib-wx-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
     .ib-wx { text-align: center; display: flex; flex-direction: column; align-items: center; }
     .ib-wx-val { font-size: 16px; color: #fff; line-height: 1; }
-    .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.3); margin-top: 6px; line-height: 1.4; }
+    .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.3); margin-top: 6px; line-height: 1.4; height: 20px; display: flex; align-items: flex-start; justify-content: center; }
     #ib-ver { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; }
   </style>
 </head>
@@ -203,7 +203,7 @@
       <div id="ib-right">
         <div id="ib-wx-row">
           <div class="ib-wx"><div class="ib-wx-val" id="ib-temp">—</div><div class="ib-wx-lbl">TEMP</div></div>
-          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND<br>MPH</div></div>
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND MPH</div></div>
           <div class="ib-wx"><div class="ib-wx-val" id="ib-cloud">—</div><div class="ib-wx-lbl">CLOUD</div></div>
         </div>
         <div id="ib-ver">v2.0.0 · data 0m ago</div>
