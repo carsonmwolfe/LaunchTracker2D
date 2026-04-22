@@ -2478,9 +2478,9 @@ function render(now) {
   drawFlameParticles();  // ← Rocket jet (behind grass, road, pad)
   ctx.drawImage(getGrassCache(), 0, 0);  // grass/road covers base of exhaust
   drawBackgroundPad();  // ← Next rocket on distant pad
-  drawRocket();         // ← Active pad rocket (behind tower)
+  drawUmbilicals();     // ← Umbilical arms (behind rocket)
+  drawRocket();         // ← Active pad rocket (in front of umbilicals)
   drawRTLS();           // ← RTLS booster return (after grass, sits on ground)
-  drawUmbilicals();     // ← Umbilical arms (between rocket and tower)
   drawLaunchTower();    // ← Draw tower AFTER (in front)
   drawLaunchPad();
 
