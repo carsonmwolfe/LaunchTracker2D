@@ -80,11 +80,11 @@
       justify-content: center; gap: 7px;
       border-right: 2px solid #0d1620;
     }
-    #ib-win-label { font-size: 6px; color: rgba(0,232,122,0.5); letter-spacing: 0.05em; }
+    #ib-win-label { font-size: 9px; color: rgba(0,232,122,0.5); letter-spacing: 0.05em; }
     #ib-win-times-row { display: flex; justify-content: space-between; align-items: center; }
-    .ib-win-time { font-size: 11px; color: #ffd93d; line-height: 1; }
-    .ib-win-sublbl { font-size: 5px; color: rgba(255,255,255,0.25); margin-top: 4px; }
-    #ib-win-sep { font-size: 8px; color: rgba(255,255,255,0.2); }
+    .ib-win-time { font-size: 14px; color: #00e87a; line-height: 1; }
+    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
     #ib-win-track {
       height: 3px; background: rgba(255,255,255,0.08);
       position: relative;
@@ -95,23 +95,26 @@
       background: #00e87a; border: 2px solid #080c12;
       left: 0%;
     }
+    #ib-win-t0 { font-size: 7px; color: #ffd93d; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* CENTER panel — mission info */
     #ib-left {
       flex: 1;
-      padding: 0 14px;
+      padding: 6px 14px 0;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      gap: 7px; min-width: 0; overflow: hidden;
+      gap: 4px; min-width: 0; overflow: hidden;
       cursor: pointer;
     }
     #ib-name-row { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-width: 0; }
     #ib-name { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #ib-badge { font-size: 6px; padding: 3px 7px; letter-spacing: 0.05em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 2px solid rgba(255,211,61,0.4); color: #ffd93d; }
+    #ib-badge { font-size: 8px; padding: 4px 8px; letter-spacing: 0.05em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 2px solid rgba(255,211,61,0.4); color: #ffd93d; }
     #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
     #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
-    #ib-prob-badge { font-size: 6px; padding: 3px 7px; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 2px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
-    #ib-detail-row { font-size: 6px; text-align: center; line-height: 2; width: 100%; overflow: hidden; }
+    #ib-prob-badge { font-size: 8px; padding: 4px 8px; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 2px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
+    #ib-detail-row { font-size: 9px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
+    #ib-sub-row  { font-size: 9px; }
+    #ib-loc-row  { font-size: 9px; }
     #ib-sub      { color: #4a9ede; }
     #ib-location { color: rgba(255,255,255,0.5); }
     #ib-t0       { color: #ffd93d; }
@@ -129,14 +132,14 @@
       width: 185px; flex-shrink: 0;
       padding: 0 12px;
       display: flex; flex-direction: column;
-      justify-content: center; gap: 7px;
+      justify-content: center; gap: 10px;
       border-left: 2px solid #0d1620;
     }
-    #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-end; }
+    #ib-wx-row { display: flex; justify-content: space-around; align-items: flex-end; padding-top: 6px; }
     .ib-wx { text-align: center; }
-    .ib-wx-val { font-size: 13px; color: #fff; line-height: 1; }
-    .ib-wx-lbl { font-size: 5px; color: rgba(255,255,255,0.3); margin-top: 5px; }
-    #ib-ver { font-size: 5px; color: rgba(255,255,255,0.3); text-align: right; }
+    .ib-wx-val { font-size: 16px; color: #fff; line-height: 1; }
+    .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.3); margin-top: 6px; }
+    #ib-ver { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; }
   </style>
 </head>
 <body>
@@ -155,7 +158,7 @@
             <div class="ib-win-time" id="ib-win-open">—:—</div>
             <div class="ib-win-sublbl">OPEN</div>
           </div>
-          <div id="ib-win-sep">—</div>
+          <div id="ib-win-sep" style="color:rgba(0,232,122,0.4); position:relative; top:-5px;">-</div>
           <div style="text-align:right;">
             <div class="ib-win-time" id="ib-win-close">—:—</div>
             <div class="ib-win-sublbl">CLOSE</div>
@@ -164,7 +167,7 @@
         <div id="ib-win-track">
           <div id="ib-win-dot"></div>
         </div>
-        <!-- hidden compat elements -->
+        <div id="ib-win-t0">—</div>
         <div id="ib-win-wrap" style="display:none;"><div id="ib-win-bar"><div id="ib-win-fill"></div></div></div>
       </div>
 
@@ -176,7 +179,9 @@
           <div id="ib-prob-badge">—%</div>
         </div>
         <div id="ib-detail-row">
-          <span id="ib-sub">—</span><span class="ib-sep"> · </span><span id="ib-location">—</span><span class="ib-sep"> · </span><span id="ib-t0">—</span>
+          <div id="ib-sub-row"><span id="ib-sub">—</span></div>
+          <div id="ib-loc-row"><span id="ib-location">—</span></div>
+          <span id="ib-t0" style="display:none;"></span>
         </div>
         <!-- hidden — kept for JS compat -->
         <div id="ib-tap" style="display:none;"></div>
@@ -198,7 +203,7 @@
       <div id="ib-right">
         <div id="ib-wx-row">
           <div class="ib-wx"><div class="ib-wx-val" id="ib-temp">—</div><div class="ib-wx-lbl">TEMP</div></div>
-          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND mph</div></div>
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND MPH</div></div>
           <div class="ib-wx"><div class="ib-wx-val" id="ib-cloud">—</div><div class="ib-wx-lbl">CLOUD</div></div>
         </div>
         <div id="ib-ver">v2.0.0 · data 0m ago</div>

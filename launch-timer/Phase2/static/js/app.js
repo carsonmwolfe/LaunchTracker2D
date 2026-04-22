@@ -1425,14 +1425,14 @@ function drawCountdown() {
 
     // "LIFTOFF" header label
     ctx.fillStyle = 'rgba(255,100,50,0.5)';
-    ctx.font = 'bold 6px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.fillText('— LIFTOFF —', _cx, BY + 8);
+    ctx.font = 'bold 9px "Press Start 2P"'; ctx.textAlign = 'center';
+    ctx.fillText('— LIFTOFF —', _cx, BY + 10);
 
     // Big LAUNCHED text
     ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 18;
     ctx.fillStyle = '#ff4422';
     ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.fillText('LAUNCHED', _cx, BY + 36);
+    ctx.fillText('LAUNCHED', _cx, BY + 38);
     ctx.shadowBlur = 0;
 
     // Mission name — clipped to one line below LAUNCHED
@@ -1441,10 +1441,10 @@ function drawCountdown() {
     const _lShort = (_lPipe >= 0 ? _lFull.slice(_lPipe + 3) : _lFull).toUpperCase();
     if (_lShort) {
       ctx.fillStyle = 'rgba(255,200,150,0.85)';
-      ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
+      ctx.font = '9px "Press Start 2P"'; ctx.textAlign = 'center';
       ctx.save();
-      ctx.beginPath(); ctx.rect(BX-16, BY+44, TOTAL_W+32, 14); ctx.clip();
-      ctx.fillText(_lShort, _cx, BY + 54);
+      ctx.beginPath(); ctx.rect(BX-16, BY+44, TOTAL_W+32, 16); ctx.clip();
+      ctx.fillText(_lShort, _cx, BY + 57);
       ctx.restore();
     }
 
@@ -1454,7 +1454,7 @@ function drawCountdown() {
 
       // Divider
       ctx.strokeStyle = 'rgba(255,68,34,0.3)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(BX, BY+64); ctx.lineTo(BX+TOTAL_W, BY+64); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BX, BY+68); ctx.lineTo(BX+TOTAL_W, BY+68); ctx.stroke();
 
       // Next mission
       if (state.nextMissionName) {
@@ -1462,18 +1462,18 @@ function drawCountdown() {
         const _nPipe  = _nFull.indexOf(' | ');
         const _nShort = (_nPipe >= 0 ? _nFull.slice(_nPipe + 3) : _nFull).toUpperCase();
         ctx.fillStyle = 'rgba(0,232,122,0.85)';
-        ctx.font = '6px "Press Start 2P"'; ctx.textAlign = 'center';
+        ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center';
         ctx.save();
-        ctx.beginPath(); ctx.rect(BX-16, BY+66, TOTAL_W+32, 16); ctx.clip();
-        ctx.fillText('NEXT  ›  ' + _nShort, _cx, BY + 77);
+        ctx.beginPath(); ctx.rect(BX-16, BY+70, TOTAL_W+32, 18); ctx.clip();
+        ctx.fillText('NEXT  ›  ' + _nShort, _cx, BY + 82);
         ctx.restore();
       }
 
       // Stand-up countdown
       ctx.shadowColor = '#ffd93d'; ctx.shadowBlur = 6;
       ctx.fillStyle = '#ffd93d';
-      ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center';
-      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), _cx, BY + 97);
+      ctx.font = '10px "Press Start 2P"'; ctx.textAlign = 'center';
+      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), _cx, BY + 102);
       ctx.shadowBlur = 0;
     }
     return;
@@ -1539,8 +1539,8 @@ function drawCountdown() {
     ctx.shadowBlur=0;
 
     // Label
-    ctx.fillStyle='#4a7aaa'; ctx.font='bold 8px "Press Start 2P"'; ctx.textAlign='center';
-    ctx.fillText(lbl, bx+BW/2, by+BH-4);
+    ctx.fillStyle='#4a7aaa'; ctx.font='bold 11px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
   // Simultaneous launch banner — shown when the next launch has the same NET (within 5 min)
@@ -1632,10 +1632,10 @@ function updateInfoBar() {
   }
 
   // Sub line — vehicle · provider · pad
-  const shorten = s => (s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
+  const shorten = s => (s||'').replace(/\s*\(.*?\)/g,'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
     .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB')
-    .replace(' Space Force Base','');
+    .replace(' Space Force Base','').trim();
   const shortenProvider = s => (s||'')
     .replace('Space Exploration Technologies Corp.','SpaceX')
     .replace('Rocket Lab USA','Rocket Lab')
@@ -1675,10 +1675,12 @@ function updateInfoBar() {
       d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false}) +
       ' ' + tzLabel;
     // T-0 display in new detail row
-    const t0Label = d.toLocaleDateString('en-US',{day:'numeric',month:'short',timeZone:tz}).toUpperCase()
-      + ' · ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})
-      + ' ' + tzLabel;
+    const t0Label = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})
+      + ' ' + tzLabel
+      + ' · ' + d.toLocaleDateString('en-US',{day:'numeric',month:'short',timeZone:tz}).toUpperCase();
     document.getElementById('ib-t0').textContent = t0Label;
+    const _winT0El = document.getElementById('ib-win-t0');
+    if (_winT0El) _winT0El.textContent = t0Label;
     const cd = computeCountdown(t0);
     if (cd && cd !== 'LAUNCHED') {
       const {days,hours,minutes,seconds} = cd;
@@ -1749,7 +1751,7 @@ function updateInfoBar() {
   }
     // Version + data age
   const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  document.getElementById('ib-ver').textContent = `v2.0.0 · data ${minAgo}m ago`;
+  document.getElementById('ib-ver').textContent = `${state.version || 'v2.0.0'} · data ${minAgo}m ago`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2003,6 +2005,7 @@ async function fetchData(afterLaunch=false) {
     state.launches    = newLaunches;
     state.weather     = data.weather  || state.weather;
     state.settings    = data.settings || state.settings;
+    state.version     = data.version  || state.version || '';
     state.lastFetchAt = Date.now();
     if (hadData) showNotification('DATA UPDATED');
 
@@ -2313,7 +2316,7 @@ function drawMilestoneTimeline() {
   const dotX = W - 38;
   const centerY = 195;
   const spacing = 62;
-  const opacities = {'-2':0.18,'-1':0.45,'0':1.0,'1':0.45,'2':0.18};
+  const opacities = {'-2':0.5,'-1':0.8,'0':1.0,'1':0.8,'2':0.5};
   const scales    = {'-2':0.6, '-1':0.75,'0':1.0,'1':0.75,'2':0.6};
   const visible   = [currentIdx-2, currentIdx-1, currentIdx, currentIdx+1, currentIdx+2];
 
@@ -2373,7 +2376,7 @@ function drawMilestoneTimeline() {
     }
 
     // Dot — black halo behind for contrast
-    const r = Math.max(2, Math.round(5*scale));
+    const r = Math.max(3, Math.round(6*scale));
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.beginPath(); ctx.arc(dotX, y, r+2, 0, Math.PI*2); ctx.fill();
     if (isHold) {
@@ -2404,19 +2407,30 @@ function drawMilestoneTimeline() {
       ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.stroke();
     }
 
-    // Labels — shadow for readability against bright backgrounds
-    const ls=Math.max(5,Math.round(9*scale));
-    const ts=Math.max(4,Math.round(6*scale));
-    ctx.textAlign='right';
+    // Labels — dark pill background for contrast, bigger font for current
+    const ls = isCurrent ? 11 : Math.max(9, Math.round(10*scale));
+    const ts = isCurrent ? 7  : Math.max(7, Math.round(8*scale));
+    const labelColor = isHold ? `rgba(255,211,61,${opacity * (isCurrent ? 1.0 : 0.5)})` : isCurrent ? `rgba(255,211,61,1.0)` : isDone ? `rgba(0,232,122,${opacity})` : `rgba(255,255,255,${opacity})`;
+    const timeColor  = isHold ? `rgba(255,211,61,${opacity * 0.4})` : isCurrent ? `rgba(255,211,61,0.9)` : `rgba(0,232,122,${Math.min(1,opacity*1.1)})`;
+    ctx.textAlign = 'right';
+
+    // Dark pill behind label for readability
+    if (isCurrent) {
+      ctx.font = `bold ${ls}px "Press Start 2P"`;
+      const lw = ctx.measureText(m.label).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      roundRectPath(dotX - 14 - lw - 4, y - ls, lw + 8, ls + 4, 2);
+      ctx.fill();
+    }
+
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 4;
-    ctx.font=`bold ${ls}px Courier New`;
-    const _holdTint = `rgba(255,211,61,${opacity * (isCurrent ? 1.0 : 0.5)})`;
-    ctx.fillStyle = isHold ? _holdTint : isCurrent ? `rgba(255,211,61,${opacity})` : isDone ? `rgba(0,232,122,${opacity})` : `rgba(255,255,255,${opacity})`;
+    ctx.shadowBlur = isCurrent ? 8 : 4;
+    ctx.font = isCurrent ? `bold ${ls}px "Press Start 2P"` : `bold ${ls}px Courier New`;
+    ctx.fillStyle = labelColor;
     ctx.fillText(m.label, dotX-12, y+3);
-    ctx.font=`${ts}px Courier New`;
-    ctx.fillStyle = isHold ? `rgba(255,211,61,${opacity * 0.4})` : isCurrent ? `rgba(255,211,61,${opacity})` : `rgba(0,232,122,${Math.min(1,opacity*1.1)})`;
-    ctx.fillText(tStr(m.t), dotX-12, y+ls+4);
+    ctx.font = isCurrent ? `${ts}px "Press Start 2P"` : `${ts}px Courier New`;
+    ctx.fillStyle = timeColor;
+    ctx.fillText(tStr(m.t), dotX-12, y+ls+5);
     ctx.shadowBlur = 0;
   });
 }
