@@ -61,13 +61,13 @@
     .body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
     /* UPCOMING */
-    .upcoming-section { flex-shrink: 0; height: 148px; }
-    .upcoming-row { display: flex; gap: 5px; padding: 6px 8px; }
+    .upcoming-section { flex-shrink: 0; height: 180px; display: flex; flex-direction: column; }
+    .upcoming-row { display: flex; gap: 5px; padding: 6px 8px; flex: 1; }
     .launch-card {
-      flex: 1; background: #080c12;
+      flex: 1; min-width: 0; background: #080c12;
       border: 2px solid #1a2030;
-      padding: 7px 8px; cursor: pointer;
-      display: flex; flex-direction: column; gap: 4px;
+      padding: 9px 9px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 5px;
       position: relative; overflow: hidden;
     }
     .launch-card:hover { background: #0d1220; }
@@ -93,10 +93,13 @@
     .divider { height: 3px; background: #1a2030; flex-shrink: 0; }
 
     /* LAUNCH CARDS — bigger text */
-    .lc-name { font-size: 11px; color: #fff; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lc-vehicle { font-size: 8px; color: #4a9ede; margin-top: 2px; }
-    .lc-countdown { font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
-    .status-text { font-size: 8px; }
+    .lc-name { font-size: 10px; color: #fff; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-vehicle { font-size: 8px; color: #4a9ede; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-date { font-size: 7px; color: rgba(255,255,255,0.85); }
+    .lc-loc  { font-size: 7px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-days { font-size: 11px; color: #fff; white-space: nowrap; }
+    .lc-hms  { font-size: 9px; white-space: nowrap; }
+    .status-text { font-size: 9px; }
 
     /* BOTTOM HALF */
     .bottom-half { flex: 1; display: flex; overflow: hidden; }
@@ -110,7 +113,7 @@
     }
     .lb-total-block { padding: 10px 14px 8px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
     .lb-total-num { font-size: 40px; color: #ffd93d; line-height: 1; }
-    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; line-height: 2.2; }
+    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.55); margin-top: 4px; line-height: 2.2; }
     .lb-rows { flex: 1; display: flex; flex-direction: column; }
     .lb-row {
       display: flex; align-items: center; gap: 8px;
@@ -120,7 +123,7 @@
     .rank-1 { color: #ffd700; }
     .rank-2 { color: #c0c0c0; }
     .rank-3 { color: #cd7f32; }
-    .rank-n { color: rgba(255,255,255,0.2); }
+    .rank-n { color: rgba(255,255,255,0.55); }
     .lb-name { font-size: 9px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lb-bar-wrap { width: 50px; height: 4px; background: #1a2030; flex-shrink: 0; }
     .lb-bar { height: 100%; }
@@ -145,11 +148,11 @@
     .icon-default { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
     .event-info { flex: 1; min-width: 0; }
     .event-name { font-size: 9px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .event-type { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; }
-    .event-loc  { font-size: 7px; color: rgba(255,255,255,0.2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-type { font-size: 7px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+    .event-loc  { font-size: 7px; color: rgba(255,255,255,0.5); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event-date { text-align: right; flex-shrink: 0; }
     .event-day  { font-size: 11px; color: #fff; }
-    .event-time { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    .event-time { font-size: 7px; color: rgba(255,255,255,0.55); margin-top: 4px; }
 
     /* STATUS STRIP */
     .status-strip {
@@ -249,11 +252,40 @@
     }
     function shorten(s) {
       return (s||'')
-        .replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
-        .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
-        .replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB')
+        // Location strings
+        .replace('Vandenberg Space Force Base, California, USA','Vandenberg, CA')
+        .replace('Cape Canaveral, Florida, USA','Cape Canaveral, FL')
+        .replace('Kennedy Space Center, Florida, USA','KSC, FL')
+        .replace('Boca Chica, Texas, USA','Boca Chica, TX')
+        .replace('Mahia Peninsula, New Zealand','Mahia, NZ')
+        .replace('Tanegashima, Kagoshima, Japan','Tanegashima')
+        .replace('Jiuquan Satellite Launch Center, Inner Mongolia, China','Jiuquan')
+        .replace('Xichang Satellite Launch Center, Sichuan, China','Xichang')
+        .replace('Wenchang Space Launch Site, Hainan, China','Wenchang')
+        .replace('Baikonur Cosmodrome, Kazakhstan','Baikonur')
+        .replace('Plesetsk Cosmodrome, Arkhangelsk Oblast, Russia','Plesetsk')
+        .replace('Vostochny Cosmodrome, Amur Oblast, Russia','Vostochny')
+        .replace('Guiana Space Centre, French Guiana, France','Kourou')
+        .replace('Sea Launch Commander, Pacific Ocean','Sea Launch')
+        // Pad names
+        .replace('Space Launch Complex 40','SLC-40')
+        .replace('Space Launch Complex 4E','SLC-4E')
+        .replace('Space Launch Complex 4W','SLC-4W')
+        .replace('Space Launch Complex 6','SLC-6')
+        .replace('Launch Complex 39A','LC-39A')
+        .replace('Launch Complex 39B','LC-39B')
+        .replace('Launch Complex 48','LC-48')
+        .replace('Rocket Lab Launch Complex 1','RL LC-1, Mahia')
+        .replace('Rocket Lab Launch Complex 2','RL LC-2, VA')
+        .replace('Starbase, Boca Chica','Starbase, TX')
+        .replace('Xichang Satellite Launch Center','Xichang')
+        .replace('Taiyuan Satellite Launch Center','Taiyuan')
         .replace('Jiuquan Satellite Launch Center','Jiuquan')
-        .replace('Wenchang Space Launch Center','Wenchang');
+        .replace('Wenchang Space Launch Center','Wenchang')
+        .replace('Vandenberg Space Force Base','Vandenberg, CA')
+        .replace('Cape Canaveral Space Force Station','CC, FL')
+        .replace('Kennedy Space Center','KSC, FL')
+        .replace(/,.*/, ''); // fallback: strip after first comma
     }
     function countdown(t0, status) {
       if (!t0) return { str:'TBD', cls:'cd-yellow' };
@@ -283,14 +315,30 @@
     }
 
     // ── Countdown tickers ─────────────────────────────────────────────────────
-    const cdEls = {}; // keyed by launch ID, stores {el, t0, status}
+    const cdEls = {}; // keyed by launch ID, stores {dayEl, hmsEl, t0, status}
+    function updateCdEls(dayEl, hmsEl, t0, status) {
+      if (!t0) { dayEl.textContent = 'TBD'; hmsEl.textContent = ''; return; }
+      const sl = (status||'').toLowerCase();
+      if (sl.includes('hold')) { dayEl.textContent = 'ON HOLD'; hmsEl.textContent = ''; dayEl.className='lc-days cd-red'; hmsEl.className='lc-hms cd-red'; return; }
+      const diff = new Date(t0) - new Date();
+      if (diff <= 0) {
+        const elapsed = Math.floor((new Date() - new Date(t0)) / 1000);
+        const h=Math.floor(elapsed/3600), m=Math.floor((elapsed%3600)/60), s=elapsed%60;
+        dayEl.textContent = 'T+'; dayEl.className = 'lc-days cd-red';
+        hmsEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; hmsEl.className = 'lc-hms cd-red';
+        return;
+      }
+      const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      const cls = diff<3600000?'cd-red':diff<86400000?'cd-yellow':'cd-green';
+      dayEl.textContent = d > 0 ? d + (d===1?' DAY':' DAYS') : 'TODAY';
+      dayEl.className = 'lc-days'; // always white
+      hmsEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      hmsEl.className = 'lc-hms ' + cls; // colored by urgency
+    }
     function startTicker() {
       setInterval(() => {
-        Object.entries(cdEls).forEach(([id, {el, t0, status}]) => {
-          const cd = countdown(t0, status);
-          el.textContent = cd.str;
-          el.className = 'lc-countdown ' + cd.cls;
-        });
+        Object.values(cdEls).forEach(({dayEl, hmsEl, t0, status}) => updateCdEls(dayEl, hmsEl, t0, status));
         const first = Object.values(cdEls)[0];
         if (first) document.getElementById('ss-next').textContent = countdown(first.t0, first.status).str;
       }, 1000);
@@ -313,28 +361,53 @@
         const sc  = cls;
         const st  = sl.includes('go')?'GO':sl.includes('hold')?'HOLD':'TBD';
         const cd  = countdown(l.t0, l.status);
-        const veh = escHtml((l.vehicle||'').replace('Block 5','').replace('Falcon ','F').trim());
+        const veh = escHtml((l.vehicle||'')
+          .replace('Block 5','').replace('Falcon ','F')
+          .replace('South Korean ADD Solid-Fuel SLV','ADD SLV')
+          .replace('Solid Fuel','SF').replace('Liquid Fuel','LF')
+          .replace('Long March ','LM-').replace('Soyuz ','Soyuz-')
+          .trim());
         const nm  = l.name||'TBD';
-        const nmShort = escHtml(nm.length>18 ? nm.slice(0,16)+'…' : nm);
-        const padTxt  = escHtml(shorten(l.pad||l.location||'').slice(0,14));
-        return `<div class="launch-card ${cls}" data-lid="${Number(l.id)||0}" data-lname="${escHtml(nm)}">
+        const pipeIdx = nm.indexOf(' | ');
+        const missionRaw = (pipeIdx >= 0 ? nm.slice(pipeIdx + 3) : nm)
+          .replace(/\s*\(.*?\)/g, '')
+          .replace('Starlink Group ', 'Starlink ')
+          .replace('GPS III', 'GPS III')
+          .trim();
+        const missionName = escHtml(missionRaw);
+        const dateTxt = escHtml(fmtDate(l.t0));
+        const locTxt  = escHtml(shorten(l.location || l.pad || ''));
+        const lid = Number(l.id)||0;
+        const t0Esc = escHtml(l.t0||''), stEsc = escHtml(l.status||'');
+        const d0 = Math.floor(Math.max(0, new Date(l.t0) - new Date()) / 86400000);
+        const daysInit = escHtml(d0 > 0 ? d0 + (d0===1?' DAY':' DAYS') : 'TODAY');
+        return `<div class="launch-card ${cls}" data-lid="${lid}" data-lname="${escHtml(nm)}">
           <div class="lc-accent" style="background:${ac};"></div>
           <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div></div>
-          <div class="lc-name">${nmShort}</div>
+          <div class="lc-name">${missionName}</div>
           <div class="lc-vehicle">${veh}</div>
-          <div class="lc-bottom">
-            <div class="lc-pad">${padTxt}</div>
-            <div class="lc-countdown ${cd.cls}" data-id="${Number(l.id)||0}" data-t0="${escHtml(l.t0||'')}" data-status="${escHtml(l.status||'')}">${escHtml(cd.str)}</div>
-          </div>
+          <div class="lc-date">${dateTxt}</div>
+          <div class="lc-loc">${locTxt}</div>
+          <div class="lc-days" data-t0="${t0Esc}" data-status="${stEsc}">${daysInit}</div>
+          <div class="lc-hms ${cd.cls}"></div>
         </div>`;
       });
       row.innerHTML = cards.join('');
       // Clear stale DOM refs before repopulating to prevent memory leak
       Object.keys(cdEls).forEach(k => delete cdEls[k]);
-      row.querySelectorAll('.launch-card[data-lid]').forEach(card => {
+      row.querySelectorAll('.launch-card[data-lid]').forEach((card, i) => {
         card.addEventListener('click', () => goMission(Number(card.dataset.lid), card.dataset.lname));
+        const dayEl = card.querySelector('.lc-days');
+        const hmsEl = card.querySelector('.lc-hms');
+        if (dayEl && hmsEl) {
+          const t0 = dayEl.dataset.t0;
+          const status = dayEl.dataset.status || '';
+          if (t0) {
+            cdEls[i] = { dayEl, hmsEl, t0, status };
+            updateCdEls(dayEl, hmsEl, t0, status);
+          }
+        }
       });
-      row.querySelectorAll('[data-id]').forEach(el => { const id=el.getAttribute('data-id'); const t0=el.getAttribute('data-t0'); const status=el.getAttribute('data-status'); if(id&&t0) cdEls[id]={el,t0,status}; });
       document.getElementById('ss-upcoming').textContent = upcoming.length;
       if (upcoming[0]?.t0) document.getElementById('ss-next').textContent = countdown(upcoming[0].t0).str;
     }

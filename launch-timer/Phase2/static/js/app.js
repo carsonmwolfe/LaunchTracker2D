@@ -1408,7 +1408,7 @@ function drawCountdown() {
 
   if (cd === 'LAUNCHED' || state.postLaunchCooldown) {
     const _hasCooldown = !!state.postLaunchCooldown;
-    const _boxH = _hasCooldown ? BH + 65 : BH + 30;
+    const _boxH = _hasCooldown ? BH + 45 : BH + 30;
     const _cx   = BX - 16 + (TOTAL_W + 32) / 2;
 
     // Extend background for cooldown content
@@ -1428,11 +1428,11 @@ function drawCountdown() {
     ctx.font = 'bold 9px "Press Start 2P"'; ctx.textAlign = 'center';
     ctx.fillText('— LIFTOFF —', _cx, BY + 10);
 
-    // Big LAUNCHED text
+    // Big IN FLIGHT text
     ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 18;
     ctx.fillStyle = '#ff4422';
     ctx.font = '20px "Press Start 2P"'; ctx.textAlign = 'center';
-    ctx.fillText('LAUNCHED', _cx, BY + 38);
+    ctx.fillText('IN FLIGHT', _cx, BY + 38);
     ctx.shadowBlur = 0;
 
     // Mission name — clipped to one line below LAUNCHED
@@ -1456,24 +1456,11 @@ function drawCountdown() {
       ctx.strokeStyle = 'rgba(255,68,34,0.3)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(BX, BY+68); ctx.lineTo(BX+TOTAL_W, BY+68); ctx.stroke();
 
-      // Next mission
-      if (state.nextMissionName) {
-        const _nFull  = state.nextMissionName;
-        const _nPipe  = _nFull.indexOf(' | ');
-        const _nShort = (_nPipe >= 0 ? _nFull.slice(_nPipe + 3) : _nFull).toUpperCase();
-        ctx.fillStyle = 'rgba(0,232,122,0.85)';
-        ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center';
-        ctx.save();
-        ctx.beginPath(); ctx.rect(BX-16, BY+70, TOTAL_W+32, 18); ctx.clip();
-        ctx.fillText('NEXT  ›  ' + _nShort, _cx, BY + 82);
-        ctx.restore();
-      }
-
       // Stand-up countdown
       ctx.shadowColor = '#ffd93d'; ctx.shadowBlur = 6;
       ctx.fillStyle = '#ffd93d';
       ctx.font = '10px "Press Start 2P"'; ctx.textAlign = 'center';
-      ctx.fillText('STAND UP IN  ' + remM + ':' + String(remS).padStart(2,'0'), _cx, BY + 102);
+      ctx.fillText('PAD TURNAROUND IN  ' + remM + ':' + String(remS).padStart(2,'0'), _cx, BY + 82);
       ctx.shadowBlur = 0;
     }
     return;
@@ -1539,7 +1526,7 @@ function drawCountdown() {
     ctx.shadowBlur=0;
 
     // Label
-    ctx.fillStyle='#4a7aaa'; ctx.font='bold 11px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillStyle='#1a2a3a'; ctx.font='bold 11px "Press Start 2P"'; ctx.textAlign='center';
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
@@ -1587,7 +1574,8 @@ function updateInfoBar() {
     document.getElementById('ib-name').textContent = _lnPipe >= 0 ? _lnFull.slice(_lnPipe + 3) : _lnFull;
     document.getElementById('ib-badge').textContent = '✓';
     document.getElementById('ib-badge').className = 'go';
-    document.getElementById('ib-sub').textContent = state.nextMissionName ? 'UPCOMING: ' + state.nextMissionName : '—';
+    document.getElementById('ib-sub').textContent = 'IN FLIGHT';
+    document.getElementById('ib-location').textContent = '';
     document.getElementById('ib-cd').textContent = '—';
     document.getElementById('ib-tap').onclick = null;
     return;
@@ -2013,6 +2001,17 @@ async function fetchData(afterLaunch=false) {
     // This prevents stale test-launch IDs from permanently skipping real missions.
     const freshIds = new Set(newLaunches.map(l => l.id));
     state.buriedLaunchIds = state.buriedLaunchIds.filter(id => freshIds.has(id));
+
+    // Auto-bury any launch whose T-0 is more than 5 min in the past.
+    // Prevents LL2 data inconsistency (past launches reappearing in the feed)
+    // from re-triggering the IN FLIGHT banner after a launch was already handled.
+    newLaunches.forEach(l => {
+      if (l.t0 && !state.buriedLaunchIds.includes(l.id)) {
+        if ((Date.now() - new Date(l.t0).getTime()) / 60000 > 5) {
+          state.buriedLaunchIds.push(l.id);
+        }
+      }
+    });
 
     if (afterLaunch) {
       const newLaunch = state.launches.find(l => !state.buriedLaunchIds.includes(l.id)) || state.launches[0];
