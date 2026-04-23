@@ -40,7 +40,7 @@ def _load_settings():
         with open(SETTINGS_FILE) as f:
             return json.load(f)
     except Exception:
-        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': ''}
+        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': '', 'auto_dim': True}
 
 def _save_settings(data):
     try:
@@ -831,8 +831,18 @@ def api_device():
             continue
     auto_id = 'LT-' + mac.replace(':', '')[-4:].upper()
     unit_id = _load_settings().get('unit_id', '').strip() or auto_id
-    lat, lon = _get_location()
-    return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'lat': lat, 'lon': lon})
+    try:
+        temp_raw = int(open('/sys/class/thermal/thermal_zone0/temp').read().strip())
+        temp = f'{temp_raw / 1000:.1f}°C'
+    except Exception:
+        temp = '—'
+    try:
+        import subprocess as _sp
+        log = _sp.run(['git', '-C', os.path.dirname(os.path.abspath(__file__)), 'log', '-1', '--format=%ar'], capture_output=True, text=True)
+        last_update = log.stdout.strip() or '—'
+    except Exception:
+        last_update = '—'
+    return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'temp': temp, 'last_update': last_update})
 
 
 # ── Pi notification (shown on all pages) ──────────────────────────────────────

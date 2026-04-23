@@ -2752,18 +2752,7 @@ function restoreState() {
   startPolling();
   // Persist state every 5 seconds
   setInterval(saveState, 5000);
-  // Auto-dim: reduce canvas brightness between 10pm and 6am
-  (function autoDim() {
-    const canvas = document.getElementById('c');
-    if (!canvas) return;
-    function applyDim() {
-      const h = new Date().getHours();
-      const isNight = h >= 22 || h < 6;
-      canvas.style.filter = isNight ? 'brightness(0.45)' : '';
-    }
-    applyDim();
-    setInterval(applyDim, 60000);
-  })();
+  // Auto-dim handled globally by notify.js (applies to document.body on all pages)
   // Server watchdog — redirect to boot page if server goes down
   let _wdFails = 0;
   setInterval(async () => {

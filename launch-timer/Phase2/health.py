@@ -192,7 +192,7 @@ def take_screenshots():
         out = os.path.join(tmp_dir, f'{label}.png')
         try:
             subprocess.run([
-                'chromium-browser',
+                'chromium',
                 '--headless',
                 '--no-sandbox',
                 '--disable-gpu',

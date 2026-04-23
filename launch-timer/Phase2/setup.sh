@@ -158,11 +158,14 @@ elif [ -f /boot/cmdline.txt ]; then
     log "Splash removed from /boot/cmdline.txt"
 fi
 
-# ── 8. Hourly updater cron ────────────────────────────────────────────────────
-log "Setting up auto-updater cron..."
-CRON_LINE="0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"
-( crontab -l 2>/dev/null | grep -v "update.sh"; echo "$CRON_LINE" ) | crontab -
-log "Cron installed — runs every hour"
+# ── 8. Cron jobs ──────────────────────────────────────────────────────────────
+log "Setting up cron jobs..."
+( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py"; \
+  echo "0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"; \
+  echo "0 8 * * * python3 $SERVER_DIR/health.py digest >> /home/pi/health.log 2>&1"; \
+  echo "*/5 * * * * python3 $SERVER_DIR/health.py check >> /home/pi/health.log 2>&1" \
+) | crontab -
+log "Cron installed — updater hourly, health digest 8am daily, health check every 5min"
 
 # ── 9. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."

@@ -21,7 +21,7 @@
     .scanlines {
       position: absolute; inset: 0;
       background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
-      pointer-events: none; z-index: 100;
+      pointer-events: none; z-index: 50;
     }
 
     /* TOP BAR */
@@ -64,13 +64,13 @@
       flex-shrink: 0;
     }
     .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
-    .device-info { padding: 10px 14px; display: flex; flex-direction: column; gap: 0; flex: 1; }
-    .rocket-icon { display: flex; justify-content: center; padding: 8px 0 10px; }
-    .di-field { border-bottom: 1px solid #1a2030; padding: 7px 0; display: flex; justify-content: space-between; align-items: center; }
-    .di-label { font-size: 7px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; }
-    .di-val { font-size: 10px; color: #fff; }
-    .di-val.green { color: #00e87a; }
-    .di-val.blue  { color: #4a9ede; font-size: 9px; }
+    .device-info { padding: 8px 12px; display: flex; flex-direction: column; gap: 0; flex: 1; }
+    .rocket-icon { display: none; }
+    .di-field { border-bottom: 1px solid #1a2030; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+    .di-label { font-size: 6px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; white-space: nowrap; flex-shrink: 0; }
+    .di-val { font-size: 9px; color: #fff; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .di-val.green { color: #00e87a; font-size: 8px; }
+    .di-val.blue  { color: #4a9ede; font-size: 8px; }
     .di-val.yellow { color: #ffd93d; }
     .di-divider { display: none; }
 
@@ -80,7 +80,7 @@
       background: #0a0e14; overflow: hidden;
       border-right: 3px solid #1a2030;
     }
-    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr; overflow: hidden; }
+    .settings-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto auto 1fr; overflow: hidden; }
     .setting-cell.full { grid-column: 1 / -1; border-right: none; }
     .setting-cell.top-full { grid-column: 1 / -1; border-right: none; }
     .unit-id-input {
@@ -92,10 +92,10 @@
     }
     .unit-id-input:focus { border-color: #ffd93d; }
     .setting-cell {
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-bottom: 2px solid #1a2030;
       border-right: 2px solid #1a2030;
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; flex-direction: column; gap: 5px;
     }
     .setting-cell:last-child { border-right: none; }
     .setting-cell.bot { border-bottom: none; }
@@ -118,7 +118,7 @@
     /* Toggle buttons */
     .tog {
       font-family: 'Press Start 2P', monospace;
-      font-size: 9px; padding: 7px 13px;
+      font-size: 8px; padding: 6px 10px;
       border: 2px solid #1a2030;
       color: rgba(255,255,255,0.25);
       cursor: pointer; background: #080c12;
@@ -154,25 +154,27 @@
     /* ACTIONS */
     .actions {
       display: flex; gap: 6px;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border-top: 3px solid #00e87a;
       background: #0d1620; flex-shrink: 0;
+      position: relative; z-index: 101;
     }
     .act-btn {
-      flex: 1; padding: 9px 4px;
+      flex: 1; padding: 10px 4px;
       font-family: 'Press Start 2P', monospace;
       font-size: 8px; cursor: pointer;
-      border: 2px solid;
       letter-spacing: 0.04em; text-align: center;
+      white-space: nowrap;
+      background: #080c12; border: 2px solid;
     }
-    .act-green  { border-color: #00e87a; color: #080c12; background: #00e87a; }
-    .act-green:hover  { background: #00c068; }
-    .act-yellow { border-color: #ffd93d; color: #080c12; background: #ffd93d; }
-    .act-yellow:hover { background: #e0c030; }
-    .act-blue   { border-color: #4a9ede; color: #080c12; background: #4a9ede; }
-    .act-blue:hover   { background: #3a84c4; }
-    .act-red    { border-color: #ff4422; color: #fff; background: #ff4422; }
-    .act-red:hover    { background: #dd2200; }
+    .act-green  { color: #00e87a; border-color: #00e87a; }
+    .act-green:hover  { background: rgba(0,232,122,0.12); }
+    .act-yellow { color: #ffd93d; border-color: #ffd93d; }
+    .act-yellow:hover { background: rgba(255,217,61,0.12); }
+    .act-blue   { color: #4a9ede; border-color: #4a9ede; }
+    .act-blue:hover   { background: rgba(74,158,222,0.12); }
+    .act-red    { color: #ff4422; border-color: #ff4422; }
+    .act-red:hover    { background: rgba(255,68,34,0.12); }
 
     /* RIGHT — system status */
     .right {
@@ -199,6 +201,7 @@
     .sys-val.blue   { color: #4a9ede; }
     .sys-val.yellow { color: #ffd93d; }
     .sys-val.orange { color: #ff9933; }
+    .sys-val.red    { color: #ff4422; }
 
     /* STATUS STRIP */
     .status-strip {
@@ -225,7 +228,7 @@
     </div>
     <div class="top-title-wrap">
       <div class="top-title">SYSTEM SETTINGS</div>
-      <div class="top-sub">// LAUNCHTRACKER2D · CONFIGURATION //</div>
+      <div class="top-sub">// RANGETRACK · CONFIGURATION //</div>
     </div>
     <div class="save-indicator" id="save-indicator" style="visibility:hidden;">✓ SAVED</div>
   </div>
@@ -241,22 +244,24 @@
     <div class="left">
       <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> DEVICE INFO</div>
       <div class="device-info">
-        <div class="rocket-icon">
-          <svg width="32" height="56" viewBox="0 0 32 56">
-            <rect x="10" y="8" width="12" height="36" fill="rgba(0,232,122,0.5)"/>
-            <polygon points="10,8 16,0 22,8" fill="rgba(0,232,122,0.7)"/>
-            <rect x="10" y="14" width="12" height="2" fill="rgba(0,0,0,0.3)"/>
-            <rect x="10" y="30" width="12" height="3" fill="rgba(0,0,0,0.3)"/>
-            <rect x="4" y="32" width="6" height="8" fill="rgba(0,232,122,0.3)"/>
-            <rect x="22" y="32" width="6" height="8" fill="rgba(0,232,122,0.3)"/>
-            <rect x="11" y="44" width="10" height="5" fill="rgba(150,150,150,0.4)"/>
-          </svg>
+        <div style="display:flex; justify-content:center; padding: 8px 0 6px;">
+          <div style="width:150px; height:150px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+            <img src="/static/assets/BootLOGO.png" style="width:200px; height:150px; object-fit:cover; object-position:center; image-rendering:auto;">
+          </div>
         </div>
-        <div class="di-field"><span class="di-label">UNIT NAME</span><span class="di-val green">LAUNCHTRACKER 2D</span></div>
+        <div class="di-field"><span class="di-label">UNIT NAME</span><span class="di-val green">RANGETRACK</span></div>
         <div class="di-field"><span class="di-label">UNIT ID</span><span class="di-val yellow" id="unit-id">LT-???</span></div>
         <div class="di-field"><span class="di-label">MAC</span><span class="di-val blue" id="mac-addr">??:??:??:??:??:??</span></div>
         <div class="di-field"><span class="di-label">FIRMWARE</span><span class="di-val" id="version-str">v1.0.0</span></div>
         <div class="di-field"><span class="di-label">PLATFORM</span><span class="di-val">RASPBERRY PI</span></div>
+        <div class="di-field" style="flex-direction:column; align-items:flex-start; gap:6px; border-bottom:none;">
+          <span class="di-label">LAUNCH SITE</span>
+          <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
+            <button class="tog blue" id="site-cape" onclick="setSite('cape')" style="font-size:7px; padding:5px 8px;">CAPE CANAVERAL</button>
+            <button class="tog disabled" disabled style="font-size:7px; padding:5px 8px;">VANDENBERG · SOON</button>
+            <button class="tog disabled" disabled style="font-size:7px; padding:5px 8px;">ALL SITES · SOON</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -275,7 +280,7 @@
           </div>
         </div>
 
-        <!-- Temperature -->
+        <!-- Row 2: Temperature · Time Format · Auto Dim -->
         <div class="setting-cell bot">
           <div class="s-label">TEMPERATURE</div>
           <div class="s-sub">Weather units</div>
@@ -285,30 +290,27 @@
           </div>
         </div>
 
-        <!-- Time format -->
         <div class="setting-cell bot">
           <div class="s-label">TIME FORMAT</div>
           <div class="s-sub">Clock &amp; sky timezone</div>
-          <div class="s-control">
+          <div class="s-control" style="flex-direction:row; flex-wrap:wrap;">
             <button class="tog" id="time-utc"   onclick="setTimeFormat('utc')">UTC</button>
             <button class="tog" id="time-site"  onclick="setTimeFormat('site')">SITE</button>
             <button class="tog" id="time-local" onclick="setTimeFormat('local')">LOCAL</button>
           </div>
         </div>
 
-        <!-- Launch site -->
         <div class="setting-cell bot">
-          <div class="s-label">LAUNCH SITE</div>
-          <div class="s-sub">Filter by location</div>
-          <div class="s-control" style="flex-direction:column;gap:4px;">
-            <button class="tog blue" id="site-cape" onclick="setSite('cape')">CAPE CANAVERAL</button>
-            <button class="tog disabled" disabled>VANDENBERG · SOON</button>
-            <button class="tog disabled" disabled>ALL SITES · SOON</button>
+          <div class="s-label">AUTO DIM</div>
+          <div class="s-sub">Dim screen 10pm–6am</div>
+          <div class="s-control" style="flex-direction:row;">
+            <button class="tog" id="dim-on"  onclick="setAutoDim(true)">ON</button>
+            <button class="tog" id="dim-off" onclick="setAutoDim(false)">OFF</button>
           </div>
         </div>
 
-        <!-- Timezone — full width row -->
-        <div class="setting-cell full">
+        <!-- Row 3: Timezone — full width -->
+        <div class="setting-cell full bot">
           <div class="s-label">TIMEZONE</div>
           <div class="s-sub">Sets Pi system clock &amp; LOCAL time display</div>
           <select class="tz-select" id="tz-select" onchange="setTimezone(this.value)">
@@ -331,7 +333,7 @@
         <button class="act-btn act-green"  onclick="goBack()">← BACK</button>
         <button class="act-btn act-yellow" onclick="restartPage()">↺ RESTART</button>
         <button class="act-btn act-blue"   onclick="goWifi()">⌘ WIFI</button>
-        <button class="act-btn act-red"    onclick="rebootPi()">⏻ REBOOT PI</button>
+        <button class="act-btn act-red"    onclick="rebootPi()">⏻ REBOOT</button>
       </div>
     </div>
 
@@ -352,12 +354,12 @@
           <div class="sys-val yellow" id="sys-weather">LOADING...</div>
         </div>
         <div class="sys-row">
-          <div class="sys-label">LL2 CACHE</div>
-          <div class="sys-val orange" id="sys-ll2">CHECKING...</div>
+          <div class="sys-label">PI TEMP</div>
+          <div class="sys-val orange" id="sys-temp">—</div>
         </div>
         <div class="sys-row">
-          <div class="sys-label">LOCATION</div>
-          <div class="sys-val" id="sys-location">DETECTING...</div>
+          <div class="sys-label">LAST UPDATE</div>
+          <div class="sys-val" id="sys-location">—</div>
         </div>
       </div>
     </div>
@@ -372,7 +374,7 @@
   </div>
 
   <script>
-    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'', timezone:'America/New_York' };
+    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'', timezone:'America/New_York', auto_dim:true };
 
     // Show first-run banner if redirected from home with ?setup=1
     if (new URLSearchParams(window.location.search).get('setup') === '1') {
@@ -408,6 +410,8 @@
       document.getElementById('time-site').classList.toggle('active',  settings.time_format === 'site');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
       document.getElementById('tz-select').value = settings.timezone || 'America/New_York';
+      document.getElementById('dim-on').classList.toggle('active',  settings.auto_dim !== false);
+      document.getElementById('dim-off').classList.toggle('active', settings.auto_dim === false);
       // unit_id managed server-side via MAC address
     }
 
@@ -451,6 +455,14 @@
     }
 
 
+    function setAutoDim(v) {
+      settings.auto_dim = v;
+      document.getElementById('dim-on').classList.toggle('active',  v === true);
+      document.getElementById('dim-off').classList.toggle('active', v === false);
+      if (window._setAutoDim) window._setAutoDim(v);
+      saveSettings();
+    }
+
     function setTimezone(tz) {
       settings.timezone = tz;
       fetch('/api/settings/timezone', {
@@ -481,8 +493,14 @@
         document.getElementById('version-str').textContent = d.version || 'v1.0.0';
         document.getElementById('ss-unit').textContent   = d.unit_id || 'LT-???';
         document.getElementById('ss-version').textContent = d.version || 'v1.0.0';
-        if (d.lat && d.lon) {
-          document.getElementById('sys-location').textContent = d.lat.toFixed(2) + '°N ' + Math.abs(d.lon).toFixed(2) + '°W';
+        if (d.temp) {
+          const el = document.getElementById('sys-temp');
+          const val = parseFloat(d.temp);
+          el.textContent = d.temp;
+          el.className = 'sys-val ' + (val >= 80 ? 'red' : val >= 65 ? 'orange' : 'green');
+        }
+        if (d.last_update) {
+          document.getElementById('sys-location').textContent = d.last_update;
         }
       } catch(e) {}
     }

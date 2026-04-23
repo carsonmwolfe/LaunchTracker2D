@@ -99,4 +99,40 @@
   }
 
   pollNotify();
+
+  // ── Auto-dim ─────────────────────────────────────────────────────────────────
+  // Applies to every page. Reads auto_dim setting from /api/settings every 5 min.
+  let _autoDimEnabled = true;
+  async function _loadDimSetting() {
+    try {
+      const r = await fetch('/api/settings');
+      const s = await r.json();
+      _autoDimEnabled = s.auto_dim !== false;
+    } catch(e) {}
+  }
+  function _applyDim() {
+    const h = new Date().getHours();
+    const dimOn = _autoDimEnabled && (h >= 22 || h < 6);
+    document.body.style.filter = dimOn ? 'brightness(0.45)' : '';
+  }
+  _loadDimSetting().then(_applyDim);
+  setInterval(() => { _loadDimSetting().then(_applyDim); }, 5 * 60 * 1000);
+  setInterval(_applyDim, 60000);
+  // expose so app.js can trigger re-apply after settings save
+  window._applyAutoDim = _applyDim;
+  window._setAutoDim = (v) => { _autoDimEnabled = v; _applyDim(); };
+
+  // ── Inactivity redirect ───────────────────────────────────────────────────────
+  // After 1 hour of no interaction on any non-home page, return to main screen.
+  if (window.location.pathname !== '/') {
+    const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
+    let _inactivityTimer = setTimeout(() => { window.location = '/'; }, INACTIVITY_MS);
+    function _resetInactivity() {
+      clearTimeout(_inactivityTimer);
+      _inactivityTimer = setTimeout(() => { window.location = '/'; }, INACTIVITY_MS);
+    }
+    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(ev =>
+      document.addEventListener(ev, _resetInactivity, { passive: true })
+    );
+  }
 })();
