@@ -183,8 +183,8 @@ def take_screenshots():
     mission_id = get_current_launch_id()
     mission_url = f'http://localhost:5001/mission?id={mission_id}' if mission_id else 'http://localhost:5001/mission'
     pages = [
-        ('LAUNCHES', 'http://localhost:5001/launches', 30),
-        ('MISSION',  mission_url,                      30),
+        ('LAUNCHES', 'http://localhost:5001/launches', 60),
+        ('MISSION',  mission_url,                      60),
     ]
     results = {}
     tmp_dir = tempfile.mkdtemp()
