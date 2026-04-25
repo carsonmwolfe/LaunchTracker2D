@@ -195,11 +195,12 @@ def take_screenshots():
                 'chromium',
                 '--headless',
                 '--no-sandbox',
+                '--no-zygote',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
                 '--disable-dev-shm-usage',
                 '--window-size=800,480',
-                '--virtual-time-budget=6000',
+                '--virtual-time-budget=8000',
                 f'--screenshot={out}',
                 url
             ], timeout=timeout, capture_output=True)
