@@ -472,7 +472,12 @@
     }
 
     function updateUnit(id) {
-      addLog(id, 'Update push requested — not yet implemented', 'warn');
+      const u = units.find(u => u.id === id);
+      if (!u) return;
+      fetch(`http://${u.ip}:5001/api/update`, {method:'POST'})
+        .then(r => r.json())
+        .then(() => addLog(id, 'Force update triggered — pulling latest from GitHub', 'ok'))
+        .catch(() => addLog(id, 'Update request failed — unit may be offline', 'warn'));
     }
 
     function viewLogs(id) {
@@ -486,7 +491,10 @@
     function pushUpdate() {
       if (!confirm('Push update to all online units?')) return;
       units.filter(u=>u.status==='online').forEach(u => {
-        addLog(u.id, 'Update push initiated', 'ok');
+        fetch(`http://${u.ip}:5001/api/update`, {method:'POST'})
+          .then(r => r.json())
+          .then(() => addLog(u.id, 'Force update triggered — pulling latest from GitHub', 'ok'))
+          .catch(() => addLog(u.id, 'Update request failed — unit may be offline', 'warn'));
       });
     }
 

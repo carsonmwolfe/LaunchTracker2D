@@ -895,6 +895,17 @@ def reboot():
         daemon=True).start()
     return jsonify({'ok': True})
 
+@app.route('/api/update', methods=['POST'])
+def force_update():
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'update.sh')
+    threading.Thread(
+        target=lambda: subprocess.Popen(['bash', script],
+            stdout=open('/home/pi/update.log', 'a'),
+            stderr=subprocess.STDOUT),
+        daemon=True).start()
+    _notify_write('UPDATE', 'Force update triggered from Mission Control')
+    return jsonify({'ok': True})
+
 
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
