@@ -82,6 +82,7 @@ if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
     cat > /home/pi/.config/labwc/autostart << LABWCEOF
 bash $SERVER_DIR/start.sh &
 (sleep 3 && pkill -f 'lwrespawn.*wf-panel' && pkill -f 'wf-panel-pi') &
+(sleep 1 && pkill -f 'gnome-keyring-daemon') &
 LABWCEOF
     log "labwc autostart configured"
 fi
@@ -133,6 +134,18 @@ log "Wallpaper configured"
 
 # Hide desktop icons (repo folder etc)
 echo "LaunchTracker2D" > /home/pi/Desktop/.hidden
+
+# ── Disable gnome-keyring (prevents "choose password" dialog on first boot) ───
+log "Disabling gnome-keyring..."
+mkdir -p /home/pi/.config/autostart
+for KR in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11 gnome-keyring-gpg; do
+    cat > /home/pi/.config/autostart/${KR}.desktop << KREOF
+[Desktop Entry]
+Type=Application
+Hidden=true
+KREOF
+done
+log "gnome-keyring disabled"
 
 # ── 6. Hide taskbar (lxsession only — labwc taskbar killed via autostart) ──────
 mkdir -p /home/pi/.config/lxpanel/LXDE-pi/panels
