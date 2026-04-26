@@ -88,6 +88,36 @@ echo "$LOG_PREFIX Successfully updated to $NEW_HEAD"
 chmod +x "$REPO_DIR/launch-timer/Phase2/update.sh"
 chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
+# ── Provision — sync system configs that may have changed in setup.sh ─────────
+# This runs on every successful pull so existing Pis don't need reimaging.
+
+PHASE2="$REPO_DIR/launch-timer/Phase2"
+
+# Ensure health cron jobs are installed
+CRON_TMP=$(mktemp)
+crontab -l 2>/dev/null | grep -v "health.py" > "$CRON_TMP"
+echo "0 8 * * * python3 $PHASE2/health.py digest >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
+echo "*/5 * * * * python3 $PHASE2/health.py check >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
+crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
+rm -f "$CRON_TMP"
+
+# Ensure gnome-keyring is permanently disabled
+CHANGED_KR=0
+for KR in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11 gnome-keyring-gpg; do
+    KR_FILE="/home/pi/.config/autostart/${KR}.desktop"
+    if [ ! -f "$KR_FILE" ] || ! grep -q "Hidden=true" "$KR_FILE" 2>/dev/null; then
+        mkdir -p /home/pi/.config/autostart
+        printf '[Desktop Entry]\nType=Application\nHidden=true\n' > "$KR_FILE"
+        CHANGED_KR=1
+    fi
+done
+[ "$CHANGED_KR" -eq 1 ] && echo "$LOG_PREFIX gnome-keyring disabled"
+
+# Warn if Gmail password file is missing
+if [ ! -f /home/pi/.rangetrack_gmail_pass ]; then
+    echo "$LOG_PREFIX WARNING: Gmail password not set. Run: echo 'APP_PASS' > /home/pi/.rangetrack_gmail_pass && chmod 600 /home/pi/.rangetrack_gmail_pass"
+fi
+
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
 # Wipe Chromium cache so all pages get fresh files (not just current tab)
@@ -97,6 +127,11 @@ echo "$LOG_PREFIX Chromium cache cleared"
 # Rotate server log — keep last 500 lines to prevent SD card fill
 if [ -f /home/pi/server.log ]; then
     tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
+fi
+
+# Rotate health log — keep last 1000 lines
+if [ -f /home/pi/health.log ]; then
+    tail -1000 /home/pi/health.log > /tmp/health.log.tmp && mv /tmp/health.log.tmp /home/pi/health.log
 fi
 
 # Restart Flask server

@@ -55,9 +55,18 @@ DISK_ALERT_PCT    = 90
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 def send_email(subject, html):
+    if not os.path.exists(PASS_FILE):
+        print(f'[{ts()}] ERROR: Gmail password file not found at {PASS_FILE}')
+        print(f'[{ts()}] FIX: Run this on the Pi:')
+        print(f'[{ts()}]   echo "YOUR_APP_PASSWORD" > {PASS_FILE}')
+        print(f'[{ts()}]   chmod 600 {PASS_FILE}')
+        return
     try:
         with open(PASS_FILE) as f:
             password = f.read().strip()
+        if not password:
+            print(f'[{ts()}] ERROR: Gmail password file is empty — {PASS_FILE}')
+            return
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f'[{UNIT_ID}] {subject}'
         msg['From']    = FROM
@@ -495,54 +504,62 @@ def send_digest():
     clear_update_log()  # reset after digest so updates don't stack up
 
 # ── Alert Check ───────────────────────────────────────────────────────────────
+ALERT_COOLDOWN = 3600  # re-alert at most once per hour per condition
+
 def check_alerts():
-    state   = load_alert_state()
+    state = load_alert_state()
+    now   = time.time()
     alerts  = []
     cleared = []
 
+    def _fire(key, msg, restart_fn=None):
+        """Fire alert if condition is new or cooldown has expired."""
+        is_new = not state.get(key)
+        last_sent = state.get(f'{key}_sent', 0)
+        if is_new and restart_fn:
+            restart_fn()
+        if is_new or (now - last_sent) >= ALERT_COOLDOWN:
+            alerts.append(msg)
+            state[key] = True
+            state[f'{key}_sent'] = now
+
+    def _clear(key, msg):
+        cleared.append(msg)
+        state[key] = False
+        state.pop(f'{key}_sent', None)
+
     internet = has_internet()
-    if not internet and not state.get('no_internet'):
-        alerts.append('INTERNET LOST — Pi has no network connection.')
-        state['no_internet'] = True
-    elif internet and state.get('no_internet'):
-        cleared.append('Internet connection restored.')
-        state['no_internet'] = False
+    if not internet:
+        _fire('no_internet', 'INTERNET LOST — Pi has no network connection.')
+    elif state.get('no_internet'):
+        _clear('no_internet', 'Internet connection restored.')
 
     temp = get_temp()
     if temp is not None:
-        if temp >= TEMP_ALERT_C and not state.get('high_temp'):
-            alerts.append(f'HIGH TEMP — CPU at {temp:.1f}C (limit {TEMP_ALERT_C}C).')
-            state['high_temp'] = True
-        elif temp < TEMP_ALERT_C and state.get('high_temp'):
-            cleared.append(f'Temperature back to normal ({temp:.1f}C).')
-            state['high_temp'] = False
+        if temp >= TEMP_ALERT_C:
+            _fire('high_temp', f'HIGH TEMP — CPU at {temp:.1f}C (limit {TEMP_ALERT_C}C).')
+        elif state.get('high_temp'):
+            _clear('high_temp', f'Temperature back to normal ({temp:.1f}C).')
 
     server = is_server_running()
-    if not server and not state.get('server_down'):
-        restart_server()
-        alerts.append('SERVER CRASHED — auto-restarted server.py.')
-        state['server_down'] = True
-    elif server and state.get('server_down'):
-        cleared.append('Server is back online.')
-        state['server_down'] = False
+    if not server:
+        _fire('server_down', 'SERVER CRASHED — auto-restarted server.py.', restart_fn=restart_server)
+    elif state.get('server_down'):
+        _clear('server_down', 'Server is back online.')
 
     los = get_last_fetch_age()
     if los is not None:
-        if los >= LOS_ALERT_MINUTES and not state.get('los'):
-            alerts.append(f'LOSS OF SIGNAL — No API data for {los:.0f} minutes.')
-            state['los'] = True
-        elif los < LOS_ALERT_MINUTES and state.get('los'):
-            cleared.append(f'API signal restored ({los:.0f} min ago).')
-            state['los'] = False
+        if los >= LOS_ALERT_MINUTES:
+            _fire('los', f'LOSS OF SIGNAL — No API data for {los:.0f} minutes.')
+        elif state.get('los'):
+            _clear('los', f'API signal restored ({los:.0f} min ago).')
 
     _, _, disk_pct = get_disk()
     if disk_pct is not None:
-        if disk_pct >= DISK_ALERT_PCT and not state.get('low_disk'):
-            alerts.append(f'LOW DISK — {disk_pct}% used (limit {DISK_ALERT_PCT}%).')
-            state['low_disk'] = True
-        elif disk_pct < DISK_ALERT_PCT and state.get('low_disk'):
-            cleared.append(f'Disk space OK ({disk_pct}% used).')
-            state['low_disk'] = False
+        if disk_pct >= DISK_ALERT_PCT:
+            _fire('low_disk', f'LOW DISK — {disk_pct}% used (limit {DISK_ALERT_PCT}%).')
+        elif state.get('low_disk'):
+            _clear('low_disk', f'Disk space OK ({disk_pct}% used).')
 
     save_alert_state(state)
 
