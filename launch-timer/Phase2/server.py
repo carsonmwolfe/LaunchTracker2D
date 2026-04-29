@@ -149,9 +149,14 @@ def _fetch_weather():
         'humidity': 60, 'wind_speed': 10, 'wind_dir': 'E', 'precip': 0, 'cloud_cover': 0,
     }
 
+_WEATHER_DEFAULT = {
+    'condition': 'clear', 'label': 'Loading...', 'temp_f': 0, 'temp_c': 0,
+    'humidity': 0, 'wind_speed': 0, 'wind_dir': '—', 'precip': 0, 'cloud_cover': 0,
+}
+
 def _get_weather():
-    """Always returns from in-memory cache synchronously. Background thread refreshes it."""
-    return _weather_cache['data'] or _fetch_weather()
+    """Returns cached weather — never blocks on a live fetch. Background thread refreshes it."""
+    return _weather_cache['data'] or _WEATHER_DEFAULT
 
 
 # ── LL2 data normalisation ────────────────────────────────────────────────────
