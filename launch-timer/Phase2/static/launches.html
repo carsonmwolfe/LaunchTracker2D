@@ -97,7 +97,10 @@
     .lc-vehicle { font-size: 10px; color: #4a9ede; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lc-date { font-size: 9px; color: rgba(255,255,255,0.85); }
     .lc-loc  { font-size: 9px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lc-slip { font-size: 7px; color: #ffd93d; margin-top: 1px; }
+    .lc-slip { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+    .lc-slip-badge { font-size: 6px; color: #0a0e14; background: #ffd93d; padding: 1px 4px; flex-shrink: 0; }
+    .lc-slip-amt { font-size: 7px; color: #ffd93d; }
+    .lc-date-orig { font-size: 7px; color: rgba(255,255,255,0.3); text-decoration: line-through; margin-right: 4px; }
     .lc-days { font-size: 11px; color: #fff; white-space: nowrap; }
     .lc-hms  { font-size: 9px; white-space: nowrap; }
     .status-text { font-size: 9px; }
@@ -376,15 +379,17 @@
           .replace('GPS III', 'GPS III')
           .trim();
         const missionName = escHtml(missionRaw);
-        const dateTxt = escHtml(fmtDate(l.t0));
         const locTxt  = escHtml(shorten(l.location || l.pad || ''));
-        let slipHtml = '';
+        let dateTxt, slipHtml = '';
         if (l.original_t0 && l.original_t0 !== l.t0) {
-          const slipMs = new Date(l.t0) - new Date(l.original_t0);
-          const slipD  = Math.floor(Math.abs(slipMs) / 86400000);
-          const slipH  = Math.floor((Math.abs(slipMs) % 86400000) / 3600000);
+          const slipMs  = new Date(l.t0) - new Date(l.original_t0);
+          const slipD   = Math.floor(Math.abs(slipMs) / 86400000);
+          const slipH   = Math.floor((Math.abs(slipMs) % 86400000) / 3600000);
           const slipStr = slipD > 0 ? `+${slipD}d ${slipH}h` : `+${slipH}h`;
-          slipHtml = `<div class="lc-slip">▲ SLIPPED ${slipStr}</div>`;
+          dateTxt  = `<span class="lc-date-orig">${escHtml(fmtDate(l.original_t0))}</span>${escHtml(fmtDate(l.t0))}`;
+          slipHtml = `<div class="lc-slip"><span class="lc-slip-badge">DELAYED</span><span class="lc-slip-amt">${slipStr}</span></div>`;
+        } else {
+          dateTxt = escHtml(fmtDate(l.t0));
         }
         const lid = Number(l.id)||0;
         const t0Esc = escHtml(l.t0||''), stEsc = escHtml(l.status||'');
