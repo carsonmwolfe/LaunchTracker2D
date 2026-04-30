@@ -254,8 +254,46 @@ def _is_valid(launch):
 
 # ── Central data cache ────────────────────────────────────────────────────────
 
-CACHE_FILE  = os.path.join(BASE_DIR, 'data_cache.json')
-_cache_lock = threading.Lock()   # guards all _data_cache mutations
+CACHE_FILE    = os.path.join(BASE_DIR, 'data_cache.json')
+T0_HIST_FILE  = os.path.join(BASE_DIR, 't0_history.json')
+_cache_lock   = threading.Lock()   # guards all _data_cache mutations
+
+def _load_t0_history():
+    try:
+        with open(T0_HIST_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_t0_history(hist):
+    try:
+        with open(T0_HIST_FILE, 'w') as f:
+            json.dump(hist, f)
+    except Exception:
+        pass
+
+def _apply_t0_history(launches):
+    """For each launch, record its first-seen T0. If T0 has slipped, attach original_t0."""
+    hist = _load_t0_history()
+    changed = False
+    for l in launches:
+        lid = str(l.get('id', ''))
+        t0  = l.get('t0')
+        if not lid or not t0:
+            continue
+        if lid not in hist:
+            hist[lid] = t0
+            changed = True
+        else:
+            orig = hist[lid]
+            if orig != t0:
+                l['original_t0'] = orig
+    # Prune IDs older than 30 days to keep file small
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    hist = {k: v for k, v in hist.items() if v >= cutoff}
+    if changed:
+        _save_t0_history(hist)
+    return launches
 
 _data_cache = {
     'launches':       [],   # normalized + filtered upcoming launches
@@ -399,6 +437,7 @@ def _refresh_all(force_hourly=False):
     try:
         launches = _fetch_upcoming()
         if launches is not None:
+            launches = _apply_t0_history(launches)
             with _cache_lock:
                 _data_cache['launches']   = launches
                 _data_cache['fetched_at'] = time.time()
