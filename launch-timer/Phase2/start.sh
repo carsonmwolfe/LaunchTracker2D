@@ -64,33 +64,39 @@ for i in $(seq 1 20); do
 done
 
 # ── Supervisor loop — restart server if it crashes ───────────────────────────
+_HTTP_FAILS=0
 while true; do
     sleep 15
 
-    if ! kill -0 $SERVER_PID 2>/dev/null; then
-        # Don't restart if update.sh is already handling it
-        if [ -e "/tmp/rangetrack_update.lock" ]; then
+    # Use HTTP health check — more reliable than PID tracking across restarts
+    if curl -s -o /dev/null http://localhost:5001/ --max-time 3 2>/dev/null; then
+        _HTTP_FAILS=0
+        # Re-acquire PID in case update.sh or health.py restarted the server
+        NEW_PID=$(fuser 5001/tcp 2>/dev/null | awk '{print $1}')
+        [ -n "$NEW_PID" ] && SERVER_PID=$NEW_PID
+    else
+        _HTTP_FAILS=$((_HTTP_FAILS + 1))
+        if [ "$_HTTP_FAILS" -lt 2 ]; then
+            echo "[$(date '+%H:%M:%S')] Server not responding (attempt $_HTTP_FAILS) — waiting..." >> "$SERVER_LOG"
+        elif [ -e "/tmp/rangetrack_update.lock" ]; then
             echo "[$(date '+%H:%M:%S')] Server down but update in progress — skipping restart" >> "$SERVER_LOG"
         else
             echo "[$(date '+%H:%M:%S')] Server crashed — restarting..." >> "$SERVER_LOG"
-            fuser -k 5001/tcp 2>/dev/null || kill $(fuser 5001/tcp 2>/dev/null) 2>/dev/null || true
+            fuser -k 5001/tcp 2>/dev/null || true
             sleep 1
             cd "$APP_DIR"
             nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
             SERVER_PID=$!
+            _HTTP_FAILS=0
             sleep 5
-            # Client detects server restart via watchdog and reloads itself
-        fi
-    else
-        # Update may have restarted the server — re-acquire PID so supervisor stays accurate
-        NEW_PID=$(fuser 5001/tcp 2>/dev/null | awk '{print $1}')
-        if [ -n "$NEW_PID" ] && [ "$NEW_PID" != "$SERVER_PID" ]; then
-            SERVER_PID=$NEW_PID
         fi
     fi
 
     # If Chromium died too, relaunch it
     if ! kill -0 $CHROMIUM_PID 2>/dev/null; then
+        rm -f /home/pi/.config/chromium/SingletonLock \
+              /home/pi/.config/chromium/SingletonCookie \
+              /home/pi/.config/chromium/SingletonSocket 2>/dev/null
         "$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
         CHROMIUM_PID=$!
     fi
