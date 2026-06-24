@@ -27,7 +27,7 @@ CHROMIUM_FLAGS="--kiosk --no-memcheck --noerrdialogs --disable-infobars \
   --disable-sync \
   --disable-component-update \
   --renderer-process-limit=1 \
-  --js-flags=--max-old-space-size=128"
+  --js-flags=--max-old-space-size=192"
 
 # ── Ensure DISPLAY / WAYLAND_DISPLAY are set ─────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}

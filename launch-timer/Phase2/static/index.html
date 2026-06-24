@@ -252,12 +252,7 @@
     if (e.data === 'spa-back') hidePage();
   });
 
-  // Preload launches into the iframe silently after 4s so first tap is instant
-  setTimeout(() => {
-    if (_frame.src === 'about:blank' || _frame.src === '') {
-      _frame.src = '/launches';
-    }
-  }, 4000);
+  // NOTE: iframe preload disabled — Pi 3 A+ has insufficient RAM for two renderers simultaneously.
 </script>
 </body>
 </html>
