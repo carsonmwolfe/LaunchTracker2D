@@ -1173,6 +1173,7 @@ function drawSmoke() {
   if (state.postLaunchCooldown) return;
   const vehicle  = (currentLaunch() ? currentLaunch().vehicle : null) || '';
   const assetKey = getRocketAssetKey(vehicle);
+  if (!assetKey) return; // no rocket asset — no venting
   const cfg      = (ROCKET_CONFIG[assetKey] || ROCKET_CONFIG.rocket_generic).pad;
   const ventX    = NOZZLE_X;
   const ventY    = cfg.y + cfg.h * 0.5;  // mid-rocket
