@@ -51,17 +51,17 @@ cd "$APP_DIR" || exit 1
 nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
-# ── Launch Chromium immediately to boot.html (hides desktop while server loads) ──
-"$CHROMIUM" $CHROMIUM_FLAGS "$BOOT_URL" &
-CHROMIUM_PID=$!
-
-# ── Wait for server to be ready (max 30s) — boot.html will redirect when ready ──
-for i in $(seq 1 20); do
+# ── Wait for server to be ready, then launch Chromium directly ───────────────
+# Boot.html used file:// → http:// probing which Chromium blocks. Simpler: wait.
+for i in $(seq 1 40); do
     if curl -s -o /dev/null "$APP_URL" --max-time 1 2>/dev/null; then
         break
     fi
     sleep 1.5
 done
+
+"$CHROMIUM" $CHROMIUM_FLAGS "$APP_URL" &
+CHROMIUM_PID=$!
 
 # ── Supervisor loop — restart server if it crashes ───────────────────────────
 _HTTP_FAILS=0
