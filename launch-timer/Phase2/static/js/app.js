@@ -2763,7 +2763,7 @@ function restoreState() {
     } catch(e) {}
     _wdFails++;
     if (_wdFails >= 3) {
-      window.location = '/static/boot.html';
+      window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
     }
   }, 10000);
   // Version watchdog — reload page when server updates (new git commit)
