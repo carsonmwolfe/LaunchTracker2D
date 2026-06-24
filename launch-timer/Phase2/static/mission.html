@@ -237,7 +237,7 @@
   <div class="scanlines"></div>
 
   <div class="topbar">
-    <button class="back-btn" onclick="window.location='/'">← BACK</button>
+    <button class="back-btn" onclick="window.parent !== window ? window.parent.postMessage('spa-back','*') : (window.location='/')">← BACK</button>
     <div class="top-sqs">
       <div class="top-sq" style="background:#00e87a;"></div>
       <div class="top-sq" style="background:#4a9ede;"></div>

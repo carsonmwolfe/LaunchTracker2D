@@ -473,7 +473,7 @@
       saveSettings();
     }
 
-    function goBack()      { window.location = '/'; }
+    function goBack()      { window.parent !== window ? window.parent.postMessage('spa-back','*') : (window.location = '/'); }
     function restartPage() {
       window.location = '/';
     }

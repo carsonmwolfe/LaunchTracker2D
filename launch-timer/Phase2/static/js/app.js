@@ -1646,9 +1646,9 @@ function updateInfoBar() {
 
   // Tap hint — update both the hidden compat element and the visible ib-left panel
   const _missionUrl = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name||'')}`;
-  document.getElementById('ib-tap').onclick = () => { window.location = _missionUrl; };
+  document.getElementById('ib-tap').onclick = () => { window.showPage ? window.showPage(_missionUrl) : (window.location = _missionUrl); };
   const ibLeft = document.getElementById('ib-left');
-  if (ibLeft) ibLeft.onclick = () => { window.location = _missionUrl; };
+  if (ibLeft) ibLeft.onclick = () => { window.showPage ? window.showPage(_missionUrl) : (window.location = _missionUrl); };
 
   // Date + countdown (hidden elements kept for compat)
   const _fmt = state.settings?.time_format;
