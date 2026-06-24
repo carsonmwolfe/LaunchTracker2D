@@ -252,12 +252,12 @@
     if (e.data === 'spa-back') hidePage();
   });
 
-  // Warm up launches page in background after 3s so first open is instant
+  // Preload launches into the iframe silently after 4s so first tap is instant
   setTimeout(() => {
-    const warm = document.createElement('link');
-    warm.rel = 'prefetch'; warm.href = '/launches';
-    document.head.appendChild(warm);
-  }, 3000);
+    if (_frame.src === 'about:blank' || _frame.src === '') {
+      _frame.src = '/launches';
+    }
+  }, 4000);
 </script>
 </body>
 </html>
