@@ -171,7 +171,17 @@ elif [ -f /boot/cmdline.txt ]; then
     log "Splash removed from /boot/cmdline.txt"
 fi
 
-# ── 7b. Low-RAM optimisations (safe on all Pi models, beneficial on 512MB) ────
+# ── 7b. Suppress Chromium low-RAM warning dialog (Pi 3 A+ / 512MB) ────────────
+# The Pi OS chromium wrapper shows a zenity dialog if RAM < 1GB before launch.
+# On a kiosk with no keyboard this blocks startup permanently — patch it out.
+if [ -f /usr/bin/chromium ]; then
+    if grep -qi 'memory\|zenity\|1024\|512' /usr/bin/chromium 2>/dev/null; then
+        sudo sed -i '/zenity/d; /low.mem\|less.than.*[Mm][Bb]\|insufficient/Id' /usr/bin/chromium 2>/dev/null && \
+            log "Chromium low-RAM dialog patched out" || log "Chromium patch skipped (already clean)"
+    fi
+fi
+
+# ── 7c. Low-RAM optimisations (safe on all Pi models, beneficial on 512MB) ────
 log "Applying low-RAM optimisations..."
 
 # Reduce GPU memory reservation to 16MB (we run headless-ish, don't need much)
@@ -191,7 +201,7 @@ if [ -f /etc/dphys-swapfile ]; then
     log "Swap set to 512MB"
 fi
 
-# ── 8. Cron jobs ──────────────────────────────────────────────────────────────
+# ── 8. Cron jobs ─────────────────────────────────────────────────────────────
 log "Setting up cron jobs..."
 ( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py"; \
   echo "0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"; \
