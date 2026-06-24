@@ -865,7 +865,7 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('spectrum'))                                                            return 'rocket_spectrum';
   if (v.includes('kinetica'))                                                            return 'rocket_kinetica';
   if (v.includes('tianlong') || v.includes('sky dragon'))                               return 'rocket_tianlong';
-  return 'rocket_generic';
+  return null; // known vehicle string but no matching asset — show empty pad
 }
 
 // y is tuned per-rocket: nozzle must visually land at PAD_Y_BASE (359).
