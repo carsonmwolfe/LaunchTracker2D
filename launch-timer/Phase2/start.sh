@@ -13,7 +13,7 @@ fi
 APP_URL="http://localhost:5001/"
 BOOT_URL="file://$APP_DIR/static/boot.html"
 
-CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
+CHROMIUM_FLAGS="--kiosk --no-memcheck --noerrdialogs --disable-infobars \
   --disable-features=ChromeWhatsNew --no-default-browser-check \
   --disable-background-networking --disable-session-crashed-bubble \
   --enable-virtual-keyboard --window-size=800,480 \
