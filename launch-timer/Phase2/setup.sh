@@ -171,6 +171,26 @@ elif [ -f /boot/cmdline.txt ]; then
     log "Splash removed from /boot/cmdline.txt"
 fi
 
+# ── 7b. Low-RAM optimisations (safe on all Pi models, beneficial on 512MB) ────
+log "Applying low-RAM optimisations..."
+
+# Reduce GPU memory reservation to 16MB (we run headless-ish, don't need much)
+CONFIG_FILE="/boot/firmware/config.txt"
+[ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
+if ! grep -q "^gpu_mem=16" "$CONFIG_FILE" 2>/dev/null; then
+    sudo sed -i '/^gpu_mem=/d' "$CONFIG_FILE"
+    echo "gpu_mem=16" | sudo tee -a "$CONFIG_FILE" > /dev/null
+    log "GPU memory set to 16MB"
+fi
+
+# Increase swap to 512MB (default is 100MB — not enough with Chromium on 512MB RAM)
+if [ -f /etc/dphys-swapfile ]; then
+    sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
+    sudo dphys-swapfile setup > /dev/null 2>&1
+    sudo dphys-swapfile swapon > /dev/null 2>&1
+    log "Swap set to 512MB"
+fi
+
 # ── 8. Cron jobs ──────────────────────────────────────────────────────────────
 log "Setting up cron jobs..."
 ( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py"; \

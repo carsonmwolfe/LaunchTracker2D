@@ -22,7 +22,12 @@ CHROMIUM_FLAGS="--kiosk --noerrdialogs --disable-infobars \
   --ozone-platform=wayland \
   --password-store=basic \
   --disable-renderer-accessibility \
-  --enable-wayland-ime"
+  --enable-wayland-ime \
+  --disable-extensions \
+  --disable-sync \
+  --disable-component-update \
+  --renderer-process-limit=1 \
+  --js-flags=--max-old-space-size=128"
 
 # ── Ensure DISPLAY / WAYLAND_DISPLAY are set ─────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
