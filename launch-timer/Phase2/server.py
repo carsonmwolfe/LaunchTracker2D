@@ -466,6 +466,10 @@ def _background_thread():
     Switches to 60-second refresh when the next launch is within 10 minutes."""
     time.sleep(2)
     _refresh_all(force_hourly=True)   # full fetch on startup
+    wx = _fetch_weather()             # weather on startup too — don't wait 5 min
+    if wx:
+        _weather_cache['data']    = wx
+        _weather_cache['fetched'] = time.time()
     while True:
         # Adaptive interval: 60s when next launch is within 10 min (before or after T-0)
         interval = 300

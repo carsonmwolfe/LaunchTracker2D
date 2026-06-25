@@ -135,9 +135,10 @@ def get_uptime():
 
 def is_server_running():
     try:
-        result = subprocess.run(['pgrep', '-f', SERVER_SCRIPT], capture_output=True)
-        return result.returncode == 0
-    except:
+        import urllib.request
+        urllib.request.urlopen('http://localhost:5001/', timeout=5)
+        return True
+    except Exception:
         return False
 
 def restart_server():
