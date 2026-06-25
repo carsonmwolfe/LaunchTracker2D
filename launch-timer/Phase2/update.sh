@@ -93,11 +93,10 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 PHASE2="$REPO_DIR/launch-timer/Phase2"
 
-# Ensure health cron jobs are installed
+# Ensure health cron job is installed
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "health.py" > "$CRON_TMP"
-echo "0 8 * * * python3 $PHASE2/health.py digest >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
-echo "*/5 * * * * python3 $PHASE2/health.py check >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
+echo "*/5 * * * * python3 $PHASE2/health.py >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
 crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
@@ -112,11 +111,6 @@ for KR in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11 gnome-key
     fi
 done
 [ "$CHANGED_KR" -eq 1 ] && echo "$LOG_PREFIX gnome-keyring disabled"
-
-# Warn if Gmail password file is missing
-if [ ! -f /home/pi/.rangetrack_gmail_pass ]; then
-    echo "$LOG_PREFIX WARNING: Gmail password not set. Run: echo 'APP_PASS' > /home/pi/.rangetrack_gmail_pass && chmod 600 /home/pi/.rangetrack_gmail_pass"
-fi
 
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
