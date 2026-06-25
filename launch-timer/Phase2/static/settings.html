@@ -358,8 +358,12 @@
           <div class="sys-val orange" id="sys-temp">—</div>
         </div>
         <div class="sys-row">
-          <div class="sys-label">LAST UPDATE</div>
+          <div class="sys-label">LAST DEPLOY</div>
           <div class="sys-val" id="sys-location">—</div>
+        </div>
+        <div class="sys-row">
+          <div class="sys-label">LAST CHECK</div>
+          <div class="sys-val" id="sys-last-check">—</div>
         </div>
       </div>
     </div>
@@ -501,6 +505,9 @@
         }
         if (d.last_update) {
           document.getElementById('sys-location').textContent = d.last_update;
+        }
+        if (d.last_check) {
+          document.getElementById('sys-last-check').textContent = d.last_check;
         }
       } catch(e) {}
     }

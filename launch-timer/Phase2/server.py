@@ -910,10 +910,24 @@ def api_device():
     try:
         import subprocess as _sp
         log = _sp.run(['git', '-C', os.path.dirname(os.path.abspath(__file__)), 'log', '-1', '--format=%ar'], capture_output=True, text=True)
-        last_update = log.stdout.strip() or '—'
+        last_deploy = log.stdout.strip() or '—'
     except Exception:
-        last_update = '—'
-    return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'temp': temp, 'last_update': last_update})
+        last_deploy = '—'
+    try:
+        raw = open('/home/pi/.rangetrack_last_check').read().strip()
+        from datetime import timezone
+        ts = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+        diff = int((datetime.now(timezone.utc) - ts).total_seconds())
+        if diff < 60:
+            last_check = f'{diff}s ago'
+        elif diff < 3600:
+            last_check = f'{diff // 60}m ago'
+        else:
+            last_check = f'{diff // 3600}h {(diff % 3600) // 60}m ago'
+    except Exception:
+        last_check = '—'
+    return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'temp': temp,
+                    'last_update': last_deploy, 'last_check': last_check})
 
 
 # ── Pi notification (shown on all pages) ──────────────────────────────────────

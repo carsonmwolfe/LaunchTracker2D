@@ -18,6 +18,7 @@ if [ -e "$LOCK_FILE" ]; then
 fi
 trap 'rm -f "$LOCK_FILE"' EXIT
 touch "$LOCK_FILE"
+date -u '+%Y-%m-%dT%H:%M:%SZ' > /home/pi/.rangetrack_last_check
 
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 
