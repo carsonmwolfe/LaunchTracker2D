@@ -52,6 +52,7 @@ const ASSETS = {
   rocket_tianlong:     'rocket-tianlong3.png',
   rocket_kinetica:     'rocket-Kinetica.png',
   rocket_falcon1st:    'rocket-Falcon1st.png',
+  rocket_placeholder:  'rocket-placeholder.png',
   moon:                'moon.png',
 };
 
@@ -865,7 +866,7 @@ function getRocketAssetKey(vehicle) {
   if (v.includes('spectrum'))                                                            return 'rocket_spectrum';
   if (v.includes('kinetica'))                                                            return 'rocket_kinetica';
   if (v.includes('tianlong') || v.includes('sky dragon'))                               return 'rocket_tianlong';
-  return null; // known vehicle string but no matching asset — show empty pad
+  return 'rocket_placeholder';
 }
 
 // y is tuned per-rocket: nozzle must visually land at PAD_Y_BASE (359).
@@ -898,6 +899,7 @@ const ROCKET_CONFIG = {
   rocket_spectrum:    { pad: { x: 476, y: 225, h: 142, fy: -13 },          te: { x: 264, y: 296, h: 69 } },
   rocket_tianlong:    { pad: { x: 475, y: 226, h: 136, fy: -9 },           te: { x: 265, y: 298, h: 65 } },
   rocket_kinetica:    { pad: { x: 506, y: 240, h: 109 },                    te: { x: 277, y: 299, h: 60 } },
+  rocket_placeholder: { pad: { x: 440, y: 204, h: 155 },                    te: { x: 128, y: 204, h: 155 } },
 };
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
