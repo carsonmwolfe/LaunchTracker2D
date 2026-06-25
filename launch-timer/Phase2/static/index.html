@@ -229,7 +229,8 @@
   const _frame = document.getElementById('page-frame');
 
   function showPage(url) {
-    if (_frame.src !== location.origin + url) {
+    const currentHref = _frame.contentWindow?.location?.href;
+    if (currentHref !== location.origin + url) {
       _frame.src = url;
     }
     _frame.style.display = 'block';

@@ -391,7 +391,7 @@
         } else {
           dateTxt = escHtml(fmtDate(l.t0));
         }
-        const lid = Number(l.id)||0;
+        const lid = l.id||'';
         const t0Esc = escHtml(l.t0||''), stEsc = escHtml(l.status||'');
         const d0 = Math.floor(Math.max(0, new Date(l.t0) - new Date()) / 86400000);
         const daysInit = escHtml(d0 > 0 ? d0 + (d0===1?' DAY':' DAYS') : 'TODAY');
@@ -411,7 +411,7 @@
       // Clear stale DOM refs before repopulating to prevent memory leak
       Object.keys(cdEls).forEach(k => delete cdEls[k]);
       row.querySelectorAll('.launch-card[data-lid]').forEach((card, i) => {
-        card.addEventListener('click', () => goMission(Number(card.dataset.lid), card.dataset.lname));
+        card.addEventListener('click', () => goMission(card.dataset.lid, card.dataset.lname));
         const dayEl = card.querySelector('.lc-days');
         const hmsEl = card.querySelector('.lc-hms');
         if (dayEl && hmsEl) {
@@ -483,7 +483,12 @@
     }
 
     function goMission(id, name) {
-      window.location = `/mission?id=${id}&name=${encodeURIComponent(name)}`;
+      const url = `/mission?id=${id}&name=${encodeURIComponent(name)}&from=/launches`;
+      if (window.parent !== window && window.parent.showPage) {
+        window.parent.showPage(url);
+      } else {
+        window.location = url;
+      }
     }
 
     // ── Load ──────────────────────────────────────────────────────────────────

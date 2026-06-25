@@ -75,11 +75,12 @@
     }
     #earthCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     .orbit-pill {
-      position: absolute; bottom: 5px; left: 50%;
-      transform: translateX(-50%);
-      font-size: 7px; color: #00e87a;
-      border: 2px solid #00e87a; padding: 4px 8px;
-      background: #060a0e; white-space: nowrap;
+      position: absolute; bottom: 0; left: 0; right: 0; width: 100%;
+      font-size: 6px; color: #00e87a;
+      border-top: 2px solid #00e87a; padding: 4px 6px;
+      background: rgba(6,10,14,0.95); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; text-align: center;
+      box-sizing: border-box;
     }
     .win-section {
       border-top: 2px solid #1a2030;
@@ -237,7 +238,7 @@
   <div class="scanlines"></div>
 
   <div class="topbar">
-    <button class="back-btn" onclick="window.parent !== window ? window.parent.postMessage('spa-back','*') : (window.location='/')">← BACK</button>
+    <button class="back-btn" onclick="(function(){const from=new URLSearchParams(location.search).get('from')||'/';if(window.parent!==window&&window.parent.showPage){if(from==='/')window.parent.postMessage('spa-back','*');else window.parent.showPage(from);}else{window.location=from;}})()">← BACK</button>
     <div class="top-sqs">
       <div class="top-sq" style="background:#00e87a;"></div>
       <div class="top-sq" style="background:#4a9ede;"></div>
@@ -493,7 +494,7 @@
     const ORBIT_DEFS = {
       'LEO':   { frac:1.22, color:'#00e87a', rgb:'0,232,122',   dash:[4,4] },
       'MEO':   { frac:1.45, color:'#4a9ede', rgb:'74,158,222',  dash:[4,4] },
-      'GEO':   { frac:1.72, color:'#ffd93d', rgb:'255,217,61',  dash:[3,3] },
+      'GEO':   { frac:1.29, color:'#ffd93d', rgb:'255,217,61',  dash:[3,3], equatorial:true },
       'GTO':   { type:'ellipse', peri:1.10, apo:2.20, color:'#ff9933', rgb:'255,153,51', dash:[3,4] },
       'SSO':   { frac:1.22, color:'#ff9933', rgb:'255,153,51',  dash:[2,2], inclined:true },
       'POLAR': { frac:1.22, color:'#4a9ede', rgb:'74,158,222',  dash:[2,2], polar:true },
@@ -577,9 +578,9 @@
     }
 
     // ── Elliptical orbit (GTO / HEO) ─────────────────────────────────────────
-    function drawEllipticalOrbit(def) {
-      const r_peri = R * def.peri;
-      const r_apo  = R * def.apo;
+    function drawEllipticalOrbit(def, scale=1.0) {
+      const r_peri = R * def.peri * scale;
+      const r_apo  = R * def.apo  * scale;
       const a = (r_peri + r_apo) / 2;
       const c = (r_apo  - r_peri) / 2;
       const b = Math.sqrt(Math.max(1, a*a - c*c));
@@ -609,8 +610,10 @@
       const cosF = (Math.cos(E)-e_ecc)/(1-e_ecc*Math.cos(E));
       const sinF = Math.sqrt(1-e_ecc*e_ecc)*Math.sin(E)/(1-e_ecc*Math.cos(E));
       const r_sc  = a*(1-e_ecc*Math.cos(E));
-      const scx = -c + r_sc*cosF;
-      const scy =      r_sc*sinF;
+      // Satellite position: from Earth (right focus at origin) = r_sc * (cosF, sinF)
+      // No -c offset — r_sc*cosF already gives x from the focus, not from ellipse center
+      const scx = r_sc*cosF;
+      const scy = r_sc*sinF;
 
       // Trail
       for(let t=6;t>=1;t--){
@@ -620,7 +623,7 @@
         const ts2=Math.sqrt(1-e_ecc*e_ecc)*Math.sin(tE)/(1-e_ecc*Math.cos(tE));
         const tr=a*(1-e_ecc*Math.cos(tE));
         ectx.fillStyle=`rgba(${def.rgb},${0.06*t})`;
-        ectx.fillRect(-c+tr*tc-2, tr*ts2-2, 4, 4);
+        ectx.fillRect(tr*tc-2, tr*ts2-2, 4, 4);
       }
       ectx.fillStyle=def.color;
       ectx.fillRect(scx-3, scy-3, 6, 6);
@@ -783,36 +786,47 @@
         return;
       }
 
-      const useSide = (def.polar || def.inclined);
+      const useSide = (def.polar || def.inclined || def.equatorial);
       const earthR = R * 0.90;  // ← adjust to resize Earth
 
       // Pick Earth PNG: Eastern Hemisphere (lon > 30) → earthback, else earthside/earthtop
-      const useBack = useSide && padLon !== null && padLon > 30;
+      const useBack = (def.polar || def.inclined) && padLon !== null && padLon > 30;
       const earthImg = useSide ? (useBack ? earthBackImg : earthSideImg) : earthTopImg;
       // Center longitude of each side PNG (for launch dot projection)
       const sideCenter = useBack ? 88 : -20;  // earthback center lon (tune to move dot), earthside≈-20°W
 
+      let ellipseScale = 1.0;
       if(def.type==='ellipse'){
-        drawEarth(CX, CY, earthR, useSide, earthImg);
-        drawEllipticalOrbit(def);
+        // Auto-scale orbit + Earth proportionally so apogee fits and perigee stays outside Earth
+        const maxApo = Math.min(CX, CY) - 6;
+        const rawApo = R * def.apo;
+        ellipseScale  = rawApo > maxApo ? maxApo / rawApo : 1.0;
+        drawEarth(CX, CY, earthR * ellipseScale, false, earthTopImg);
+        drawEllipticalOrbit(def, ellipseScale);
       } else {
         const orb_r = R * def.frac;
 
         if(useSide){
           // ── Side-view orbit: split back/front around Earth for correct layering ──
-          const rx  = def.polar ? orb_r*0.15 : orb_r*0.5;
-          const rot = def.inclined ? 0.4 : 0;
+          // rx/ry determine orbital shape from the side:
+          //   equatorial → wide flat ring (large rx, tiny ry)
+          //   polar      → tall narrow ring (tiny rx, large ry)
+          //   inclined   → moderate (SSO etc)
+          let rx, ry, rot;
+          if(def.equatorial){ rx=orb_r; ry=orb_r*0.15; rot=0; }
+          else if(def.polar){ rx=orb_r*0.15; ry=orb_r; rot=0; }
+          else { rx=orb_r*0.5; ry=orb_r; rot=def.inclined?0.4:0; }
+
           const a   = angle - rot;
-          const sx  = rx  * Math.cos(a);
-          const sy  = orb_r * Math.sin(a);
-          // Show satellite when on front side OR outside the Earth disk
+          const sx  = rx * Math.cos(a);
+          const sy  = ry * Math.sin(a);
           const behindEarth = Math.cos(a) < 0 && (sx*sx + sy*sy) < earthR*earthR;
 
           // Back half — draw BEFORE Earth (dimmer)
           ectx.save(); ectx.translate(CX,CY); if(rot) ectx.rotate(rot);
           ectx.strokeStyle=def.color+'44'; ectx.lineWidth=1;
           ectx.setLineDash(def.dash);
-          ectx.beginPath(); ectx.ellipse(0,0,rx,orb_r,0, Math.PI/2, Math.PI*1.5); ectx.stroke();
+          ectx.beginPath(); ectx.ellipse(0,0,rx,ry,0, Math.PI/2, Math.PI*1.5); ectx.stroke();
           ectx.setLineDash([]); ectx.restore();
 
           drawEarth(CX, CY, earthR, useSide, earthImg);
@@ -821,7 +835,7 @@
           ectx.save(); ectx.translate(CX,CY); if(rot) ectx.rotate(rot);
           ectx.strokeStyle=def.color+'88'; ectx.lineWidth=1.5;
           ectx.setLineDash(def.dash);
-          ectx.beginPath(); ectx.ellipse(0,0,rx,orb_r,0, -Math.PI/2, Math.PI/2); ectx.stroke();
+          ectx.beginPath(); ectx.ellipse(0,0,rx,ry,0, -Math.PI/2, Math.PI/2); ectx.stroke();
           ectx.setLineDash([]);
 
           // Spacecraft — hide only when actually behind the Earth disk
@@ -829,7 +843,7 @@
             for(let t=7;t>=1;t--){
               const ta=a-t*0.07;
               ectx.fillStyle=`rgba(${def.rgb},${0.05*t})`;
-              ectx.fillRect(rx*Math.cos(ta)-2,orb_r*Math.sin(ta)-2,4,4);
+              ectx.fillRect(rx*Math.cos(ta)-2,ry*Math.sin(ta)-2,4,4);
             }
             ectx.fillStyle=def.color; ectx.fillRect(sx-3,sy-3,6,6);
           }
@@ -874,7 +888,12 @@
           visible = depth > 0.1;  // only show if on front hemisphere of PNG
         } else {
           [lsx,lsy] = proj(padLat,padLon);
-          visible = Math.sqrt((lsx-CX)**2+(lsy-CY)**2) <= R*0.97;
+          // For ellipse case, Earth is drawn scaled — adjust dot to match
+          if(ellipseScale < 1.0){
+            lsx = CX + (lsx-CX) * ellipseScale;
+            lsy = CY + (lsy-CY) * ellipseScale;
+          }
+          visible = Math.sqrt((lsx-CX)**2+(lsy-CY)**2) <= earthR * ellipseScale * 0.97;
         }
         if(visible){
           if(Math.floor(angle*4)%2===0){
@@ -1041,7 +1060,7 @@
       }
 
       // Orbit pill
-      document.getElementById('orbit-pill').textContent=`${orbitFull.toUpperCase()} · ${orbitAbbrev}${inferred?' *':''}`;
+      document.getElementById('orbit-pill').textContent=orbitFull.toUpperCase()+(inferred?' *':'');
 
       // Time format
       const useLocal=settings.time_format==='local';
