@@ -907,10 +907,16 @@ def api_device():
         temp = f'{temp_raw / 1000:.1f}°C'
     except Exception:
         temp = '—'
+    def _rel(diff):
+        if diff < 60:   return f'{diff}s ago'
+        if diff < 3600: return f'{diff // 60}min ago'
+        return f'{diff // 3600}h {(diff % 3600) // 60}min ago'
     try:
         import subprocess as _sp
-        log = _sp.run(['git', '-C', os.path.dirname(os.path.abspath(__file__)), 'log', '-1', '--format=%ar'], capture_output=True, text=True)
-        last_deploy = log.stdout.strip() or '—'
+        log = _sp.run(['git', '-C', os.path.dirname(os.path.abspath(__file__)), 'log', '-1', '--format=%at'], capture_output=True, text=True)
+        from datetime import timezone
+        diff = int(datetime.now(timezone.utc).timestamp()) - int(log.stdout.strip())
+        last_deploy = _rel(diff)
     except Exception:
         last_deploy = '—'
     try:
@@ -918,12 +924,7 @@ def api_device():
         from datetime import timezone
         ts = datetime.fromisoformat(raw.replace('Z', '+00:00'))
         diff = int((datetime.now(timezone.utc) - ts).total_seconds())
-        if diff < 60:
-            last_check = f'{diff}s ago'
-        elif diff < 3600:
-            last_check = f'{diff // 60}m ago'
-        else:
-            last_check = f'{diff // 3600}h {(diff % 3600) // 60}m ago'
+        last_check = _rel(diff)
     except Exception:
         last_check = '—'
     return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'temp': temp,
