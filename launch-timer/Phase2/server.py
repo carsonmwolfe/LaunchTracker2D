@@ -18,6 +18,22 @@ from flask import Flask, jsonify, send_from_directory, request, redirect
 import os
 import sys
 import logging
+import signal
+import atexit
+
+def _log_exit(sig=None, frame=None):  # noqa: ARG001
+    label = f'signal {sig}' if sig else 'normal exit'
+    try:
+        with open('/home/pi/server.log', 'a') as f:
+            f.write(f'[{datetime.now().strftime("%H:%M:%S")}] Server process exiting ({label})\n')
+    except Exception:
+        pass
+    if sig:
+        sys.exit(0)
+
+atexit.register(_log_exit)
+for _s in (signal.SIGTERM, signal.SIGHUP):
+    signal.signal(_s, _log_exit)
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
