@@ -899,7 +899,7 @@ const ROCKET_CONFIG = {
   rocket_spectrum:    { pad: { x: 476, y: 225, h: 142, fy: -13 },          te: { x: 264, y: 296, h: 69 } },
   rocket_tianlong:    { pad: { x: 475, y: 226, h: 136, fy: -9 },           te: { x: 265, y: 298, h: 65 } },
   rocket_kinetica:    { pad: { x: 506, y: 240, h: 109 },                    te: { x: 277, y: 299, h: 60 } },
-  rocket_placeholder: { pad: { x: 457, y: 252, h: 115 },                    te: { x: 267, y: 309, h: 60 } },
+  rocket_placeholder: { pad: { x: 485, y: 252, h: 115 },                    te: { x: 267, y: 309, h: 60 } },
 };
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
