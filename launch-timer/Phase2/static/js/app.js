@@ -1364,7 +1364,7 @@ function drawCountdown() {
   if (!launch) return;
   const cd = computeCountdown(launch.t0);
   const vals = (cd && cd !== 'LAUNCHED') ? [cd.days, cd.hours, cd.minutes, cd.seconds] : [0,0,0,0];
-  const LABELS = ['DAYS','HOURS','MINS','SECS'];
+  const LABELS = ['DAY','HOUR','MIN','SEC'];
 
   const BW = 80, BH = 80, GAP = 7;
   const TOTAL_W = 4*BW + 3*GAP;
@@ -1828,7 +1828,6 @@ function checkLaunchTrigger() {
     if (minsAgo > 30) {
       // Old launch — just bury it silently, no cooldown banner
       console.log(`[${ts()}] Stale launch (${Math.floor(minsAgo)}m ago) — burying and skipping`);
-      state.launchTriggered = true;
       if (!state.buriedLaunchIds.includes(launch.id)) state.buriedLaunchIds.push(launch.id);
       // Advance to next without triggering postLaunchCooldown
       const nextIdx = state.launches.findIndex(l => !state.buriedLaunchIds.includes(l.id));
@@ -2028,6 +2027,7 @@ async function fetchData(afterLaunch=false) {
       showNotification('NEXT MISSION');
     } else {
       const firstValid = state.launches.findIndex(l => !state.buriedLaunchIds.includes(l.id));
+      if (firstValid < 0) state.buriedLaunchIds = []; // all buried — reset so we don't show nothing
       state.currentIdx = firstValid >= 0 ? firstValid : 0;
       // If the current launch has a future T-0, reset trigger so countdown runs normally.
       // This prevents a stale launchTriggered=true from blocking the next mission's animation.

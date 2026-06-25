@@ -27,12 +27,8 @@ def restart_server():
         return
     subprocess.run(['pkill', '-f', SERVER_SCRIPT], capture_output=True)
     time.sleep(2)
-    subprocess.Popen(
-        ['python3', SERVER_SCRIPT],
-        cwd=PHASE2,
-        stdout=open('/home/pi/server.log', 'a'),
-        stderr=subprocess.STDOUT
-    )
+    with open('/home/pi/server.log', 'a') as f:
+        subprocess.Popen(['python3', SERVER_SCRIPT], cwd=PHASE2, stdout=f, stderr=subprocess.STDOUT)
     print(f'[{ts()}] Server restarted.')
 
 if __name__ == '__main__':

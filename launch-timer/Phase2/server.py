@@ -280,6 +280,7 @@ def _is_valid(launch):
 CACHE_FILE    = os.path.join(BASE_DIR, 'data_cache.json')
 T0_HIST_FILE  = os.path.join(BASE_DIR, 't0_history.json')
 _cache_lock   = threading.Lock()   # guards all _data_cache mutations
+_weather_lock = threading.Lock()   # guards _weather_cache reads/writes
 
 def _load_t0_history():
     try:
@@ -513,8 +514,9 @@ def _background_thread():
         now = time.time()
         if now - _weather_cache['fetched'] >= WEATHER_TTL:
             data = _fetch_weather()
-            _weather_cache['data']    = data
-            _weather_cache['fetched'] = now
+            with _weather_lock:
+                _weather_cache['data']    = data
+                _weather_cache['fetched'] = now
 
 _UNIT_ID_FILE = '/home/pi/.rangetrack_unit_id'
 
@@ -839,9 +841,9 @@ def api_settings():
     _save_settings(settings)
     global _location_cache
     _location_cache = None
-    # Flush weather so next request reflects new site immediately
-    _weather_cache['data']    = None
-    _weather_cache['fetched'] = 0
+    with _weather_lock:
+        _weather_cache['data']    = None
+        _weather_cache['fetched'] = 0
     return jsonify({'ok': True, 'settings': settings})
 
 @app.route('/api/settings/brightness', methods=['POST'])
@@ -984,11 +986,10 @@ def reboot():
 @app.route('/api/update', methods=['POST'])
 def force_update():
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'update.sh')
-    threading.Thread(
-        target=lambda: subprocess.Popen(['bash', script],
-            stdout=open('/home/pi/update.log', 'a'),
-            stderr=subprocess.STDOUT),
-        daemon=True).start()
+    def _run():
+        with open('/home/pi/update.log', 'a') as f:
+            subprocess.Popen(['bash', script], stdout=f, stderr=subprocess.STDOUT)
+    threading.Thread(target=_run, daemon=True).start()
     _notify_write('UPDATE', 'Force update triggered from Mission Control')
     return jsonify({'ok': True})
 
