@@ -136,9 +136,17 @@
     .dot-warn    { background: #ffd93d; }
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-    .unit-id { font-size: 10px; color: #fff; width: 110px; flex-shrink: 0; line-height: 1.5; }
-    .unit-nick { font-size: 10px; color: #fff; }
+    .unit-id { font-size: 10px; color: #fff; width: 140px; flex-shrink: 0; line-height: 1.5; }
+    .unit-nick { font-size: 10px; color: #fff; display: flex; align-items: center; gap: 5px; }
+    .unit-nick-edit { font-size: 8px; color: rgba(74,158,222,0.6); cursor: pointer; border: 1px solid rgba(74,158,222,0.3); background: rgba(74,158,222,0.08); font-family: 'Press Start 2P', monospace; padding: 1px 5px; line-height: 1.4; }
+    .unit-nick-edit:hover { color: #4a9ede; border-color: #4a9ede; background: rgba(74,158,222,0.15); }
     .unit-raw-id { font-size: 6px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    .nick-input {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px; background: rgba(74,158,222,0.1);
+      border: 1px solid #4a9ede; color: #fff;
+      padding: 2px 6px; width: 100px; outline: none;
+    }
     .unit-loc { flex: 2; font-size: 7px; color: rgba(255,255,255,0.4); }
     .unit-wifi { flex: 1.5; font-size: 7px; color: rgba(255,255,255,0.3); }
     .unit-launch { flex: 2; font-size: 7px; color: rgba(255,211,61,0.7); text-align: right; padding-right: 10px; }
@@ -349,18 +357,27 @@
     }
 
     // ── Nicknames (stored in localStorage) ───────────────────────────────────
+    let editingNick = null;
     function getNick(id) { return localStorage.getItem('nick_' + id) || ''; }
-    function setNick(id, nick) {
+    function saveNick(id, nick) {
       nick = nick.trim();
       if (nick) localStorage.setItem('nick_' + id, nick);
       else localStorage.removeItem('nick_' + id);
+      editingNick = null;
       renderUnits();
     }
-    function promptNick(id, event) {
+    function startNickEdit(id, event) {
       event.stopPropagation();
-      const current = getNick(id);
-      const nick = prompt(`Nickname for ${id}:\n(leave blank to clear)`, current);
-      if (nick !== null) setNick(id, nick);
+      editingNick = id;
+      renderUnits();
+      setTimeout(() => {
+        const inp = document.getElementById('nick-input-' + id);
+        if (inp) { inp.focus(); inp.select(); }
+      }, 0);
+    }
+    function onNickKey(id, event) {
+      if (event.key === 'Enter') saveNick(id, event.target.value);
+      if (event.key === 'Escape') { editingNick = null; renderUnits(); }
     }
 
     // ── Render units ──────────────────────────────────────────────────────────
@@ -382,9 +399,18 @@
         const seenStr   = isOnline ? Math.round((Date.now()-u.lastSeen)/1000)+'s ago' : 'offline';
 
         const nick = getNick(u.id);
-        const nameHtml = nick
-          ? `<div class="unit-nick">${nick}</div><div class="unit-raw-id">${u.id}</div>`
-          : `<div class="unit-nick">${u.id}</div>`;
+        let nameHtml;
+        if (editingNick === u.id) {
+          nameHtml = `<input class="nick-input" id="nick-input-${u.id}" value="${nick}" placeholder="nickname..."
+            onblur="saveNick('${u.id}',this.value)"
+            onkeydown="onNickKey('${u.id}',event)"
+            onclick="event.stopPropagation()">
+            ${nick ? `<div class="unit-raw-id">${u.id}</div>` : ''}`;
+        } else if (nick) {
+          nameHtml = `<div class="unit-nick">${nick} <button class="unit-nick-edit" onclick="startNickEdit('${u.id}',event)" title="Edit nickname">✎</button></div><div class="unit-raw-id">${u.id}</div>`;
+        } else {
+          nameHtml = `<div class="unit-nick">${u.id} <button class="unit-nick-edit" onclick="startNickEdit('${u.id}',event)" title="Set nickname">+</button></div>`;
+        }
 
         let html = `<div class="unit-row ${isExpanded?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${u.id}')">
           <div class="status-dot ${dotCls}"></div>
@@ -399,13 +425,6 @@
         if (isExpanded) {
           html += `<div class="unit-detail">
             <div class="detail-grid">
-              <div class="detail-field">
-                <div class="detail-label">NICKNAME</div>
-                <div class="detail-val" style="display:flex;align-items:center;gap:6px;">
-                  <span style="color:${nick?'#fff':'rgba(255,255,255,0.2)'};">${nick||'—'}</span>
-                  <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);font-size:5px;padding:2px 6px;" onclick="promptNick('${u.id}',event)">${nick?'EDIT':'SET'}</button>
-                </div>
-              </div>
               <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${u.id}</div></div>
               <div class="detail-field"><div class="detail-label">IP ADDRESS</div><div class="detail-val">${u.ip}</div></div>
               <div class="detail-field"><div class="detail-label">UPTIME</div><div class="detail-val green">${u.uptime}</div></div>
@@ -414,8 +433,8 @@
             <div style="display:flex;gap:12px;align-items:flex-start;">
               <div class="detail-actions">
                 <button class="hbtn hbtn-blue" onclick="sshUnit('${u.id}','${u.ip}');event.stopPropagation()">SSH</button>
-                <button class="hbtn hbtn-green" onclick="updateUnit('${u.id}');event.stopPropagation()">UPDATE</button>
-                <button class="hbtn hbtn-red" onclick="rebootUnit('${u.id}','${u.ip}');event.stopPropagation()">REBOOT</button>
+                <button class="hbtn hbtn-green" onclick="updateUnit('${u.id}',this);event.stopPropagation()">UPDATE</button>
+                <button class="hbtn hbtn-red" onclick="rebootUnit('${u.id}','${u.ip}',this);event.stopPropagation()">REBOOT</button>
                 <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="viewLogs('${u.id}');event.stopPropagation()">VIEW LOGS</button>
                 <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="openUnit('${u.ip}');event.stopPropagation()">OPEN UI</button>
               </div>
@@ -464,20 +483,24 @@
       alert(`SSH into Pi:\nssh pi@${ip}\n\nOr use Tailscale if on different network.`);
     }
 
-    function rebootUnit(id, ip) {
+    function rebootUnit(id, ip, btn) {
       if (!confirm(`Reboot ${id}?`)) return;
-      fetch(`http://${ip}:5001/api/reboot`, {method:'POST'})
-        .then(() => addLog(id, 'Reboot command sent', 'warn'))
-        .catch(() => addLog(id, 'Reboot failed — unit may be offline', 'err'));
+      if (btn) { btn.disabled = true; btn.textContent = 'REBOOTING…'; }
+      fetch(`http://${ip}:5001/api/reboot`, {method:'POST', signal: AbortSignal.timeout(5000)})
+        .then(() => addLog(id, 'Reboot command sent — Pi will be offline ~30s', 'warn'))
+        .catch(() => addLog(id, 'Reboot command sent (no response — Pi may already be rebooting)', 'warn'))
+        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = 'REBOOT'; } });
     }
 
-    function updateUnit(id) {
+    function updateUnit(id, btn) {
       const u = units.find(u => u.id === id);
       if (!u) return;
-      fetch(`http://${u.ip}:5001/api/update`, {method:'POST'})
+      if (btn) { btn.disabled = true; btn.textContent = 'UPDATING…'; }
+      fetch(`http://${u.ip}:5001/api/update`, {method:'POST', signal: AbortSignal.timeout(5000)})
         .then(r => r.json())
-        .then(() => addLog(id, 'Force update triggered — pulling latest from GitHub', 'ok'))
-        .catch(() => addLog(id, 'Update request failed — unit may be offline', 'warn'));
+        .then(() => addLog(id, 'Update triggered — pulling latest from GitHub (~30s)', 'ok'))
+        .catch(() => addLog(id, 'Update sent (no response — server restarting is normal)', 'warn'))
+        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = 'UPDATE'; } });
     }
 
     function viewLogs(id) {
@@ -491,10 +514,10 @@
     function pushUpdate() {
       if (!confirm('Push update to all online units?')) return;
       units.filter(u=>u.status==='online').forEach(u => {
-        fetch(`http://${u.ip}:5001/api/update`, {method:'POST'})
+        fetch(`http://${u.ip}:5001/api/update`, {method:'POST', signal: AbortSignal.timeout(5000)})
           .then(r => r.json())
-          .then(() => addLog(u.id, 'Force update triggered — pulling latest from GitHub', 'ok'))
-          .catch(() => addLog(u.id, 'Update request failed — unit may be offline', 'warn'));
+          .then(() => addLog(u.id, 'Update triggered — pulling latest from GitHub (~30s)', 'ok'))
+          .catch(() => addLog(u.id, 'Update sent (no response — server restarting is normal)', 'warn'));
       });
     }
 
@@ -508,8 +531,9 @@
     function rebootAll() {
       if (!confirm('Reboot ALL online units?')) return;
       units.filter(u=>u.status==='online').forEach(u => {
-        fetch(`http://${u.ip}:5001/api/reboot`, {method:'POST'}).catch(()=>{});
-        addLog(u.id, 'Reboot command sent', 'warn');
+        fetch(`http://${u.ip}:5001/api/reboot`, {method:'POST', signal: AbortSignal.timeout(5000)})
+          .catch(()=>{});
+        addLog(u.id, 'Reboot command sent — Pi will be offline ~30s', 'warn');
       });
     }
 
