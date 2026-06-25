@@ -483,24 +483,33 @@
       alert(`SSH into Pi:\nssh pi@${ip}\n\nOr use Tailscale if on different network.`);
     }
 
-    function rebootUnit(id, ip, btn) {
-      if (!confirm(`Reboot ${id}?`)) return;
-      if (btn) { btn.disabled = true; btn.textContent = 'REBOOTING…'; }
-      fetch(`http://${ip}:5001/api/reboot`, {method:'POST', signal: AbortSignal.timeout(5000)})
-        .then(() => addLog(id, 'Reboot command sent — Pi will be offline ~30s', 'warn'))
-        .catch(() => addLog(id, 'Reboot command sent (no response — Pi may already be rebooting)', 'warn'))
-        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = 'REBOOT'; } });
+    async function sendCmd(ip, path, retries=3) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          await fetch(`http://${ip}:5001${path}`, {method:'POST', keepalive:true});
+          return true;
+        } catch(e) {
+          if (i < retries - 1) await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      return false;
     }
 
-    function updateUnit(id, btn) {
+    async function rebootUnit(id, ip, btn) {
+      if (!confirm(`Reboot ${id}?`)) return;
+      if (btn) { btn.disabled = true; btn.textContent = 'REBOOTING…'; }
+      const ok = await sendCmd(ip, '/api/reboot');
+      addLog(id, ok ? 'Reboot sent — Pi will be offline ~30s' : 'Reboot failed — unit unreachable', ok ? 'warn' : 'err');
+      if (btn) { btn.disabled = false; btn.textContent = 'REBOOT'; }
+    }
+
+    async function updateUnit(id, btn) {
       const u = units.find(u => u.id === id);
       if (!u) return;
       if (btn) { btn.disabled = true; btn.textContent = 'UPDATING…'; }
-      fetch(`http://${u.ip}:5001/api/update`, {method:'POST', signal: AbortSignal.timeout(5000)})
-        .then(r => r.json())
-        .then(() => addLog(id, 'Update triggered — pulling latest from GitHub (~30s)', 'ok'))
-        .catch(() => addLog(id, 'Update sent (no response — server restarting is normal)', 'warn'))
-        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = 'UPDATE'; } });
+      const ok = await sendCmd(u.ip, '/api/update');
+      addLog(id, ok ? 'Update triggered — pulling latest from GitHub (~30s)' : 'Update failed — unit unreachable', ok ? 'ok' : 'err');
+      if (btn) { btn.disabled = false; btn.textContent = 'UPDATE'; }
     }
 
     function viewLogs(id) {
@@ -514,10 +523,8 @@
     function pushUpdate() {
       if (!confirm('Push update to all online units?')) return;
       units.filter(u=>u.status==='online').forEach(u => {
-        fetch(`http://${u.ip}:5001/api/update`, {method:'POST', signal: AbortSignal.timeout(5000)})
-          .then(r => r.json())
-          .then(() => addLog(u.id, 'Update triggered — pulling latest from GitHub (~30s)', 'ok'))
-          .catch(() => addLog(u.id, 'Update sent (no response — server restarting is normal)', 'warn'));
+        sendCmd(u.ip, '/api/update')
+          .then(ok => addLog(u.id, ok ? 'Update triggered — pulling latest from GitHub (~30s)' : 'Update failed — unit unreachable', ok ? 'ok' : 'err'));
       });
     }
 
@@ -531,9 +538,8 @@
     function rebootAll() {
       if (!confirm('Reboot ALL online units?')) return;
       units.filter(u=>u.status==='online').forEach(u => {
-        fetch(`http://${u.ip}:5001/api/reboot`, {method:'POST', signal: AbortSignal.timeout(5000)})
-          .catch(()=>{});
-        addLog(u.id, 'Reboot command sent — Pi will be offline ~30s', 'warn');
+        sendCmd(u.ip, '/api/reboot')
+          .then(ok => addLog(u.id, ok ? 'Reboot sent — Pi will be offline ~30s' : 'Reboot failed — unit unreachable', ok ? 'warn' : 'err'));
       });
     }
 
