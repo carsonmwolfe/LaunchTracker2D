@@ -441,10 +441,28 @@ def _fetch_ll2(url, label):
         return None
 
 def _fetch_year_launches():
+    """Fetch all launches since Jan 1 of current year, paginating past LL2's 100-per-page cap."""
     year_str = datetime.now().strftime('%Y-01-01')
-    return _fetch_ll2(
-        f'{LL2_BASE}/launches/?window_start__gte={year_str}&limit=100&ordering=window_start&format=json',
-        'year launches')
+    base = f'{LL2_BASE}/launches/?window_start__gte={year_str}&limit=100&ordering=window_start&format=json'
+    all_results = []
+    url = base
+    pages = 0
+    while url and pages < 5:  # cap at 5 pages (500 launches) to protect rate limit
+        try:
+            r = requests.get(url, timeout=LL2_TIMEOUT)
+            if r.status_code == 429:
+                print(f'[{_ts()}] LL2 rate limited (year launches page {pages+1})')
+                break
+            r.raise_for_status()
+            payload = r.json()
+            all_results.extend(payload.get('results', []))
+            url = payload.get('next')  # None when no more pages
+            pages += 1
+        except Exception as e:
+            print(f'[{_ts()}] Error fetching year launches page {pages+1}: {e}')
+            break
+    print(f'[{_ts()}] year launches: {len(all_results)} across {pages} page(s)')
+    return all_results if all_results else None
 
 def _fetch_events():
     return _fetch_ll2(f'{LL2_BASE}/events/upcoming/?limit=5&format=json', 'events')
