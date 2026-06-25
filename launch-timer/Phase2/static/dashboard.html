@@ -286,10 +286,9 @@
   </div>
 
   <script>
-    // ── Config — point this at your Pi or VPS ─────────────────────────────────
-    const PI_HOST = 'http://localhost:5001'; // change to Pi IP or VPS when deployed
+    const RELAY = 'http://45.55.245.193';
 
-    // ── Demo units — replace with real heartbeat data ─────────────────────────
+    // Known units — ip used for direct (same-network) polling only
     let units = [
       {
         id:'LT-001', mac:'b8:27:eb:f0:f8:2a', ip:'192.168.1.93',
@@ -483,33 +482,47 @@
       alert(`SSH into Pi:\nssh pi@${ip}\n\nOr use Tailscale if on different network.`);
     }
 
-    async function sendCmd(ip, path, retries=3) {
-      for (let i = 0; i < retries; i++) {
+    // ── Relay command helpers ─────────────────────────────────────────────────
+    async function sendRelayCmd(unitId, cmd) {
+      const r = await fetch(`${RELAY}/api/unit/command`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({unit_id: unitId, command: cmd}),
+        keepalive: true,
+      });
+      return r.ok;
+    }
+
+    async function waitForAck(unitId, cmd, logId) {
+      for (let i = 0; i < 8; i++) {
+        await new Promise(r => setTimeout(r, 2000));
         try {
-          await fetch(`http://${ip}:5001${path}`, {method:'POST', keepalive:true});
-          return true;
-        } catch(e) {
-          if (i < retries - 1) await new Promise(r => setTimeout(r, 1500));
-        }
+          const r = await fetch(`${RELAY}/api/unit/acks/${unitId}`);
+          const acks = await r.json();
+          if (acks.some(a => a.command === cmd)) {
+            addLog(logId, `${cmd.toUpperCase()} acknowledged — Pi is executing`, 'ok');
+            return;
+          }
+        } catch(e) {}
       }
-      return false;
+      addLog(logId, `${cmd.toUpperCase()} queued — no ack yet (Pi may be offline)`, 'warn');
     }
 
     async function rebootUnit(id, ip, btn) {
       if (!confirm(`Reboot ${id}?`)) return;
-      if (btn) { btn.disabled = true; btn.textContent = 'REBOOTING…'; }
-      const ok = await sendCmd(ip, '/api/reboot');
-      addLog(id, ok ? 'Reboot sent — Pi will be offline ~30s' : 'Reboot failed — unit unreachable', ok ? 'warn' : 'err');
+      if (btn) { btn.disabled = true; btn.textContent = 'QUEUING…'; }
+      const ok = await sendRelayCmd(id, 'reboot');
+      addLog(id, ok ? 'Reboot queued via relay — waiting for Pi to pick up…' : 'Relay unreachable', ok ? 'warn' : 'err');
       if (btn) { btn.disabled = false; btn.textContent = 'REBOOT'; }
+      if (ok) waitForAck(id, 'reboot', id);
     }
 
     async function updateUnit(id, btn) {
-      const u = units.find(u => u.id === id);
-      if (!u) return;
-      if (btn) { btn.disabled = true; btn.textContent = 'UPDATING…'; }
-      const ok = await sendCmd(u.ip, '/api/update');
-      addLog(id, ok ? 'Update triggered — pulling latest from GitHub (~30s)' : 'Update failed — unit unreachable', ok ? 'ok' : 'err');
+      if (btn) { btn.disabled = true; btn.textContent = 'QUEUING…'; }
+      const ok = await sendRelayCmd(id, 'update');
+      addLog(id, ok ? 'Update queued via relay — waiting for Pi to pick up…' : 'Relay unreachable', ok ? 'ok' : 'err');
       if (btn) { btn.disabled = false; btn.textContent = 'UPDATE'; }
+      if (ok) waitForAck(id, 'update', id);
     }
 
     function viewLogs(id) {
@@ -522,9 +535,12 @@
 
     function pushUpdate() {
       if (!confirm('Push update to all online units?')) return;
-      units.filter(u=>u.status==='online').forEach(u => {
-        sendCmd(u.ip, '/api/update')
-          .then(ok => addLog(u.id, ok ? 'Update triggered — pulling latest from GitHub (~30s)' : 'Update failed — unit unreachable', ok ? 'ok' : 'err'));
+      units.forEach(u => {
+        sendRelayCmd(u.id, 'update')
+          .then(ok => {
+            addLog(u.id, ok ? 'Update queued via relay' : 'Relay unreachable', ok ? 'ok' : 'err');
+            if (ok) waitForAck(u.id, 'update', u.id);
+          });
       });
     }
 
@@ -537,9 +553,12 @@
 
     function rebootAll() {
       if (!confirm('Reboot ALL online units?')) return;
-      units.filter(u=>u.status==='online').forEach(u => {
-        sendCmd(u.ip, '/api/reboot')
-          .then(ok => addLog(u.id, ok ? 'Reboot sent — Pi will be offline ~30s' : 'Reboot failed — unit unreachable', ok ? 'warn' : 'err'));
+      units.forEach(u => {
+        sendRelayCmd(u.id, 'reboot')
+          .then(ok => {
+            addLog(u.id, ok ? 'Reboot queued via relay' : 'Relay unreachable', ok ? 'warn' : 'err');
+            if (ok) waitForAck(u.id, 'reboot', u.id);
+          });
       });
     }
 
@@ -551,25 +570,37 @@
       a.click();
     }
 
-    // ── Heartbeat polling — fetches from each Pi ──────────────────────────────
+    // ── Heartbeat polling — direct first, relay fallback ─────────────────────
     async function pollUnit(u) {
       try {
         const start = Date.now();
-        const r = await fetch(`http://${u.ip}:5001/api/launches`, {
-          signal: AbortSignal.timeout(3000)
-        });
+        const r = await fetch(`http://${u.ip}:5001/api/launches`, {signal: AbortSignal.timeout(3000)});
         const d = await r.json();
         u.ping = Date.now() - start;
         u.status = 'online';
         u.lastSeen = Date.now();
         u.launch = d.launches?.[0]?.name || '—';
-        // Get device info
-        const dr = await fetch(`http://${u.ip}:5001/api/device`);
+        const dr = await fetch(`http://${u.ip}:5001/api/device`, {signal: AbortSignal.timeout(3000)});
         const dd = await dr.json();
         u.version = dd.version || u.version;
         u.mac = dd.mac || u.mac;
       } catch(e) {
-        u.status = 'offline';
+        // Direct unreachable — check relay for last heartbeat
+        try {
+          const rr = await fetch(`${RELAY}/api/units`, {signal: AbortSignal.timeout(5000)});
+          const all = await rr.json();
+          const ru = all[u.id];
+          if (ru && (Date.now()/1000 - ru.last_seen) < 600) {
+            u.status = 'online';
+            u.version = ru.version || u.version;
+            u.lastSeen = ru.last_seen * 1000;
+            u.ping = null;
+          } else {
+            u.status = 'offline';
+          }
+        } catch(e2) {
+          u.status = 'offline';
+        }
       }
     }
 
