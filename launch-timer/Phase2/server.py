@@ -616,6 +616,10 @@ def _execute_command(cmd):
         elif cmd == 'reboot':
             _notify_write('REBOOTING', 'System reboot in progress...')
             subprocess.Popen(['bash', '-c', 'sleep 2 && sudo /sbin/reboot'])
+        elif cmd == 'refresh':
+            _data_cache['fetched_at'] = 0
+            threading.Thread(target=_refresh_all, daemon=True).start()
+            print(f'[{_ts()}] Remote refresh triggered')
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
