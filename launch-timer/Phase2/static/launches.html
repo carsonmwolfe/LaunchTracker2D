@@ -75,7 +75,7 @@
     .launch-card.hold { border-color: rgba(255,68,34,0.4); }
     .launch-card.tbd  { border-color: rgba(255,211,61,0.2); }
     .lc-accent { position: absolute; top: 0; left: 0; width: 100%; height: 2px; }
-    .lc-status { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+    .lc-status { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; flex-wrap: nowrap; overflow: hidden; }
     .status-dot { width: 5px; height: 5px; flex-shrink: 0; }
     .status-dot.go   { background: #00e87a; }
     .status-dot.tbd  { background: #ffd93d; }
@@ -98,7 +98,7 @@
     .lc-date { font-size: 9px; color: rgba(255,255,255,0.85); }
     .lc-loc  { font-size: 9px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lc-slip-badge { font-size: 7px; color: #0a0e14; background: #ffd93d; padding: 2px 5px; flex-shrink: 0; font-weight: bold; }
-    .lc-slip-amt { font-size: 8px; color: #ffd93d; font-weight: bold; }
+    .lc-slip-amt { font-size: 8px; color: #ffd93d; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
     .lc-date-orig { font-size: 7px; color: rgba(255,255,255,0.3); text-decoration: line-through; margin-right: 4px; }
     .lc-days { font-size: 11px; color: #fff; white-space: nowrap; }
     .lc-hms  { font-size: 9px; white-space: nowrap; }
