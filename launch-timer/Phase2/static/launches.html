@@ -385,7 +385,7 @@
           const slipMs  = new Date(l.t0) - new Date(l.original_t0);
           const slipD   = Math.floor(Math.abs(slipMs) / 86400000);
           const slipH   = Math.floor((Math.abs(slipMs) % 86400000) / 3600000);
-          const slipStr = slipD > 0 ? `+${slipD}d ${slipH}h` : `+${slipH}h`;
+          const slipStr = slipD > 0 ? `+${slipD}d` : `+${slipH}h`;
           dateTxt   = `<span class="lc-date-orig">${escHtml(fmtDate(l.original_t0))}</span>${escHtml(fmtDate(l.t0))}`;
           slipInline = `<span class="lc-slip-badge">DELAYED</span><span class="lc-slip-amt">${slipStr}</span>`;
         } else {
