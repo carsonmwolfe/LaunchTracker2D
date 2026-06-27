@@ -288,17 +288,27 @@ def _is_valid(launch):
 
 # ── Central data cache ────────────────────────────────────────────────────────
 
-CACHE_FILE    = os.path.join(BASE_DIR, 'data_cache.json')
-T0_HIST_FILE  = os.path.join(BASE_DIR, 't0_history.json')
+CACHE_FILE      = os.path.join(BASE_DIR, 'data_cache.json')
+T0_HIST_FILE    = os.path.join(os.path.expanduser('~'), '.rangetrack_t0_history.json')
+T0_HIST_SEED    = os.path.join(BASE_DIR, 't0_history_seed.json')
 _cache_lock   = threading.Lock()   # guards all _data_cache mutations
 _weather_lock = threading.Lock()   # guards _weather_cache reads/writes
 
 def _load_t0_history():
+    hist = {}
+    # Merge seed file first so Pis pick up known slips without having observed them
+    try:
+        with open(T0_HIST_SEED) as f:
+            hist.update(json.load(f))
+    except Exception:
+        pass
+    # Local history overwrites seed — local observations take precedence
     try:
         with open(T0_HIST_FILE) as f:
-            return json.load(f)
+            hist.update(json.load(f))
     except Exception:
-        return {}
+        pass
+    return hist
 
 def _save_t0_history(hist):
     try:
