@@ -1,4 +1,4 @@
-import requests, time, threading
+import json, os, requests, time, threading
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -6,6 +6,56 @@ app = Flask(__name__)
 _cache = {}
 _cache_lock = threading.Lock()
 CACHE_TTL = 300  # 5 minutes
+
+# ── T0 slip history — tracks first-seen T0 per launch ID ─────────────────────
+# Stored in memory; survives as long as the process runs on DO.
+# All Pis share this so DELAYED badges are universal.
+_t0_history = {}
+_T0_HIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 't0_history_relay.json')
+
+def _load_t0_history():
+    global _t0_history
+    try:
+        with open(_T0_HIST_FILE) as f:
+            _t0_history = json.load(f)
+        print(f"T0 history loaded: {len(_t0_history)} entries")
+    except Exception:
+        _t0_history = {}
+
+def _save_t0_history():
+    try:
+        with open(_T0_HIST_FILE, 'w') as f:
+            json.dump(_t0_history, f)
+    except Exception as e:
+        print(f"T0 history save error: {e}")
+
+def _apply_t0_history(launches):
+    """Record first-seen T0 for each launch; attach original_t0 if T0 has slipped."""
+    changed = False
+    cutoff = time.time() - 30 * 86400  # prune entries older than 30 days
+    for l in launches:
+        lid = str(l.get('id', ''))
+        net = (l.get('net') or '').strip()
+        if not lid or not net:
+            continue
+        if lid not in _t0_history:
+            _t0_history[lid] = {'t0': net, 'seen': time.time()}
+            changed = True
+        else:
+            orig = _t0_history[lid]['t0']
+            if orig != net:
+                l['original_t0'] = orig
+    # Prune old entries
+    stale = [k for k, v in _t0_history.items() if v.get('seen', 0) < cutoff]
+    if stale:
+        for k in stale:
+            del _t0_history[k]
+        changed = True
+    if changed:
+        _save_t0_history()
+    return launches
+
+_load_t0_history()
 
 LL2_BASE = "https://ll.thespacedevs.com/2.2.0"
 WEATHER_BASE = "https://api.open-meteo.com/v1"
@@ -45,6 +95,7 @@ def _refresh():
             return
         launches = _fetch_launches()
         if launches is not None:
+            launches = _apply_t0_history(launches)
             _cache['launches'] = launches
         for site_id, site in SITES.items():
             wx = _fetch_weather(site['lat'], site['lon'])
