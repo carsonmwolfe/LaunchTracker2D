@@ -130,6 +130,7 @@ let state = {
 
   // Post-launch cooldown
   lastFetchAt: Date.now(),
+  dataAge: 0,          // seconds since server last fetched from LL2 (from age_seconds in /api/data)
   postLaunchCooldown:   false,
   cooldownEndsAt:       0,
   launchedMissionName:  '',
@@ -1739,9 +1740,23 @@ function updateInfoBar() {
     document.getElementById('ib-cloud').textContent  = (wx.cloud_cover||0)+'%';
     
   }
-    // Version + data age
-  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  document.getElementById('ib-ver').textContent = `${state.version || 'v2.0.0'} · data ${minAgo}m ago`;
+    // Version + data age — show LOS warning when stale >1h
+  const serverStaleIB = state.dataAge > 3600;
+  const clientStaleIB = Date.now() - state.lastFetchAt > 60 * 60 * 1000;
+  const verEl = document.getElementById('ib-ver');
+  if (serverStaleIB || clientStaleIB) {
+    const staleMin = serverStaleIB
+      ? Math.floor(state.dataAge / 60)
+      : Math.floor((Date.now() - state.lastFetchAt) / 60000);
+    const sh = Math.floor(staleMin / 60), sm = staleMin % 60;
+    const staleStr = sh > 0 ? `${sh}h ${String(sm).padStart(2,'0')}m` : `${sm}m`;
+    verEl.textContent = `⚠ NO SIGNAL · ${staleStr} ago`;
+    verEl.style.color = '#ff4422';
+  } else {
+    const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
+    verEl.textContent = `${state.version || 'v2.0.0'} · data ${minAgo}m ago`;
+    verEl.style.color = '';
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1956,18 +1971,48 @@ function updateLaunch() {
 }
 
 function drawNoSignal() {
-  if (Date.now() - state.lastFetchAt < 15 * 60 * 1000) return;
-  // Small L.O.S indicator under the countdown clock
-  const cx = W / 2;
-  const by = 108; // just below the countdown box
-  ctx.fillStyle = 'rgba(255,68,34,0.7)';
-  ctx.font = 'bold 9px Courier New';
+  // Trigger when server hasn't reached LL2 in 1h OR client hasn't heard from server in 1h
+  const serverStale = state.dataAge > 3600;
+  const clientStale = Date.now() - state.lastFetchAt > 60 * 60 * 1000;
+  if (!serverStale && !clientStale) return;
+
+  // Compute total stale duration in minutes for display
+  const staleMs  = clientStale
+    ? Date.now() - state.lastFetchAt
+    : state.dataAge * 1000;
+  const totalMin = Math.floor(staleMs / 60000);
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  const ageStr = hh > 0 ? `${hh}H ${String(mm).padStart(2,'0')}M` : `${mm}M`;
+
+  // Blink at ~1Hz
+  const blink = Math.floor(Date.now() / 600) % 2 === 0;
+
+  // Panel — right side below gear icon
+  const PW = 120, PH = 38;
+  const PX = W - PW - 6, PY = 32;
+
+  // Dark background
+  ctx.fillStyle = 'rgba(8,10,16,0.93)';
+  ctx.fillRect(PX, PY, PW, PH);
+
+  // Red border (blinks between solid and dim)
+  ctx.strokeStyle = blink ? '#ff2200' : 'rgba(255,34,0,0.35)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(PX + 1, PY + 1, PW - 2, PH - 2);
+
+  // "NO SIGNAL" title
+  ctx.fillStyle = blink ? '#ff4422' : 'rgba(255,68,34,0.5)';
+  ctx.font = '7px "Press Start 2P"';
   ctx.textAlign = 'center';
-  ctx.fillText('L.O.S', cx, by);
-  const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.font = '8px Courier New';
-  ctx.fillText('signal lost · ' + minAgo + 'm ago', cx, by + 12);
+  ctx.fillText('NO SIGNAL', PX + PW / 2, PY + 14);
+
+  // Stale age
+  ctx.fillStyle = 'rgba(255,200,180,0.55)';
+  ctx.font = '6px "Press Start 2P"';
+  ctx.fillText('DATA: ' + ageStr + ' AGO', PX + PW / 2, PY + 28);
+
+  ctx.textAlign = 'left';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1995,6 +2040,7 @@ async function fetchData(afterLaunch=false) {
     state.weather     = data.weather  || state.weather;
     state.settings    = data.settings || state.settings;
     state.version     = data.version  || state.version || '';
+    state.dataAge     = data.age_seconds || 0;
     state.lastFetchAt = Date.now();
     if (hadData) showNotification('DATA UPDATED');
 
