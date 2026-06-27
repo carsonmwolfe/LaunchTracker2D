@@ -97,7 +97,6 @@
     .lc-vehicle { font-size: 10px; color: #4a9ede; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lc-date { font-size: 9px; color: rgba(255,255,255,0.85); }
     .lc-loc  { font-size: 9px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lc-slip { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
     .lc-slip-badge { font-size: 6px; color: #0a0e14; background: #ffd93d; padding: 1px 4px; flex-shrink: 0; }
     .lc-slip-amt { font-size: 7px; color: #ffd93d; }
     .lc-date-orig { font-size: 7px; color: rgba(255,255,255,0.3); text-decoration: line-through; margin-right: 4px; }
@@ -380,14 +379,14 @@
           .trim();
         const missionName = escHtml(missionRaw);
         const locTxt  = escHtml(shorten(l.location || l.pad || ''));
-        let dateTxt, slipHtml = '';
+        let dateTxt, slipInline = '';
         if (l.original_t0 && l.original_t0 !== l.t0) {
           const slipMs  = new Date(l.t0) - new Date(l.original_t0);
           const slipD   = Math.floor(Math.abs(slipMs) / 86400000);
           const slipH   = Math.floor((Math.abs(slipMs) % 86400000) / 3600000);
           const slipStr = slipD > 0 ? `+${slipD}d ${slipH}h` : `+${slipH}h`;
-          dateTxt  = `<span class="lc-date-orig">${escHtml(fmtDate(l.original_t0))}</span>${escHtml(fmtDate(l.t0))}`;
-          slipHtml = `<div class="lc-slip"><span class="lc-slip-badge">DELAYED</span><span class="lc-slip-amt">${slipStr}</span></div>`;
+          dateTxt   = `<span class="lc-date-orig">${escHtml(fmtDate(l.original_t0))}</span>${escHtml(fmtDate(l.t0))}`;
+          slipInline = `<span class="lc-slip-badge">DELAYED</span><span class="lc-slip-amt">${slipStr}</span>`;
         } else {
           dateTxt = escHtml(fmtDate(l.t0));
         }
@@ -397,12 +396,11 @@
         const daysInit = escHtml(d0 > 0 ? d0 + (d0===1?' DAY':' DAYS') : 'TODAY');
         return `<div class="launch-card ${cls}" data-lid="${lid}" data-lname="${escHtml(nm)}">
           <div class="lc-accent" style="background:${ac};"></div>
-          <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div></div>
+          <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div>${slipInline}</div>
           <div class="lc-name">${missionName}</div>
           <div class="lc-vehicle">${veh}</div>
           <div class="lc-date">${dateTxt}</div>
           <div class="lc-loc">${locTxt}</div>
-          ${slipHtml}
           <div class="lc-days" data-t0="${t0Esc}" data-status="${stEsc}">${daysInit}</div>
           <div class="lc-hms ${cd.cls}"></div>
         </div>`;
