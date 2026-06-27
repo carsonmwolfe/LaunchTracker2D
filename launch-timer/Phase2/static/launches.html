@@ -97,8 +97,8 @@
     .lc-vehicle { font-size: 10px; color: #4a9ede; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lc-date { font-size: 9px; color: rgba(255,255,255,0.85); }
     .lc-loc  { font-size: 9px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lc-slip-badge { font-size: 6px; color: #0a0e14; background: #ffd93d; padding: 1px 4px; flex-shrink: 0; }
-    .lc-slip-amt { font-size: 7px; color: #ffd93d; }
+    .lc-slip-badge { font-size: 7px; color: #0a0e14; background: #ffd93d; padding: 2px 5px; flex-shrink: 0; font-weight: bold; }
+    .lc-slip-amt { font-size: 8px; color: #ffd93d; font-weight: bold; }
     .lc-date-orig { font-size: 7px; color: rgba(255,255,255,0.3); text-decoration: line-through; margin-right: 4px; }
     .lc-days { font-size: 11px; color: #fff; white-space: nowrap; }
     .lc-hms  { font-size: 9px; white-space: nowrap; }
@@ -114,9 +114,9 @@
       display: flex; flex-direction: column;
       background: #0a0e14;
     }
-    .lb-total-block { padding: 10px 14px 8px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .lb-total-block { padding: 6px 14px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
     .lb-total-num { font-size: 40px; color: #ffd93d; line-height: 1; }
-    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.55); margin-top: 4px; line-height: 2.2; }
+    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.55); line-height: 2.0; margin-top: 0; }
     .lb-rows { flex: 1; display: flex; flex-direction: column; }
     .lb-row {
       display: flex; align-items: center; gap: 8px;
@@ -185,7 +185,6 @@
     </div>
     <div class="top-title-wrap">
       <div class="top-title">LAUNCHES & EVENTS</div>
-      <div class="top-sub">// LAUNCH MANIFEST · UPLINK ESTABLISHED //</div>
     </div>
     <div class="top-date" id="top-date">—</div>
   </div>
@@ -206,8 +205,10 @@
       <div class="lb-col">
         <div class="phdr"><div class="phdr-dot" style="background:#ffd93d;"></div>> LEADERBOARD 2026</div>
         <div class="lb-total-block">
-          <div class="lb-total-num" id="lb-total">—</div>
-          <div class="lb-total-lbl">ORBITAL LAUNCHES<br>THIS YEAR</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="lb-total-num" id="lb-total">—</div>
+            <div class="lb-total-lbl">ORBITAL<br>LAUNCHES<br>THIS YEAR</div>
+          </div>
         </div>
         <div class="lb-rows" id="lb-rows">
           <div class="loading-msg">LOADING...</div>
