@@ -2469,10 +2469,11 @@ function render(now) {
   drawMoon();
   drawClouds();
 
-  // Weather effects
+  // Weather effects — only draw rain streaks if measurable precip detected
   const cond = state.weather.condition;
-  if (cond === 'rain' || cond === 'light_rain') drawRain(false);
-  if (cond === 'thunderstorm') { drawRain(true); drawLightning(); }
+  const hasRain = (state.weather.precip || 0) > 0;
+  if (cond === 'rain' || cond === 'light_rain') { if (hasRain) drawRain(false); }
+  if (cond === 'thunderstorm') { if (hasRain) drawRain(true); drawLightning(); }
   if (cond === 'fog') drawFog();
   drawVAB();
   // drawFences();
