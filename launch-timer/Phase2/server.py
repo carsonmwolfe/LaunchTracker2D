@@ -87,6 +87,17 @@ SITE_COORDS = {
 _location_cache = None
 
 def _get_location():
+    # Use next launch's pad coordinates if available — weather should match the mission site
+    launches = _data_cache.get('launches', [])
+    if launches:
+        try:
+            lat = float(launches[0].get('pad_lat') or '')
+            lon = float(launches[0].get('pad_lon') or '')
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                return (lat, lon)
+        except (ValueError, TypeError):
+            pass
+    # Fall back to static site setting
     global _location_cache
     if _location_cache:
         return _location_cache
