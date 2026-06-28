@@ -590,7 +590,7 @@
           const rr = await fetch(`${RELAY}/api/units`, {signal: AbortSignal.timeout(5000)});
           const all = await rr.json();
           const ru = all[u.id];
-          if (ru && (Date.now()/1000 - ru.last_seen) < 600) {
+          if (ru && (Date.now()/1000 - ru.last_seen) < 180) {
             u.status = 'online';
             u.version = ru.version || u.version;
             u.lastSeen = ru.last_seen * 1000;

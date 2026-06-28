@@ -592,7 +592,7 @@ def _get_unit_id():
     return uid
 
 def _ping_relay():
-    """Ping the DO relay every 5 minutes."""
+    """Ping the DO relay every 60 seconds."""
     while True:
         try:
             settings = _load_settings()
@@ -607,7 +607,7 @@ def _ping_relay():
             }, timeout=5)
         except Exception:
             pass
-        time.sleep(300)
+        time.sleep(60)
 
 def _poll_commands():
     """Poll DO relay for pending commands every 5 seconds."""
