@@ -1719,7 +1719,8 @@ function updateInfoBar() {
       }
       document.getElementById('ib-win-close').textContent =
         new Date(winClose).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false});
-      const dotEl = document.getElementById('ib-win-dot');
+      const dotEl  = document.getElementById('ib-win-dot');
+      const fillEl = document.getElementById('ib-win-fill');
       if (dotEl) {
         const openMs  = new Date(winOpen).getTime();
         const t0Ms    = new Date(t0).getTime();
@@ -1727,6 +1728,7 @@ function updateInfoBar() {
         const _span = closeMs - openMs;
         const pct = _span > 0 ? Math.min(100, Math.max(0, (t0Ms - openMs) / _span * 100)) : 50;
         dotEl.style.left = pct + '%';
+        if (fillEl) fillEl.style.width = pct + '%';
       }
     }
   }
@@ -2491,7 +2493,7 @@ function render(now) {
   const cond = state.weather.condition;
   const hasRain = (state.weather.precip || 0) > 0;
   if (cond === 'rain' || cond === 'light_rain') { if (hasRain) drawRain(false); }
-  if (cond === 'thunderstorm') { if (hasRain) drawRain(true); drawLightning(); }
+  if (cond === 'thunderstorm') { const clouds = state.weather.cloud_cover || 0; if (hasRain) drawRain(true); if (clouds > 20) drawLightning(); }
   if (cond === 'fog') drawFog();
   drawVAB();
   // drawFences();

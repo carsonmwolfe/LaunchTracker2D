@@ -20,14 +20,14 @@
 
     /* TOP BAR */
     .topbar {
-      height: 36px; flex-shrink: 0;
+      height: 32px; flex-shrink: 0;
       background: #0d1620; border-bottom: 3px solid #00e87a;
       display: flex; align-items: center; padding: 0 12px; gap: 10px;
     }
     .back-btn {
       font-family: 'Press Start 2P', monospace; font-size: 7px;
       background: #0a1a10; border: 2px solid #00e87a;
-      color: #00e87a; padding: 4px 8px; cursor: pointer;
+      color: #00e87a; padding: 3px 8px; cursor: pointer;
     }
     .back-btn:hover { background: #0f2a18; }
     .top-sqs { display: flex; gap: 5px; }
@@ -35,18 +35,34 @@
     .top-title-wrap { flex: 1; text-align: center; }
     .top-title { font-size: 8px; color: #fff; }
     .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
-    .top-current {
-      font-size: 5px; color: #ffd93d;
-      background: #0a1a10; border: 2px solid #ffd93d;
-      padding: 3px 7px; white-space: nowrap;
-      max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+
+    /* CONNECTION STATUS BAR — sits just above keyboard */
+    #conn-bar {
+      flex-shrink: 0; display: none;
+      background: #061a0e; border-top: 2px solid #00e87a;
+      padding: 5px 14px;
+      align-items: center; gap: 10px;
     }
+    #conn-bar.visible { display: flex; }
+    .conn-dot { width: 8px; height: 8px; background: #00e87a; flex-shrink: 0; }
+    .conn-lbl { font-size: 7px; color: rgba(0,232,122,0.7); }
+    .conn-ssid { font-size: 9px; color: #00e87a; }
+    #no-conn-bar {
+      flex-shrink: 0; display: none;
+      background: #1a0808; border-top: 2px solid #ff4422;
+      padding: 5px 14px;
+      align-items: center; gap: 10px;
+    }
+    #no-conn-bar.visible { display: flex; }
+    .no-conn-dot { width: 8px; height: 8px; background: #ff4422; flex-shrink: 0; }
+    .no-conn-lbl { font-size: 7px; color: #ff4422; }
 
     /* TOP PANEL — networks left, connect right */
     .top-panel {
       display: flex; flex-direction: row;
-      height: 196px; flex-shrink: 0;
-      border-bottom: 3px solid #2a3a50;
+      flex: 1;
+      border-bottom: none;
+      overflow: hidden;
     }
 
     /* LEFT — network list */
@@ -56,93 +72,94 @@
       border-right: 3px solid #2a3a50; background: #0e1520;
     }
     .phdr {
-      font-size: 6px; color: #00e87a;
-      background: #141e2e; padding: 6px 10px;
+      font-size: 7px; color: #00e87a;
+      background: #141e2e; padding: 7px 10px;
       border-bottom: 2px solid #2a3a50;
       display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
     }
     .phdr-left { display: flex; align-items: center; gap: 6px; }
     .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
     .btn-scan-sm {
-      font-family: 'Press Start 2P', monospace; font-size: 5px;
+      font-family: 'Press Start 2P', monospace; font-size: 6px;
       background: #141e2e; border: 2px solid #6ab4f8;
-      color: #6ab4f8; padding: 3px 6px; cursor: pointer;
+      color: #6ab4f8; padding: 4px 8px; cursor: pointer;
     }
     .btn-scan-sm:disabled { opacity: 0.4; cursor: not-allowed; }
     .networks-list {
       flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding: 4px; display: flex; flex-direction: column; gap: 3px;
+      padding: 5px; display: flex; flex-direction: column; gap: 4px;
     }
     .network {
       background: #1a2535; border: 2px solid #344558;
-      padding: 6px 8px; cursor: pointer;
-      font-size: 7px; color: #ffffff;
-      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      padding: 10px 12px; cursor: pointer;
+      font-size: 9px; color: #ffffff;
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
     }
     .network:hover { background: #1f2e42; border-color: rgba(0,232,122,0.6); }
     .network.selected { background: #0a1f10; border-color: #00e87a; color: #00e87a; }
-    .network.current-net { border-color: #ffd93d; }
-    .network-signal { font-size: 7px; flex-shrink: 0; color: #6ab4f8; }
+    .network.current-net { border-color: #00e87a; background: #061a0e; }
+    .network-signal { font-size: 8px; flex-shrink: 0; color: #6ab4f8; }
     .network-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .network-badge { font-size: 5px; color: #ffd93d; flex-shrink: 0; background: rgba(255,211,61,0.1); border: 1px solid #ffd93d; padding: 2px 4px; }
-    .scan-msg { font-size: 6px; color: rgba(255,255,255,0.5); text-align: center; padding: 16px 8px; }
+    .network-badge { font-size: 6px; color: #00e87a; flex-shrink: 0; background: rgba(0,232,122,0.1); border: 1px solid #00e87a; padding: 3px 6px; }
+    .scan-msg { font-size: 7px; color: rgba(255,255,255,0.5); text-align: center; padding: 20px 8px; }
 
     /* RIGHT — connect panel */
     .right-col {
       flex: 1; display: flex; flex-direction: column;
-      padding: 8px 12px; background: #0c1018; gap: 7px;
+      padding: 12px 14px; background: #0c1018; gap: 10px;
     }
-    .connect-hdr { font-size: 6px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
+    .connect-hdr { font-size: 8px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
 
     .ssid-display {
       background: #141e2e; border: 2px solid #2a3a50;
-      padding: 5px 10px; flex-shrink: 0;
+      padding: 12px 14px; flex: 1;
+      display: flex; flex-direction: column; justify-content: center;
     }
     .ssid-display.has-selection { border-color: #00e87a; }
-    .ssid-display-label { font-size: 4px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 4px; }
-    .ssid-display-val { font-size: 8px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 7px; }
+    .ssid-display-label { font-size: 7px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 10px; }
+    .ssid-display-val { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 10px; }
 
     /* Password row */
-    .pw-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .pw-label { font-size: 5px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
+    .pw-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pw-label { font-size: 8px; color: #4a9ede; letter-spacing: 1px; flex-shrink: 0; }
     .pw-input-wrap { flex: 1; position: relative; }
     input.pw-field {
       width: 100%; background: #1a2535; border: 2px solid #344558;
-      padding: 7px 38px 7px 8px; color: #ffffff;
-      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      padding: 14px 44px 14px 12px; color: #ffffff;
+      font-family: 'Press Start 2P', monospace; font-size: 10px;
       outline: none; caret-color: #00e87a;
     }
     input.pw-field:focus { border-color: #00e87a; background: #0a1f12; }
     .show-toggle {
       position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-      font-family: 'Press Start 2P', monospace; font-size: 5px;
-      color: rgba(255,255,255,0.4); cursor: pointer;
+      font-family: 'Press Start 2P', monospace; font-size: 6px;
+      color: rgba(255,255,255,0.5); cursor: pointer;
       user-select: none; background: none; border: none; padding: 4px;
     }
     .show-toggle:hover { color: #ffd93d; }
 
     /* Connect btn + status */
     .connect-btn {
-      width: 100%; padding: 8px;
-      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      width: 100%; padding: 10px;
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
       cursor: pointer; border: none;
       background: #00e87a; color: #050a07;
       flex-shrink: 0;
     }
     .connect-btn:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
     .status-bar {
-      flex-shrink: 0; font-size: 5px; color: #ffd93d;
-      letter-spacing: 1px; min-height: 12px;
+      flex-shrink: 0; font-size: 7px; color: #ffd93d;
+      letter-spacing: 1px; min-height: 14px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .status-bar.success { color: #00e87a; }
     .status-bar.error   { color: #ff4422; }
 
-    /* KEYBOARD — full width, bottom half */
+    /* KEYBOARD — full width, fixed height */
     .kb-section {
-      flex: 1; background: #080c12;
-      padding: 6px 6px 6px;
+      flex: 0 0 210px; background: #080c12;
+      padding: 5px 6px;
       display: flex; flex-direction: column; gap: 4px;
     }
     .kb-row { display: flex; gap: 4px; flex: 1; }
@@ -177,7 +194,6 @@
       <div class="top-title">WIFI SETUP</div>
       <div class="top-sub">// NETWORK CONFIGURATION //</div>
     </div>
-    <div class="top-current" id="top-current" style="display:none;">CONNECTED: —</div>
   </div>
 
   <!-- TOP PANEL: networks + connect side by side -->
@@ -221,6 +237,17 @@
       <div class="status-bar" id="status"></div>
     </div>
 
+  </div>
+
+  <!-- CONNECTION STATUS BAR — just above keyboard -->
+  <div id="conn-bar">
+    <div class="conn-dot"></div>
+    <div class="conn-lbl">CONNECTED TO</div>
+    <div class="conn-ssid" id="conn-ssid">—</div>
+  </div>
+  <div id="no-conn-bar">
+    <div class="no-conn-dot"></div>
+    <div class="no-conn-lbl">NOT CONNECTED TO ANY NETWORK</div>
   </div>
 
   <!-- BOTTOM: full-width keyboard -->
@@ -368,11 +395,16 @@
       fetch('/api/wifi/current').then(r => r.json()).then(d => {
         currentSsid = (d.ssid || '').trim();
         if (currentSsid) {
-          const el = document.getElementById('top-current');
-          el.textContent = 'CONNECTED: ' + currentSsid.toUpperCase();
-          el.style.display = '';
+          document.getElementById('conn-ssid').textContent = currentSsid;
+          document.getElementById('conn-bar').classList.add('visible');
+          document.getElementById('no-conn-bar').classList.remove('visible');
+        } else {
+          document.getElementById('conn-bar').classList.remove('visible');
+          document.getElementById('no-conn-bar').classList.add('visible');
         }
-      }).catch(() => {});
+      }).catch(() => {
+        document.getElementById('no-conn-bar').classList.add('visible');
+      });
 
       fetch('/api/wifi/scan').then(r => r.json()).then(data => {
         document.getElementById('btn-scan').disabled = false;
@@ -400,7 +432,7 @@
           if (isCurrent) {
             const badge = document.createElement('span');
             badge.className = 'network-badge';
-            badge.textContent = 'CONNECTED';
+            badge.textContent = '✓ CONNECTED';
             div.appendChild(badge);
           }
 

@@ -150,7 +150,7 @@ def _refresh():
         if now - _cache.get('_fetched_at', 0) < CACHE_TTL:
             return
         launches = _fetch_launches()
-        if launches is not None:
+        if launches:  # guard: don't overwrite good cache with empty result
             launches = _apply_t0_history(launches)
             _cache['launches'] = launches
         # Weather uses pad coords from launches, so refresh after launches

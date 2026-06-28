@@ -55,6 +55,35 @@ LL2_BASE      = 'https://ll.thespacedevs.com/2.3.0'
 LL2_TIMEOUT   = 15
 RELAY_URL     = 'http://45.55.245.193'  # DO relay — Pi fetches from here instead of LL2 directly
 
+# ── Email alerts ──────────────────────────────────────────────────────────────
+ALERT_TO      = 'carzspam001@gmail.com'
+ALERT_FROM    = ''        # your Gmail address
+ALERT_PASS    = ''        # Gmail app password (Settings → Security → App passwords)
+ALERT_MIN_GAP = 7200      # minimum seconds between alerts (2 hours)
+_alert_state  = {'last_sent': 0, 'fail_count': 0}
+
+def _send_alert(subject, body):
+    """Send an email alert; rate-limited to once per ALERT_MIN_GAP seconds."""
+    if not ALERT_FROM or not ALERT_PASS:
+        return  # not configured
+    now = time.time()
+    if now - _alert_state['last_sent'] < ALERT_MIN_GAP:
+        return
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        msg = MIMEText(body)
+        msg['Subject'] = f'[LaunchTracker] {subject}'
+        msg['From']    = ALERT_FROM
+        msg['To']      = ALERT_TO
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as s:
+            s.login(ALERT_FROM, ALERT_PASS)
+            s.sendmail(ALERT_FROM, [ALERT_TO], msg.as_string())
+        _alert_state['last_sent'] = now
+        print(f'[{_ts()}] Alert sent: {subject}')
+    except Exception as e:
+        print(f'[{_ts()}] Alert failed: {e}')
+
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
@@ -428,11 +457,15 @@ def _fetch_upcoming():
         r.raise_for_status()
         payload = r.json()
         if not isinstance(payload, dict):
-            print(f'[{_ts()}] LL2 unexpected response: {str(payload)[:200]}')
+            msg = str(payload)[:200]
+            print(f'[{_ts()}] LL2 unexpected response: {msg}')
+            _send_alert('API format changed', f'LL2 returned unexpected type: {msg}')
             return None
         results  = payload.get('results', [])
         if not isinstance(results, list):
-            print(f'[{_ts()}] LL2 results not a list: {str(results)[:200]}')
+            msg = str(results)[:200]
+            print(f'[{_ts()}] LL2 results not a list: {msg}')
+            _send_alert('API format changed', f'LL2 "results" field is not a list: {msg}')
             return None
         launches = []
         skipped  = 0
@@ -516,6 +549,11 @@ def _refresh_all(force_hourly=False):
             with _cache_lock:
                 _data_cache['launches']   = launches
                 _data_cache['fetched_at'] = time.time()
+            _alert_state['fail_count'] = 0  # reset on success
+        else:
+            _alert_state['fail_count'] = _alert_state.get('fail_count', 0) + 1
+            if _alert_state['fail_count'] >= 3:
+                _send_alert('API down', 'Both relay and LL2 failed 3 consecutive fetches. Pi is serving stale data.')
 
         now = time.time()
         if force_hourly or (now - _data_cache.get('hourly_fetched', 0) > 3600):
@@ -540,11 +578,13 @@ def _background_thread():
     """Single background thread — refreshes all data and weather every 5 minutes.
     Switches to 60-second refresh when the next launch is within 10 minutes."""
     time.sleep(2)
-    _refresh_all(force_hourly=True)   # full fetch on startup
-    wx = _fetch_weather()             # weather on startup too — don't wait 5 min
+    # Fetch weather first — it's fast so /api/data has real values during the slow LL2 fetch
+    wx = _fetch_weather()
     if wx:
-        _weather_cache['data']    = wx
-        _weather_cache['fetched'] = time.time()
+        with _weather_lock:
+            _weather_cache['data']    = wx
+            _weather_cache['fetched'] = time.time()
+    _refresh_all(force_hourly=True)   # full fetch on startup (can take many seconds)
     while True:
         # Adaptive interval: 60s when next launch is within 10 min (before or after T-0)
         interval = 300

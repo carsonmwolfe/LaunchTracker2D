@@ -96,16 +96,21 @@
     .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.7); margin-top: 4px; }
     #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
     #ib-win-track {
-      height: 3px; background: rgba(255,255,255,0.08);
-      position: relative;
+      height: 6px; background: rgba(255,255,255,0.07);
+      position: relative; border-radius: 1px;
+    }
+    #ib-win-fill {
+      position: absolute; top: 0; left: 0; height: 100%;
+      background: rgba(0,232,122,0.25); pointer-events: none;
     }
     #ib-win-dot {
       position: absolute; top: 50%; transform: translate(-50%, -50%);
-      width: 7px; height: 7px;
+      width: 9px; height: 9px;
       background: #00e87a; border: 2px solid #080c12;
       left: 0%;
     }
-    #ib-win-t0 { font-size: 9px; color: #ffd93d; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-win-t0-row { display: flex; align-items: center; justify-content: center; }
+    #ib-win-t0 { font-size: 9px; color: #ffd93d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 
     /* CENTER panel — mission info */
     #ib-left {
@@ -114,7 +119,7 @@
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
       gap: 4px; min-width: 0; overflow: hidden;
-      cursor: pointer;
+      cursor: pointer; position: relative;
     }
     #ib-name-row { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-width: 0; }
     #ib-name { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -150,6 +155,23 @@
     .ib-wx-val { font-size: 16px; color: #fff; line-height: 1; }
     .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.7); margin-top: 6px; line-height: 1.4; height: 20px; display: flex; align-items: flex-start; justify-content: center; }
     #ib-ver { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; }
+    .ib-reticle {
+      position: absolute; width: 10px; height: 10px;
+      border-color: rgba(0,232,122,0.4); border-style: solid;
+      pointer-events: none;
+    }
+    .ib-reticle.tl { top: 7px;    left: 8px;   border-width: 2px 0 0 2px; }
+    .ib-reticle.tr { top: 7px;    right: 8px;  border-width: 2px 2px 0 0; }
+    .ib-reticle.bl { bottom: 7px; left: 8px;   border-width: 0 0 2px 2px; }
+    .ib-reticle.br { bottom: 7px; right: 8px;  border-width: 0 2px 2px 0; }
+    @keyframes reticle-breathe {
+      0%, 100% { opacity: 0.35; }
+      50%       { opacity: 0.85; }
+    }
+    .ib-reticle.tl { animation: reticle-breathe 3s ease-in-out infinite 0s; }
+    .ib-reticle.tr { animation: reticle-breathe 3s ease-in-out infinite 0.75s; }
+    .ib-reticle.bl { animation: reticle-breathe 3s ease-in-out infinite 1.5s; }
+    .ib-reticle.br { animation: reticle-breathe 3s ease-in-out infinite 2.25s; }
   </style>
 </head>
 <body>
@@ -176,10 +198,12 @@
           </div>
         </div>
         <div id="ib-win-track">
+          <div id="ib-win-fill"></div>
           <div id="ib-win-dot"></div>
         </div>
-        <div id="ib-win-t0">—</div>
-        <div id="ib-win-wrap" style="display:none;"><div id="ib-win-bar"><div id="ib-win-fill"></div></div></div>
+        <div id="ib-win-t0-row">
+          <div id="ib-win-t0">—</div>
+        </div>
       </div>
 
       <!-- CENTER: mission info — tappable → mission page (onclick set dynamically by updateInfoBar) -->
@@ -194,6 +218,10 @@
           <div id="ib-loc-row"><span id="ib-location">—</span></div>
           <span id="ib-t0" style="display:none;"></span>
         </div>
+        <div class="ib-reticle tl"></div>
+        <div class="ib-reticle tr"></div>
+        <div class="ib-reticle bl"></div>
+        <div class="ib-reticle br"></div>
         <!-- hidden — kept for JS compat -->
         <div id="ib-tap" style="display:none;"></div>
         <div id="ib-cd" style="display:none;"></div>
