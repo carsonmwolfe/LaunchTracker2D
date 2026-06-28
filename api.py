@@ -127,76 +127,104 @@ def weather():
 def health():
     return jsonify({'ok': True, 'cached_at': _cache.get('_fetched_at', 0)})
 
-# ── Unit tracking ──────────────────────────────────────────────────────────────
+# ── Unit tracking — file-backed so state survives restarts ───────────────────
 
-_units = {}
-_commands = {}   # unit_id -> list of pending command dicts
-_acks    = {}    # unit_id -> list of {command, ts}
-_cmd_lock = threading.Lock()
+_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'relay_state.json')
+_state_lock = threading.Lock()
+UNIT_TTL    = 3600   # drop units not seen in 1h
+CMD_TTL     = 300    # discard undelivered commands older than 5 min
 
-UNIT_TTL = 3600  # drop units not seen in 1h
+def _load_state():
+    try:
+        with open(_STATE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {'units': {}, 'commands': {}, 'acks': {}}
+
+def _save_state(state):
+    try:
+        with open(_STATE_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception as e:
+        print(f"State save error: {e}")
 
 @app.route('/api/unit/ping', methods=['POST'])
 def unit_ping():
-    data = request.get_json() or {}
+    data    = request.get_json() or {}
     unit_id = data.get('unit_id', 'unknown')
-    now = time.time()
-    # Expire stale units
-    stale = [k for k, v in _units.items() if now - v.get('last_seen', 0) > UNIT_TTL]
-    for k in stale:
-        del _units[k]
-    _units[unit_id] = {**data, 'last_seen': now}
+    now     = time.time()
+    with _state_lock:
+        s = _load_state()
+        # Expire stale units
+        s['units'] = {k: v for k, v in s['units'].items() if now - v.get('last_seen', 0) < UNIT_TTL}
+        s['units'][unit_id] = {**data, 'last_seen': now}
+        _save_state(s)
     return jsonify({'ok': True})
 
 @app.route('/api/units')
 def units():
     now = time.time()
-    active = {k: v for k, v in _units.items() if now - v.get('last_seen', 0) < UNIT_TTL}
+    with _state_lock:
+        s = _load_state()
+    active = {k: v for k, v in s['units'].items() if now - v.get('last_seen', 0) < UNIT_TTL}
     return jsonify(active)
 
 @app.route('/api/unit/<unit_id>', methods=['DELETE'])
 def delete_unit(unit_id):
-    _units.pop(unit_id, None)
+    with _state_lock:
+        s = _load_state()
+        s['units'].pop(unit_id, None)
+        _save_state(s)
     return jsonify({'ok': True})
 
-# ── Command queue ──────────────────────────────────────────────────────────────
+# ── Command queue — persisted so restarts don't drop pending commands ─────────
 
 @app.route('/api/unit/command', methods=['POST'])
 def send_command():
-    """Dashboard posts a command for a specific unit."""
-    data = request.get_json() or {}
+    data    = request.get_json() or {}
     unit_id = data.get('unit_id')
-    cmd     = data.get('command')  # 'restart', 'update', 'reboot'
+    cmd     = data.get('command')
     if not unit_id or not cmd:
         return jsonify({'ok': False, 'error': 'unit_id and command required'}), 400
-    with _cmd_lock:
-        if unit_id not in _commands:
-            _commands[unit_id] = []
-        _commands[unit_id].append({'command': cmd, 'queued_at': time.time()})
+    now = time.time()
+    with _state_lock:
+        s = _load_state()
+        s['commands'].setdefault(unit_id, [])
+        # Drop expired commands then append new one
+        s['commands'][unit_id] = [c for c in s['commands'][unit_id] if now - c.get('queued_at', 0) < CMD_TTL]
+        s['commands'][unit_id].append({'command': cmd, 'queued_at': now})
+        _save_state(s)
     print(f"Command '{cmd}' queued for {unit_id}")
     return jsonify({'ok': True})
 
 @app.route('/api/unit/commands/<unit_id>')
 def get_commands(unit_id):
-    """Pi polls this to get pending commands."""
-    with _cmd_lock:
-        cmds = _commands.pop(unit_id, [])
+    now = time.time()
+    with _state_lock:
+        s    = _load_state()
+        cmds = [c for c in s['commands'].pop(unit_id, []) if now - c.get('queued_at', 0) < CMD_TTL]
+        _save_state(s)
     return jsonify(cmds)
 
 @app.route('/api/unit/ack', methods=['POST'])
 def unit_ack():
-    """Pi confirms a command was received and is executing."""
     data    = request.get_json() or {}
     unit_id = data.get('unit_id')
     cmd     = data.get('command')
     if unit_id and cmd:
-        _acks.setdefault(unit_id, []).append({'command': cmd, 'ts': time.time()})
+        with _state_lock:
+            s = _load_state()
+            s['acks'].setdefault(unit_id, []).append({'command': cmd, 'ts': time.time()})
+            _save_state(s)
     return jsonify({'ok': True})
 
 @app.route('/api/unit/acks/<unit_id>')
 def get_acks(unit_id):
-    """Dashboard polls this; clears on read."""
-    return jsonify(_acks.pop(unit_id, []))
+    with _state_lock:
+        s    = _load_state()
+        acks = s['acks'].pop(unit_id, [])
+        _save_state(s)
+    return jsonify(acks)
 
 @app.after_request
 def add_cors(r):
