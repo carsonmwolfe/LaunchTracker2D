@@ -1908,12 +1908,12 @@ function updateLaunch() {
 
   state.launchFrame++;
 
-  // Phase 1: ignition build-up (150 frames ≈ 5s at 30fps)
-  if (state.launchFrame < 150) {
-    state.flameIntensity = state.launchFrame / 150;
+  // Phase 1: ignition build-up (40 frames = 2s at 20fps)
+  if (state.launchFrame < 40) {
+    state.flameIntensity = state.launchFrame / 40;
   } else {
     // Phase 2: liftoff
-    const vel = Math.min(0.08 * (state.launchFrame - 150) * 0.5, 4);
+    const vel = Math.min(0.08 * (state.launchFrame - 40) * 0.5, 4);
     state.rocketY -= vel;
 
     if (state.rocketY < -200) {
