@@ -140,6 +140,18 @@ _weather_cache = {'data': None, 'fetched': 0}
 WEATHER_TTL = 900  # 15 min
 
 def _fetch_weather():
+    """Fetch weather — relay first (shared across all Pis), direct open-meteo fallback."""
+    # Try relay — all Pis share the same weather this way
+    try:
+        r = requests.get(f'{RELAY_URL}/api/weather', timeout=8)
+        if r.status_code == 200:
+            wx = r.json()
+            if wx and wx.get('temp_f') is not None:
+                print(f'[{_ts()}] Weather (relay): {wx.get("label")}, {wx.get("temp_f")}°F')
+                return wx
+    except Exception as e:
+        print(f'[{_ts()}] Relay weather unavailable ({e}) — falling back to open-meteo')
+    # Fallback: fetch directly from open-meteo using local pad coords
     lat, lon = _get_location()
     url = (
         f'https://api.open-meteo.com/v1/forecast'
@@ -172,7 +184,7 @@ def _fetch_weather():
             'sunrise':     (daily.get('sunrise') or [None])[0],
             'sunset':      (daily.get('sunset')  or [None])[0],
         }
-        print(f'[{_ts()}] Weather: {result["label"]}, {temp_f}°F, '
+        print(f'[{_ts()}] Weather (direct): {result["label"]}, {temp_f}°F, '
               f'{result["wind_speed"]} mph {result["wind_dir"]}, '
               f'{result["cloud_cover"]}% cloud')
         return result

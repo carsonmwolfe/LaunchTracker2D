@@ -2207,34 +2207,6 @@ function updateSmoke() {
   state.smokeFrame = (state.smokeFrame + 1) % 1000;
 }
 
-function drawWifiIcon() {
-  const x = W - 36, y = 16;
-  const connected = Date.now() - state.lastFetchAt < 20 * 60 * 1000;
-  const col = connected ? '#00e87a' : '#ff4422';
-  
-  ctx.strokeStyle = col;
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  
-  // Dot
-  ctx.fillStyle = col;
-  drawOval(x, y + 18, 2, 2, col);
-  
-  // Arc 1 (small)
-  ctx.beginPath();
-  ctx.arc(x, y + 18, 6, Math.PI * 1.25, Math.PI * 1.75);
-  ctx.stroke();
-  
-  // Arc 2 (medium)
-  ctx.beginPath();
-  ctx.arc(x, y + 18, 11, Math.PI * 1.2, Math.PI * 1.8);
-  ctx.stroke();
-  
-  // Arc 3 (large)
-  ctx.beginPath();
-  ctx.arc(x, y + 18, 16, Math.PI * 1.15, Math.PI * 3);
-  ctx.stroke();
-}
 
 function drawGearIcon() {
   const bw = 88, bh = 22;

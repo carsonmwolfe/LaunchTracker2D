@@ -1,3 +1,4 @@
 data_cache.json
 __pycache__/
 *.pyc
+t0_history.json
