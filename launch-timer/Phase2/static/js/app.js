@@ -2670,8 +2670,8 @@ canvas.addEventListener('click', function(e) {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  // Settings button tap zone — matches drawGearIcon: bx = W-94, by = 5, bw = 88, bh = 22
-  if (x > W - 100 && x < W - 6 && y > 5 && y < 27) {
+  // Settings button tap zone — expanded hit area around gear icon (visual: W-94 to W-6, y 5-27)
+  if (x > W - 116 && x < W && y > 0 && y < 40) {
     window.location = '/settings';
   }
 
