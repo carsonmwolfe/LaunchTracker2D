@@ -57,10 +57,15 @@ RELAY_URL     = 'http://45.55.245.193'  # DO relay — Pi fetches from here inst
 
 # ── Email alerts ──────────────────────────────────────────────────────────────
 ALERT_TO      = 'carzspam001@gmail.com'
-ALERT_FROM    = ''        # your Gmail address
-ALERT_PASS    = ''        # Gmail app password (Settings → Security → App passwords)
 ALERT_MIN_GAP = 7200      # minimum seconds between alerts (2 hours)
 _alert_state  = {'last_sent': 0, 'fail_count': 0}
+try:
+    _ecfg      = json.load(open(os.path.join(BASE_DIR, 'email_config.json')))
+    ALERT_FROM = _ecfg.get('from', '')
+    ALERT_PASS = _ecfg.get('pass', '')
+except Exception:
+    ALERT_FROM = ''
+    ALERT_PASS = ''
 
 def _send_alert(subject, body):
     """Send an email alert; rate-limited to once per ALERT_MIN_GAP seconds."""
