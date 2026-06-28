@@ -60,9 +60,20 @@ _load_t0_history()
 LL2_BASE = "https://ll.thespacedevs.com/2.2.0"
 WEATHER_BASE = "https://api.open-meteo.com/v1"
 
-SITES = {
-    'cape':       {'lat': 28.5623, 'lon': -80.5774},
-    'vandenberg': {'lat': 34.7420, 'lon': -120.5724},
+DEFAULT_LAT, DEFAULT_LON = 28.5623, -80.5774  # KSC fallback
+
+_WIND_DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+_WMO_LABELS = {
+    0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+    45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',
+    61:'Light rain',63:'Rain',65:'Heavy rain',80:'Light showers',81:'Showers',82:'Heavy showers',
+    95:'Thunderstorm',96:'Thunderstorm w/ hail',99:'Thunderstorm w/ heavy hail',
+}
+_WMO_CONDITION = {
+    0:'clear',1:'clear',2:'cloudy',3:'cloudy',45:'fog',48:'fog',
+    51:'light_rain',53:'light_rain',55:'light_rain',61:'light_rain',
+    63:'rain',65:'rain',80:'rain',81:'rain',82:'rain',
+    95:'thunderstorm',96:'thunderstorm',99:'thunderstorm',
 }
 
 def _fetch_launches():
@@ -75,18 +86,63 @@ def _fetch_launches():
         print(f"Launch fetch error: {e}")
         return None
 
-def _fetch_weather(lat, lon):
+def _get_pad_coords():
+    """Return (lat, lon) of next upcoming launch pad, falling back to KSC."""
+    for launch in (_cache.get('launches') or []):
+        try:
+            lat = float((launch.get('pad') or {}).get('latitude') or
+                        launch.get('pad_lat') or '')
+            lon = float((launch.get('pad') or {}).get('longitude') or
+                        launch.get('pad_lon') or '')
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                return lat, lon
+        except (ValueError, TypeError):
+            pass
+    return DEFAULT_LAT, DEFAULT_LON
+
+def _fetch_weather():
+    """Fetch weather for the next launch pad and return normalized dict."""
+    lat, lon = _get_pad_coords()
     try:
         r = requests.get(f"{WEATHER_BASE}/forecast", params={
             'latitude': lat, 'longitude': lon,
-            'current': 'temperature_2m,windspeed_10m,cloudcover,weathercode',
+            'current': 'temperature_2m,relative_humidity_2m,precipitation,'
+                       'weather_code,cloud_cover,wind_speed_10m,wind_direction_10m',
             'daily': 'sunrise,sunset',
-            'timezone': 'auto', 'forecast_days': 1
+            'temperature_unit': 'fahrenheit',
+            'wind_speed_unit': 'mph',
+            'timezone': 'auto',
+            'forecast_days': 1,
         }, timeout=10)
-        return r.json()
+        r.raise_for_status()
+        data  = r.json()
+        c     = data['current']
+        daily = data.get('daily', {})
+        wmo   = c.get('weather_code', 0)
+        temp_f = round(c['temperature_2m'], 1)
+        wind_deg = c.get('wind_direction_10m', 0)
+        result = {
+            'temp_f':      temp_f,
+            'temp_c':      round((temp_f - 32) * 5 / 9, 1),
+            'condition':   _WMO_CONDITION.get(wmo, 'clear'),
+            'label':       _WMO_LABELS.get(wmo, f'Code {wmo}'),
+            'weather_code': wmo,
+            'humidity':    c.get('relative_humidity_2m', 0),
+            'wind_speed':  round(c.get('wind_speed_10m', 0), 1),
+            'wind_dir':    _WIND_DIRS[int((wind_deg + 11.25) / 22.5) % 16],
+            'precip':      c.get('precipitation', 0),
+            'cloud_cover': c.get('cloud_cover', 0),
+            'sunrise':     (daily.get('sunrise') or [None])[0],
+            'sunset':      (daily.get('sunset')  or [None])[0],
+            'pad_lat':     lat, 'pad_lon': lon,
+        }
+        print(f"Weather: {result['label']}, {temp_f}°F @ {lat:.3f},{lon:.3f}")
+        return result
     except Exception as e:
         print(f"Weather fetch error: {e}")
         return None
+
+WEATHER_TTL = 900  # 15 min — matches Pi server
 
 def _refresh():
     with _cache_lock:
@@ -97,10 +153,12 @@ def _refresh():
         if launches is not None:
             launches = _apply_t0_history(launches)
             _cache['launches'] = launches
-        for site_id, site in SITES.items():
-            wx = _fetch_weather(site['lat'], site['lon'])
+        # Weather uses pad coords from launches, so refresh after launches
+        if now - _cache.get('_wx_fetched_at', 0) >= WEATHER_TTL:
+            wx = _fetch_weather()
             if wx:
-                _cache[f'weather_{site_id}'] = wx
+                _cache['weather'] = wx
+                _cache['_wx_fetched_at'] = now
         _cache['_fetched_at'] = now
         print(f"Cache refreshed at {time.strftime('%H:%M:%S')}")
 
@@ -119,9 +177,8 @@ def launches():
 
 @app.route('/api/weather')
 def weather():
-    site = request.args.get('site', 'cape')
     _refresh()
-    return jsonify(_cache.get(f'weather_{site}', {}))
+    return jsonify(_cache.get('weather') or {})
 
 @app.route('/api/health')
 def health():
