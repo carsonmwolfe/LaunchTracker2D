@@ -595,8 +595,12 @@ def _refresh_all(force_hourly=False):
             time.sleep(5)
             year = _fetch_year_launches()
             if year is not None:
-                with _cache_lock:
-                    _data_cache['year_launches'] = year
+                cached_year = _data_cache.get('year_launches', [])
+                if len(year) < len(cached_year):
+                    print(f'[{_ts()}] Keeping cached year launches ({len(cached_year)}) over fetch ({len(year)})')
+                else:
+                    with _cache_lock:
+                        _data_cache['year_launches'] = year
             time.sleep(5)
             events = _fetch_events()
             if events is not None:

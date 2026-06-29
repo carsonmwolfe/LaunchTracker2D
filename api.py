@@ -78,9 +78,10 @@ _WMO_CONDITION = {
 
 def _fetch_launches():
     try:
-        r = requests.get(f"{LL2_BASE}/launch/upcoming/",
+        r = requests.get(f"{LL2_BASE}/launches/upcoming/",
             params={'limit': 10, 'format': 'json'},
             timeout=15)
+        r.raise_for_status()
         return r.json().get('results', [])
     except Exception as e:
         print(f"Launch fetch error: {e}")
@@ -199,8 +200,9 @@ def _refresh():
         year = _fetch_year_launches()
 
     events = None
-    events_fetched = now - _cache.get('_events_fetched_at', 0) >= EVENTS_TTL
-    if events_fetched:
+    need_events = now - _cache.get('_events_fetched_at', 0) >= EVENTS_TTL
+    if need_events:
+        time.sleep(3)
         events = _fetch_events()
 
     with _cache_lock:
@@ -214,9 +216,8 @@ def _refresh():
         if year:
             _cache['year_launches'] = year
             _cache['_year_fetched_at'] = now
-        if events_fetched:
-            if events is not None:
-                _cache['events'] = events
+        if need_events and events is not None:
+            _cache['events'] = events
             _cache['_events_fetched_at'] = now
         _cache['_fetched_at'] = now
     print(f"Cache refreshed at {time.strftime('%H:%M:%S')}")
@@ -359,6 +360,7 @@ def add_cors(r):
     r.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     return r
 
+threading.Thread(target=_bg_refresh, daemon=True).start()
+
 if __name__ == '__main__':
-    threading.Thread(target=_bg_refresh, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
