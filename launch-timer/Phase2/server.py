@@ -512,14 +512,24 @@ def _fetch_ll2(url, label):
         return None
 
 def _fetch_year_launches():
-    """Fetch all launches since Jan 1 of current year, paginating past LL2's 100-per-page cap."""
+    """Fetch year launches — relay first, LL2 direct fallback."""
+    try:
+        r = requests.get(f'{RELAY_URL}/api/launches/year', timeout=10)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list) and results:
+                print(f'[{_ts()}] Year launches (relay): {len(results)}')
+                return results
+    except Exception as e:
+        print(f'[{_ts()}] Relay year launches unavailable ({e}) — falling back to LL2')
+    # Direct LL2 fallback with pagination
     year_str = datetime.now().strftime('%Y-01-01')
     base = f'{LL2_BASE}/launches/?window_start__gte={year_str}&limit=100&ordering=window_start&format=json'
     all_results = []
     url = base
     pages = 0
     interrupted = False
-    while url and pages < 5:  # cap at 5 pages (500 launches) to protect rate limit
+    while url and pages < 5:
         try:
             r = requests.get(url, timeout=LL2_TIMEOUT)
             if r.status_code == 429:
@@ -529,7 +539,7 @@ def _fetch_year_launches():
             r.raise_for_status()
             payload = r.json()
             all_results.extend(payload.get('results', []))
-            url = payload.get('next')  # None when no more pages
+            url = payload.get('next')
             pages += 1
         except Exception as e:
             print(f'[{_ts()}] Error fetching year launches page {pages+1}: {e}')
@@ -546,6 +556,16 @@ def _fetch_year_launches():
     return all_results
 
 def _fetch_events():
+    """Fetch events — relay first, LL2 direct fallback."""
+    try:
+        r = requests.get(f'{RELAY_URL}/api/events', timeout=8)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list):
+                print(f'[{_ts()}] Events (relay): {len(results)}')
+                return results
+    except Exception as e:
+        print(f'[{_ts()}] Relay events unavailable ({e}) — falling back to LL2')
     return _fetch_ll2(f'{LL2_BASE}/events/upcoming/?limit=5&format=json', 'events')
 
 _refresh_in_progress = False

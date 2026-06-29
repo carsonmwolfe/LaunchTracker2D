@@ -57,7 +57,7 @@ def _apply_t0_history(launches):
 
 _load_t0_history()
 
-LL2_BASE = "https://ll.thespacedevs.com/2.2.0"
+LL2_BASE = "https://ll.thespacedevs.com/2.3.0"
 WEATHER_BASE = "https://api.open-meteo.com/v1"
 
 DEFAULT_LAT, DEFAULT_LON = 28.5623, -80.5774  # KSC fallback
@@ -84,6 +84,43 @@ def _fetch_launches():
         return r.json().get('results', [])
     except Exception as e:
         print(f"Launch fetch error: {e}")
+        return None
+
+def _fetch_year_launches():
+    from datetime import datetime
+    year_str = datetime.now().strftime('%Y-01-01')
+    url = f"{LL2_BASE}/launches/?window_start__gte={year_str}&limit=100&ordering=window_start&format=json"
+    all_results = []
+    pages = 0
+    while url and pages < 5:
+        try:
+            r = requests.get(url, timeout=15)
+            if r.status_code == 429:
+                print(f"Year launches rate limited (page {pages+1})")
+                break
+            r.raise_for_status()
+            payload = r.json()
+            all_results.extend(payload.get('results', []))
+            url = payload.get('next')
+            pages += 1
+            if url:
+                time.sleep(2)
+        except Exception as e:
+            print(f"Year launches error (page {pages+1}): {e}")
+            break
+    print(f"Year launches: {len(all_results)} across {pages} page(s)")
+    return all_results if all_results else None
+
+def _fetch_events():
+    try:
+        r = requests.get(f"{LL2_BASE}/events/upcoming/",
+            params={'limit': 5, 'format': 'json'}, timeout=15)
+        r.raise_for_status()
+        results = r.json().get('results', [])
+        print(f"Events: {len(results)}")
+        return results
+    except Exception as e:
+        print(f"Events fetch error: {e}")
         return None
 
 def _get_pad_coords():
@@ -142,25 +179,47 @@ def _fetch_weather():
         print(f"Weather fetch error: {e}")
         return None
 
-WEATHER_TTL = 900  # 15 min — matches Pi server
+WEATHER_TTL = 900   # 15 min
+YEAR_TTL    = 3600  # 1 hour
+EVENTS_TTL  = 1800  # 30 min
 
 def _refresh():
+    now = time.time()
+    if now - _cache.get('_fetched_at', 0) < CACHE_TTL:
+        return
+
+    launches = _fetch_launches()
+
+    wx = None
+    if now - _cache.get('_wx_fetched_at', 0) >= WEATHER_TTL:
+        wx = _fetch_weather()
+
+    year = None
+    if now - _cache.get('_year_fetched_at', 0) >= YEAR_TTL:
+        year = _fetch_year_launches()
+
+    events = None
+    events_fetched = now - _cache.get('_events_fetched_at', 0) >= EVENTS_TTL
+    if events_fetched:
+        events = _fetch_events()
+
     with _cache_lock:
         now = time.time()
-        if now - _cache.get('_fetched_at', 0) < CACHE_TTL:
-            return
-        launches = _fetch_launches()
-        if launches:  # guard: don't overwrite good cache with empty result
+        if launches:
             launches = _apply_t0_history(launches)
             _cache['launches'] = launches
-        # Weather uses pad coords from launches, so refresh after launches
-        if now - _cache.get('_wx_fetched_at', 0) >= WEATHER_TTL:
-            wx = _fetch_weather()
-            if wx:
-                _cache['weather'] = wx
-                _cache['_wx_fetched_at'] = now
+        if wx:
+            _cache['weather'] = wx
+            _cache['_wx_fetched_at'] = now
+        if year:
+            _cache['year_launches'] = year
+            _cache['_year_fetched_at'] = now
+        if events_fetched:
+            if events is not None:
+                _cache['events'] = events
+            _cache['_events_fetched_at'] = now
         _cache['_fetched_at'] = now
-        print(f"Cache refreshed at {time.strftime('%H:%M:%S')}")
+    print(f"Cache refreshed at {time.strftime('%H:%M:%S')}")
 
 def _bg_refresh():
     while True:
@@ -179,6 +238,16 @@ def launches():
 def weather():
     _refresh()
     return jsonify(_cache.get('weather') or {})
+
+@app.route('/api/launches/year')
+def year_launches():
+    _refresh()
+    return jsonify(_cache.get('year_launches', []))
+
+@app.route('/api/events')
+def events_route():
+    _refresh()
+    return jsonify(_cache.get('events', []))
 
 @app.route('/api/health')
 def health():
