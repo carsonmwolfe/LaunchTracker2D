@@ -137,10 +137,6 @@
     #ib-location { color: rgba(255,255,255,0.75); }
     #ib-t0       { color: #ffd93d; }
     .ib-sep      { color: rgba(255,255,255,0.2); }
-    @keyframes ib-delayed-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-    #ib-delayed-row { display: none; align-items: center; gap: 6px; }
-    #ib-delayed-badge { font-size: 7px; color: #fff; background: #cc2200; padding: 2px 5px; flex-shrink: 0; animation: ib-delayed-pulse 2s ease-in-out infinite; }
-    #ib-delayed-amt   { font-size: 8px; color: #fff; flex-shrink: 0; animation: ib-delayed-pulse 2s ease-in-out infinite; }
 
     /* hidden — kept for JS compat */
     #ib-tap { display: none; }
@@ -219,10 +215,6 @@
           <div id="ib-name">—</div>
           <div id="ib-badge">TBD</div>
           <div id="ib-prob-badge">—%</div>
-        </div>
-        <div id="ib-delayed-row">
-          <span id="ib-delayed-badge">DELAYED</span>
-          <span id="ib-delayed-amt"></span>
         </div>
         <div id="ib-detail-row">
           <div id="ib-sub-row"><span id="ib-sub">—</span></div>

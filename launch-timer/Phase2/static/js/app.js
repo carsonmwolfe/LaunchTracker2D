@@ -1534,6 +1534,34 @@ function drawCountdown() {
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
+  // DELAYED indicator — drawn below countdown clock when T0 has slipped
+  if (launch.original_t0 && launch.original_t0 !== launch.t0) {
+    const _slipMs = Math.abs(new Date(launch.t0) - new Date(launch.original_t0));
+    const _totalM = Math.floor(_slipMs / 60000);
+    if (_totalM >= 5) {
+      const _slipD = Math.floor(_slipMs / 86400000);
+      const _slipH = Math.floor((_slipMs % 86400000) / 3600000);
+      const _slipMm = Math.floor((_slipMs % 3600000) / 60000);
+      const _slipStr = _slipD > 0 ? `+${_slipD}d` : _slipH > 0 ? `+${_slipH}h` : `+${_slipMm}m`;
+      const _dcx = BX + TOTAL_W / 2;
+      const _dy  = BY + BH + 38;
+      const _pulse = 0.55 + 0.45 * Math.sin(Date.now() / 700);
+      ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      const _bW = ctx.measureText('DELAYED').width + 10;
+      const _aW = ctx.measureText(_slipStr).width + 10;
+      const _tw = _bW + 6 + _aW;
+      const _sx = _dcx - _tw / 2;
+      ctx.fillStyle = 'rgba(8,12,18,0.85)';
+      ctx.fillRect(_sx - 2, _dy - 11, _tw + 4, 15);
+      ctx.fillStyle = `rgba(204,34,0,${_pulse})`;
+      ctx.fillRect(_sx, _dy - 11, _bW, 15);
+      ctx.fillStyle = `rgba(255,255,255,${_pulse})`;
+      ctx.fillText('DELAYED', _sx + _bW / 2, _dy + 1);
+      ctx.fillText(_slipStr, _sx + _bW + 6 + _aW / 2, _dy + 1);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
   // Simultaneous launch banner — shown when the next launch has the same NET (within 5 min)
   if (state.launches.length > 1) {
     const primary = state.launches[state.currentIdx];
@@ -1621,22 +1649,6 @@ function updateInfoBar() {
     } else {
       probBadge.style.display = 'none';
     }
-  }
-
-  // Delayed indicator
-  const _delayedRow = document.getElementById('ib-delayed-row');
-  if (_delayedRow) {
-    if (launch.original_t0 && launch.original_t0 !== launch.t0) {
-      const slipMs = Math.abs(new Date(launch.t0) - new Date(launch.original_t0));
-      const slipD  = Math.floor(slipMs / 86400000);
-      const slipH  = Math.floor((slipMs % 86400000) / 3600000);
-      const slipM  = Math.floor((slipMs % 3600000) / 60000);
-      if (Math.floor(slipMs / 60000) >= 5) {
-        const slipStr = slipD > 0 ? `+${slipD}d` : slipH > 0 ? `+${slipH}h` : `+${slipM}m`;
-        document.getElementById('ib-delayed-amt').textContent = slipStr;
-        _delayedRow.style.display = 'flex';
-      } else { _delayedRow.style.display = 'none'; }
-    } else { _delayedRow.style.display = 'none'; }
   }
 
   // Sub line — vehicle · provider · pad
