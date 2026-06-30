@@ -1623,6 +1623,22 @@ function updateInfoBar() {
     }
   }
 
+  // Delayed indicator
+  const _delayedRow = document.getElementById('ib-delayed-row');
+  if (_delayedRow) {
+    if (launch.original_t0 && launch.original_t0 !== launch.t0) {
+      const slipMs = Math.abs(new Date(launch.t0) - new Date(launch.original_t0));
+      const slipD  = Math.floor(slipMs / 86400000);
+      const slipH  = Math.floor((slipMs % 86400000) / 3600000);
+      const slipM  = Math.floor((slipMs % 3600000) / 60000);
+      if (Math.floor(slipMs / 60000) >= 5) {
+        const slipStr = slipD > 0 ? `+${slipD}d` : slipH > 0 ? `+${slipH}h` : `+${slipM}m`;
+        document.getElementById('ib-delayed-amt').textContent = slipStr;
+        _delayedRow.style.display = 'flex';
+      } else { _delayedRow.style.display = 'none'; }
+    } else { _delayedRow.style.display = 'none'; }
+  }
+
   // Sub line — vehicle · provider · pad
   const shorten = s => (s||'').replace(/\s*\(.*?\)/g,'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC')
     .replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC')
