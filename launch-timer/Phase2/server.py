@@ -812,19 +812,39 @@ def _backlight_path():
         return p
     return None
 
+def _fetch_sun_times():
+    """Fetch today's sunrise/sunset as UTC Unix timestamps from Open-Meteo.
+    Using unixtime format avoids all timezone ambiguity."""
+    try:
+        lat, lon = _get_location()
+        r = requests.get('https://api.open-meteo.com/v1/forecast', params={
+            'latitude': lat, 'longitude': lon,
+            'daily': 'sunrise,sunset',
+            'timezone': 'UTC',
+            'timeformat': 'unixtime',
+            'forecast_days': 1,
+        }, timeout=8)
+        r.raise_for_status()
+        d = r.json().get('daily', {})
+        sr = (d.get('sunrise') or [None])[0]
+        ss = (d.get('sunset')  or [None])[0]
+        return sr, ss
+    except Exception as e:
+        print(f'[{_ts()}] Sun times fetch error: {e}')
+        return None, None
+
 def _auto_brightness():
     while True:
         try:
-            wx      = _weather_cache.get('data') or {}
-            sunrise = wx.get('sunrise')
-            sunset  = wx.get('sunset')
-            if sunrise and sunset:
-                now  = datetime.now()
-                sr   = datetime.fromisoformat(sunrise)
-                ss   = datetime.fromisoformat(sunset)
-                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60  # NIGHT_MIN=51 ≈ 20%
-                after_sr  = (now - sr).total_seconds()
-                before_ss = (ss - now).total_seconds()
+            if not _load_settings().get('auto_dim', True):
+                time.sleep(300)
+                continue
+            sr_ts, ss_ts = _fetch_sun_times()
+            if sr_ts and ss_ts:
+                now_ts    = time.time()
+                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
+                after_sr  = now_ts - sr_ts
+                before_ss = ss_ts - now_ts
                 if after_sr < 0 or before_ss < 0:
                     brightness = NIGHT_MIN
                 elif after_sr < FADE_SECS:
@@ -833,13 +853,16 @@ def _auto_brightness():
                     brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * before_ss / FADE_SECS)
                 else:
                     brightness = DAY_MAX
+                sr_lt = datetime.fromtimestamp(sr_ts).strftime('%H:%M')
+                ss_lt = datetime.fromtimestamp(ss_ts).strftime('%H:%M')
+                print(f'[{_ts()}] Auto brightness → {brightness} '
+                      f'(sr={sr_lt} ss={ss_lt} now={datetime.now().strftime("%H:%M")})')
                 try:
                     bp = _backlight_path()
                     if bp:
                         cur = int(open(bp).read().strip())
                         if abs(cur - brightness) > 5:
                             open(bp, 'w').write(str(brightness))
-                        print(f'[{_ts()}] Auto brightness → {brightness}')
                 except Exception:
                     pass
         except Exception as e:
