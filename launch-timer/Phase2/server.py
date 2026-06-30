@@ -234,6 +234,59 @@ _WEATHER_DEFAULT = {
     'humidity': 0, 'wind_speed': 0, 'wind_dir': '—', 'precip': 0, 'cloud_cover': 0,
 }
 
+LIFTOFF_WX_TTL = 1800  # 30 min
+
+def _fetch_liftoff_weather():
+    """Fetch Open-Meteo hourly forecast for the T-0 hour of the next launch."""
+    launches = _data_cache.get('launches', [])
+    if not launches:
+        return None
+    t0 = launches[0].get('t0')
+    if not t0:
+        return None
+    try:
+        t0_dt = datetime.fromisoformat(t0.replace('Z', '+00:00'))
+        diff_h = (t0_dt - datetime.now(timezone.utc)).total_seconds() / 3600
+        if diff_h < 0 or diff_h > 168:  # only forecast up to 7 days out
+            return None
+    except Exception:
+        return None
+    lat, lon = _get_location()
+    try:
+        r = requests.get('https://api.open-meteo.com/v1/forecast', params={
+            'latitude': lat, 'longitude': lon,
+            'hourly': 'weather_code,wind_speed_10m,cloud_cover,precipitation',
+            'wind_speed_unit': 'mph',
+            'timezone': 'UTC',
+            'forecast_days': 7,
+        }, timeout=10)
+        r.raise_for_status()
+        data   = r.json()
+        hourly = data.get('hourly', {})
+        times  = hourly.get('time', [])
+        prefix = t0_dt.strftime('%Y-%m-%dT%H')
+        idx    = next((i for i, t in enumerate(times) if t.startswith(prefix)), None)
+        if idx is None:
+            return None
+        wmo   = (hourly.get('weather_code') or [])[idx] if idx < len(hourly.get('weather_code') or []) else 0
+        wind  = round((hourly.get('wind_speed_10m') or [])[idx], 1) if idx < len(hourly.get('wind_speed_10m') or []) else 0
+        cloud = (hourly.get('cloud_cover') or [])[idx] if idx < len(hourly.get('cloud_cover') or []) else 0
+        precip= (hourly.get('precipitation') or [])[idx] if idx < len(hourly.get('precipitation') or []) else 0
+        result = {
+            'condition':    _WMO_CONDITION.get(wmo, 'clear'),
+            'label':        _WMO_LABELS.get(wmo, f'Code {wmo}'),
+            'weather_code': wmo,
+            'wind_speed':   wind,
+            'cloud_cover':  cloud,
+            'precip':       precip,
+            't0_hour':      times[idx],
+        }
+        print(f'[{_ts()}] Liftoff wx @ {times[idx]}: {result["label"]}, {wind}mph, {cloud}% cloud')
+        return result
+    except Exception as e:
+        print(f'[{_ts()}] Liftoff weather error: {e}')
+        return None
+
 def _get_weather():
     """Returns cached weather — never blocks on a live fetch. Background thread refreshes it."""
     return _weather_cache['data'] or _WEATHER_DEFAULT
@@ -387,11 +440,13 @@ def _apply_t0_history(launches):
     return launches
 
 _data_cache = {
-    'launches':       [],   # normalized + filtered upcoming launches
-    'year_launches':  [],   # raw LL2 results (for leaderboard)
-    'events':         [],   # raw LL2 events
-    'fetched_at':     0,    # timestamp of last upcoming-launch fetch
-    'hourly_fetched': 0,    # timestamp of last year/events fetch
+    'launches':         [],   # normalized + filtered upcoming launches
+    'year_launches':    [],   # raw LL2 results (for leaderboard)
+    'events':           [],   # raw LL2 events
+    'liftoff_wx':       None, # hourly forecast for T-0 hour
+    'liftoff_wx_at':    0,    # timestamp of last liftoff weather fetch
+    'fetched_at':       0,    # timestamp of last upcoming-launch fetch
+    'hourly_fetched':   0,    # timestamp of last year/events fetch
 }
 
 def _load_cache():
@@ -608,6 +663,14 @@ def _refresh_all(force_hourly=False):
                     _data_cache['events'] = events
             with _cache_lock:
                 _data_cache['hourly_fetched'] = now
+
+        # Liftoff weather — refresh every 30 min or when launch changes
+        if now - _data_cache.get('liftoff_wx_at', 0) >= LIFTOFF_WX_TTL:
+            liftoff_wx = _fetch_liftoff_weather()
+            with _cache_lock:
+                if liftoff_wx:
+                    _data_cache['liftoff_wx'] = liftoff_wx
+                _data_cache['liftoff_wx_at'] = now
 
         _save_cache()
     finally:
@@ -877,6 +940,7 @@ def api_data():
         'year_launches': year_raw,
         'events':        events,
         'weather':       weather,
+        'liftoff_wx':    _data_cache.get('liftoff_wx'),
         'settings':      settings,
         'age_seconds':   age_seconds,
     })

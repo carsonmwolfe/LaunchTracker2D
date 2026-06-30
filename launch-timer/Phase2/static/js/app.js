@@ -93,6 +93,10 @@ let state = {
   rocketOffscreen: false,
   launchComplete:  false,
 
+  // Probability trend tracking
+  _probPrev:  null,   // { id, prob } of last known probability
+  probTrend:  null,   // { arrow, delta, color } or null
+
   // Rocket flame particles
   flameParticles:  [],
   trenchParticles: [],
@@ -1474,8 +1478,11 @@ function drawCountdown() {
   const _slipMs0 = (launch.original_t0 && launch.original_t0 !== launch.t0)
     ? Math.abs(new Date(launch.t0) - new Date(launch.original_t0)) : 0;
   const _isDelayed = _slipMs0 >= 5 * 60000;
+  // Scrub: on hold AND within 1hr of T-0 (T-0 not yet passed — that case is handled above)
+  const _isScrub = _onHold && cd && cd !== 'LAUNCHED' && cd.total_seconds < 3600;
+  const _showTab = _isDelayed || _isScrub;
   const _dlw = 4; // border lineWidth — shared by border + tab
-  const _dbp = _isDelayed ? 0.75 + 0.25 * Math.sin(Date.now() / 1400) : 1; // shared pulse
+  const _dbp = _showTab ? 0.75 + 0.25 * Math.sin(Date.now() / 1400) : 1;
   let _delayedStr = '';
   if (_isDelayed) {
     const _sd = Math.floor(_slipMs0 / 86400000);
@@ -1483,9 +1490,20 @@ function drawCountdown() {
     const _sm = Math.floor((_slipMs0 % 3600000) / 60000);
     _delayedStr = _sd > 0 ? `+${_sd} ${_sd===1?'DAY':'DAYS'}` : _sh > 0 ? `+${_sh} ${_sh===1?'HOUR':'HOURS'}` : `+${_sm} MIN`;
   }
+  let _scrubNextStr = '';
+  if (_isScrub) {
+    if (launch.original_t0 && launch.original_t0 !== launch.t0) {
+      const _na = new Date(launch.t0);
+      const _nm = _na.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).toUpperCase();
+      const _nt = _na.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'UTC',hour12:false});
+      _scrubNextStr = `NEXT: ${_nm} ${_nt} UTC`;
+    } else {
+      _scrubNextStr = 'NEXT ATT: TBD';
+    }
+  }
 
-  // Border — when delayed: 3-sided red outline (no bottom — tab provides it); otherwise subtle white
-  if (_isDelayed) {
+  // Border — when delayed or scrubbed: 3-sided red outline; otherwise subtle white
+  if (_showTab) {
     const _bx = BX - 16, _by = BY - 6, _bw = TOTAL_W + 32, _bh = BH + 30, _r = 5;
     ctx.shadowColor = `rgba(200,30,0,${_dbp * 0.4})`; ctx.shadowBlur = 10;
     ctx.strokeStyle = `rgba(210,40,0,${_dbp})`; ctx.lineWidth = _dlw;
@@ -1563,12 +1581,12 @@ function drawCountdown() {
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
-  // DELAYED tab — flush with outer edge of border (offset by lineWidth/2)
-  if (_isDelayed) {
+  // Tab — flush with outer edge of border
+  if (_showTab) {
     const _tabX = BX - 16 - _dlw / 2;
     const _tabW = TOTAL_W + 32 + _dlw;
     const _tabY = BY - 6 + BH + 30;
-    const _tabH = 18;
+    const _tabH = _isScrub ? 26 : 18;  // taller for scrub to fit two lines
     ctx.fillStyle = `rgba(180,28,0,${_dbp})`;
     ctx.beginPath();
     ctx.moveTo(_tabX, _tabY);
@@ -1580,10 +1598,18 @@ function drawCountdown() {
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = `rgba(255,255,255,${_dbp})`;
-    ctx.font = '8px "Press Start 2P"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`DELAYED  ${_delayedStr}`, _tabX + _tabW / 2, _tabY + _tabH / 2);
+    if (_isScrub) {
+      ctx.font = '8px "Press Start 2P"';
+      ctx.fillText('SCRUBBED', _tabX + _tabW / 2, _tabY + 9);
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = `rgba(255,200,180,${_dbp})`;
+      ctx.fillText(_scrubNextStr, _tabX + _tabW / 2, _tabY + 20);
+    } else {
+      ctx.font = '8px "Press Start 2P"';
+      ctx.fillText(`DELAYED  ${_delayedStr}`, _tabX + _tabW / 2, _tabY + _tabH / 2);
+    }
     ctx.textBaseline = 'alphabetic';
   }
 
@@ -1795,7 +1821,7 @@ function updateInfoBar() {
     document.getElementById('ib-cloud').textContent  = (wx.cloud_cover||0)+'%';
     
   }
-    // Version + data age — show LOS warning when stale >1h
+  // Weather go/no-go — replaces version text; falls back to stale warning
   const serverStaleIB = state.dataAge > 3600;
   const clientStaleIB = Date.now() - state.lastFetchAt > 60 * 60 * 1000;
   const verEl = document.getElementById('ib-ver');
@@ -1804,13 +1830,31 @@ function updateInfoBar() {
       ? Math.floor(state.dataAge / 60)
       : Math.floor((Date.now() - state.lastFetchAt) / 60000);
     const sh = Math.floor(staleMin / 60), sm = staleMin % 60;
-    const staleStr = sh > 0 ? `${sh}h ${String(sm).padStart(2,'0')}m` : `${sm}m`;
-    verEl.textContent = `⚠ NO SIGNAL · ${staleStr} ago`;
-    verEl.style.color = '#ff4422';
+    verEl.textContent = `⚠ NO SIGNAL · ${sh > 0 ? sh+'h ' : ''}${sm}m ago`;
+    verEl.className = 'wx-stale';
   } else {
-    const minAgo = Math.floor((Date.now() - state.lastFetchAt) / 60000);
-    verEl.textContent = `${state.version || 'v2.0.0'} · data ${minAgo}m ago`;
-    verEl.style.color = '';
+    // Use liftoff forecast if available, otherwise fall back to current weather
+    const wx = state.liftoffWx || state.weather || {};
+    const wind = wx.wind_speed || 0;
+    const cloud = wx.cloud_cover || 0;
+    const cond = wx.condition || 'clear';
+    let wxClass, wxLabel;
+    if (cond === 'thunderstorm' || wind > 30 || cloud > 75 || cond === 'rain') {
+      wxClass = 'wx-nogo';     wxLabel = '✕ UNFAVORABLE';
+    } else if (wind > 20 || cloud > 50 || cond === 'light_rain' || cond === 'fog') {
+      wxClass = 'wx-marginal'; wxLabel = '~ MARGINAL';
+    } else {
+      wxClass = 'wx-go';       wxLabel = '✓ FAVORABLE';
+    }
+    // Add probability if available
+    const launch = currentLaunch();
+    const prob = launch?.probability;
+    if (prob != null && prob >= 0) wxLabel += `  ${prob}%`;
+    verEl.textContent = wxLabel;
+    verEl.className = wxClass;
+    // Label always says AT LIFTOFF — that's what the badge represents
+    const wxLabelEl = document.getElementById('ib-wx-label');
+    if (wxLabelEl) wxLabelEl.textContent = 'AT LIFTOFF';
   }
 }
 
@@ -2092,8 +2136,9 @@ async function fetchData(afterLaunch=false) {
 
     const hadData = state.launches.length > 0;
     state.launches    = newLaunches;
-    state.weather     = data.weather  || state.weather;
-    state.settings    = data.settings || state.settings;
+    state.weather     = data.weather    || state.weather;
+    state.liftoffWx   = data.liftoff_wx || null;
+    state.settings    = data.settings   || state.settings;
     state.version     = data.version  || state.version || '';
     state.dataAge     = data.age_seconds || 0;
     state.lastFetchAt = Date.now();
@@ -2138,18 +2183,34 @@ async function fetchData(afterLaunch=false) {
       }
     }
 
-    // Update probability badge directly from launch data (no separate /api/ll2 call)
+    // Update probability badge + trend tracking
     const launch = currentLaunch();
     if (launch?.probability != null) {
       const prob      = launch.probability;
       const pc        = prob >= 80 ? '#00e87a' : prob >= 50 ? '#ffd93d' : '#ff4422';
       const probBadge = document.getElementById('ib-prob-badge');
       if (probBadge) {
-        probBadge.textContent  = prob + '%';
+        probBadge.textContent        = prob + '%';
         probBadge.style.display      = 'block';
         probBadge.style.color        = pc;
         probBadge.style.borderColor  = pc;
       }
+      // Trend: compare against previous reading for the same launch
+      const prev = state._probPrev;
+      if (prev && prev.id === launch.id && prev.prob !== prob) {
+        const delta = prob - prev.prob;
+        const absDelta = Math.abs(delta);
+        if (absDelta >= 5) {
+          state.probTrend = delta > 0
+            ? { arrow: '↑', delta: '+' + absDelta, color: '#00e87a' }
+            : { arrow: '↓', delta: '-' + absDelta, color: '#ff4422' };
+        } else {
+          state.probTrend = { arrow: '→', delta: '~', color: 'rgba(255,255,255,0.4)' };
+        }
+      } else if (!prev || prev.id !== launch.id) {
+        state.probTrend = null; // fresh launch — no trend yet
+      }
+      state._probPrev = { id: launch.id, prob };
     }
   } catch(e) {
     console.error('fetchData error:', e);

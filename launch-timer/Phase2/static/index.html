@@ -150,14 +150,21 @@
       width: 185px; flex-shrink: 0;
       padding: 0 12px;
       display: flex; flex-direction: column;
-      justify-content: center; gap: 10px;
+      justify-content: center; gap: 5px;
       border-left: 2px solid #0d1620;
     }
     #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
     .ib-wx { text-align: center; display: flex; flex-direction: column; align-items: center; }
     .ib-wx-val { font-size: 16px; color: #fff; line-height: 1; }
     .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.7); margin-top: 6px; line-height: 1.4; height: 20px; display: flex; align-items: flex-start; justify-content: center; }
-    #ib-ver { font-size: 6px; color: rgba(255,255,255,0.3); text-align: center; }
+    #ib-wx-now-lbl { font-size: 7px; color: rgba(74,158,222,0.75); letter-spacing: 0.08em; }
+    #ib-liftoff-row { display: flex; align-items: center; gap: 6px; }
+    #ib-wx-label { font-size: 7px; color: rgba(74,158,222,0.75); letter-spacing: 0.06em; flex-shrink: 0; white-space: nowrap; }
+    #ib-ver { font-size: 7px; padding: 2px 5px; letter-spacing: 0.04em; flex: 1; text-align: center; white-space: nowrap; }
+    #ib-ver.wx-go       { color: #00e87a; background: rgba(0,232,122,0.12); border: 1px solid rgba(0,232,122,0.3); }
+    #ib-ver.wx-marginal { color: #ffd93d; background: rgba(255,211,61,0.12); border: 1px solid rgba(255,211,61,0.3); }
+    #ib-ver.wx-nogo     { color: #ff4422; background: rgba(255,68,34,0.12);  border: 1px solid rgba(255,68,34,0.3); }
+    #ib-ver.wx-stale    { color: #ff4422; background: none; border: none; font-size: 6px; }
     .ib-reticle {
       position: absolute; width: 10px; height: 10px;
       border-color: rgba(0,232,122,0.4); border-style: solid;
@@ -243,12 +250,16 @@
 
       <!-- RIGHT: weather -->
       <div id="ib-right">
+        <div id="ib-wx-now-lbl">CURRENT CONDITIONS</div>
         <div id="ib-wx-row">
           <div class="ib-wx"><div class="ib-wx-val" id="ib-temp">—</div><div class="ib-wx-lbl">TEMP</div></div>
           <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND MPH</div></div>
           <div class="ib-wx"><div class="ib-wx-val" id="ib-cloud">—</div><div class="ib-wx-lbl">CLOUD</div></div>
         </div>
-        <div id="ib-ver">v2.0.0 · data 0m ago</div>
+        <div id="ib-liftoff-row">
+          <div id="ib-wx-label">AT LIFTOFF</div>
+          <div id="ib-ver">—</div>
+        </div>
       </div>
 
     </div>
