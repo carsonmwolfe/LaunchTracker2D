@@ -1474,6 +1474,8 @@ function drawCountdown() {
   const _slipMs0 = (launch.original_t0 && launch.original_t0 !== launch.t0)
     ? Math.abs(new Date(launch.t0) - new Date(launch.original_t0)) : 0;
   const _isDelayed = _slipMs0 >= 5 * 60000;
+  const _dlw = 4; // border lineWidth — shared by border + tab
+  const _dbp = _isDelayed ? 0.75 + 0.25 * Math.sin(Date.now() / 1400) : 1; // shared pulse
   let _delayedStr = '';
   if (_isDelayed) {
     const _sd = Math.floor(_slipMs0 / 86400000);
@@ -1482,16 +1484,24 @@ function drawCountdown() {
     _delayedStr = _sd > 0 ? `+${_sd} ${_sd===1?'DAY':'DAYS'}` : _sh > 0 ? `+${_sh} ${_sh===1?'HOUR':'HOURS'}` : `+${_sm} MIN`;
   }
 
-  // Border — red outline when delayed, subtle white otherwise
+  // Border — when delayed: 3-sided red outline (no bottom — tab provides it); otherwise subtle white
   if (_isDelayed) {
-    const _bp = 0.6 + 0.2 * Math.sin(Date.now() / 1200);
-    ctx.shadowColor = `rgba(200,30,0,${_bp * 0.5})`; ctx.shadowBlur = 10;
-    ctx.strokeStyle = `rgba(210,40,0,${_bp})`; ctx.lineWidth = 2;
+    const _bx = BX - 16, _by = BY - 6, _bw = TOTAL_W + 32, _bh = BH + 30, _r = 5;
+    ctx.shadowColor = `rgba(200,30,0,${_dbp * 0.4})`; ctx.shadowBlur = 10;
+    ctx.strokeStyle = `rgba(210,40,0,${_dbp})`; ctx.lineWidth = _dlw;
+    ctx.beginPath();
+    ctx.moveTo(_bx, _by + _bh);
+    ctx.lineTo(_bx, _by + _r);
+    ctx.arcTo(_bx, _by, _bx + _r, _by, _r);
+    ctx.lineTo(_bx + _bw - _r, _by);
+    ctx.arcTo(_bx + _bw, _by, _bx + _bw, _by + _r, _r);
+    ctx.lineTo(_bx + _bw, _by + _bh);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
   } else {
     ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+    ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
   }
-  ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
-  ctx.shadowBlur = 0;
   ctx.fillStyle='rgba(255,255,255,0.25)';
   ctx.font='bold 7px Courier New'; ctx.textAlign='center';
   ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
@@ -1553,14 +1563,13 @@ function drawCountdown() {
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
-  // DELAYED tab — red strip connected to bottom of clock box
+  // DELAYED tab — flush with outer edge of border (offset by lineWidth/2)
   if (_isDelayed) {
-    const _tabX = BX - 16;
-    const _tabW = TOTAL_W + 32;
+    const _tabX = BX - 16 - _dlw / 2;
+    const _tabW = TOTAL_W + 32 + _dlw;
     const _tabY = BY - 6 + BH + 30;
     const _tabH = 18;
-    const _bp = 0.6 + 0.2 * Math.sin(Date.now() / 1200);
-    ctx.fillStyle = `rgba(180,28,0,${0.88 + 0.08 * _bp})`;
+    ctx.fillStyle = `rgba(180,28,0,${_dbp})`;
     ctx.beginPath();
     ctx.moveTo(_tabX, _tabY);
     ctx.lineTo(_tabX + _tabW, _tabY);
@@ -1570,7 +1579,7 @@ function drawCountdown() {
     ctx.arcTo(_tabX, _tabY + _tabH, _tabX, _tabY + _tabH - 4, 4);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = `rgba(255,255,255,${_dbp})`;
     ctx.font = '8px "Press Start 2P"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
