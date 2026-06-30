@@ -1470,9 +1470,28 @@ function drawCountdown() {
     return;
   }
 
-  // Normal countdown border + T-MINUS label
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth=1;
+  // Pre-compute delay info so border + tab share the same values
+  const _slipMs0 = (launch.original_t0 && launch.original_t0 !== launch.t0)
+    ? Math.abs(new Date(launch.t0) - new Date(launch.original_t0)) : 0;
+  const _isDelayed = _slipMs0 >= 5 * 60000;
+  let _delayedStr = '';
+  if (_isDelayed) {
+    const _sd = Math.floor(_slipMs0 / 86400000);
+    const _sh = Math.floor((_slipMs0 % 86400000) / 3600000);
+    const _sm = Math.floor((_slipMs0 % 3600000) / 60000);
+    _delayedStr = _sd > 0 ? `+${_sd} ${_sd===1?'DAY':'DAYS'}` : _sh > 0 ? `+${_sh} ${_sh===1?'HOUR':'HOURS'}` : `+${_sm} MIN`;
+  }
+
+  // Border — red outline when delayed, subtle white otherwise
+  if (_isDelayed) {
+    const _bp = 0.6 + 0.2 * Math.sin(Date.now() / 1200);
+    ctx.shadowColor = `rgba(200,30,0,${_bp * 0.5})`; ctx.shadowBlur = 10;
+    ctx.strokeStyle = `rgba(210,40,0,${_bp})`; ctx.lineWidth = 2;
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+  }
   ctx.beginPath(); roundRectPath(BX-16, BY-6, TOTAL_W+32, BH+30, 5); ctx.stroke();
+  ctx.shadowBlur = 0;
   ctx.fillStyle='rgba(255,255,255,0.25)';
   ctx.font='bold 7px Courier New'; ctx.textAlign='center';
   ctx.fillText('T  —  M I N U S', BX+TOTAL_W/2, BY+2);
@@ -1534,32 +1553,29 @@ function drawCountdown() {
     ctx.fillText(lbl, bx+BW/2, by+BH-3);
   });
 
-  // DELAYED indicator — drawn below countdown clock when T0 has slipped
-  if (launch.original_t0 && launch.original_t0 !== launch.t0) {
-    const _slipMs = Math.abs(new Date(launch.t0) - new Date(launch.original_t0));
-    const _totalM = Math.floor(_slipMs / 60000);
-    if (_totalM >= 5) {
-      const _slipD = Math.floor(_slipMs / 86400000);
-      const _slipH = Math.floor((_slipMs % 86400000) / 3600000);
-      const _slipMm = Math.floor((_slipMs % 3600000) / 60000);
-      const _slipStr = _slipD > 0 ? `+${_slipD}d` : _slipH > 0 ? `+${_slipH}h` : `+${_slipMm}m`;
-      const _dcx = BX + TOTAL_W / 2;
-      const _dy  = BY + BH + 38;
-      const _pulse = 0.55 + 0.45 * Math.sin(Date.now() / 700);
-      ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      const _bW = ctx.measureText('DELAYED').width + 10;
-      const _aW = ctx.measureText(_slipStr).width + 10;
-      const _tw = _bW + 6 + _aW;
-      const _sx = _dcx - _tw / 2;
-      ctx.fillStyle = 'rgba(8,12,18,0.85)';
-      ctx.fillRect(_sx - 2, _dy - 11, _tw + 4, 15);
-      ctx.fillStyle = `rgba(204,34,0,${_pulse})`;
-      ctx.fillRect(_sx, _dy - 11, _bW, 15);
-      ctx.fillStyle = `rgba(255,255,255,${_pulse})`;
-      ctx.fillText('DELAYED', _sx + _bW / 2, _dy + 1);
-      ctx.fillText(_slipStr, _sx + _bW + 6 + _aW / 2, _dy + 1);
-      ctx.textBaseline = 'alphabetic';
-    }
+  // DELAYED tab — red strip connected to bottom of clock box
+  if (_isDelayed) {
+    const _tabX = BX - 16;
+    const _tabW = TOTAL_W + 32;
+    const _tabY = BY - 6 + BH + 30;
+    const _tabH = 18;
+    const _bp = 0.6 + 0.2 * Math.sin(Date.now() / 1200);
+    ctx.fillStyle = `rgba(180,28,0,${0.88 + 0.08 * _bp})`;
+    ctx.beginPath();
+    ctx.moveTo(_tabX, _tabY);
+    ctx.lineTo(_tabX + _tabW, _tabY);
+    ctx.lineTo(_tabX + _tabW, _tabY + _tabH - 4);
+    ctx.arcTo(_tabX + _tabW, _tabY + _tabH, _tabX + _tabW - 4, _tabY + _tabH, 4);
+    ctx.lineTo(_tabX + 4, _tabY + _tabH);
+    ctx.arcTo(_tabX, _tabY + _tabH, _tabX, _tabY + _tabH - 4, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`DELAYED  ${_delayedStr}`, _tabX + _tabW / 2, _tabY + _tabH / 2);
+    ctx.textBaseline = 'alphabetic';
   }
 
   // Simultaneous launch banner — shown when the next launch has the same NET (within 5 min)
