@@ -255,6 +255,21 @@ def events_route():
 def health():
     return jsonify({'ok': True, 'cached_at': _cache.get('_fetched_at', 0)})
 
+# ── Mission Control dashboard ─────────────────────────────────────────────────
+
+@app.route('/mission-control')
+def mission_control():
+    from flask import send_from_directory, Response
+    mc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mission-control.html')
+    try:
+        with open(mc_path) as f:
+            html = f.read()
+        resp = Response(html, mimetype='text/html')
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return resp
+    except Exception:
+        return 'Mission Control not found — run deploy.', 404
+
 # ── Unit tracking — file-backed so state survives restarts ───────────────────
 
 _STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'relay_state.json')

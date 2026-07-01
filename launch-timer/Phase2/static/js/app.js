@@ -2608,9 +2608,13 @@ async function disableNightMode() {
   } catch(e) {}
   state._nightWakeUntil = wakeUntil;
   try { localStorage.setItem('_nightWakeUntil', String(wakeUntil)); } catch(e) {}
-  // Restore manual brightness — don't blast to 100%
+  // Tell server about wake so auto_brightness holds manual level (not NIGHT_MIN)
   const pref = state.settings?.brightness || 40;
   try {
+    await fetch('/api/wake', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({until: wakeUntil / 1000}),
+    });
     await fetch('/api/settings/brightness', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({value: pref}),

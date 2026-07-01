@@ -910,14 +910,18 @@ def _auto_brightness():
             SLEEP_MIN    = 51
             screen_mode  = settings.get('screen_mode', 'auto')
             display_mode = settings.get('display_mode', 'auto')
-            if screen_mode == 'always_on' or display_mode == 'bright':
+            manual_pct   = int(settings.get('brightness', 40))
+            manual_raw   = int(manual_pct * 2.55)
+
+            # Wake override — user tapped screen, hold manual brightness until sunrise
+            if _wake_until and time.time() < _wake_until:
+                brightness = manual_raw
+            elif screen_mode == 'always_on' or display_mode == 'bright':
                 # Respect manual brightness exactly — no auto changes
-                manual = int(settings.get('brightness', 40) * 2.55)
-                brightness = max(0, min(255, manual))
+                brightness = max(0, min(255, manual_raw))
             elif screen_mode == 'sleep' or display_mode == 'night':
                 # Sleep: respect manual pref but floor at SLEEP_MIN, cap at 40%
-                manual = int(settings.get('brightness', 40) * 2.55)
-                brightness = max(SLEEP_MIN, min(manual, 102))
+                brightness = max(SLEEP_MIN, min(manual_raw, 102))
             elif not settings.get('auto_dim', True):
                 time.sleep(300)
                 continue
@@ -1275,6 +1279,17 @@ def api_log():
         return jsonify({'lines': [l.rstrip() for l in lines[-n:]]})
     except Exception as e:
         return jsonify({'lines': [], 'error': str(e)})
+
+
+# ── Wake override — tells auto_brightness to hold manual brightness after tap ──
+
+_wake_until = 0  # Unix timestamp; 0 = no override
+
+@app.route('/api/wake', methods=['POST'])
+def set_wake():
+    global _wake_until
+    _wake_until = float((request.get_json() or {}).get('until', 0))
+    return jsonify({'ok': True})
 
 
 # ── Pi notification (shown on all pages) ──────────────────────────────────────
