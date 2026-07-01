@@ -2640,6 +2640,12 @@ function drawNightMode() {
     ctx.fillText(cdStr, W/2, H/2 + 52);
   }
 
+  // Touch to wake hint — slow breathe, bottom of screen
+  ctx.fillStyle = `rgba(255,255,255,${0.06 + pulse * 0.06})`;
+  ctx.font = '11px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('TOUCH TO WAKE', W/2, H - 40);
+
   ctx.textBaseline = 'alphabetic';
   drawGearIcon();
 }
