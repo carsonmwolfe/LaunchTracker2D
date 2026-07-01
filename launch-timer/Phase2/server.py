@@ -893,7 +893,7 @@ def _auto_brightness():
 
             # display_mode overrides auto_dim
             if display_mode == 'night':
-                brightness = 10  # nearly off
+                brightness = 30  # dim but readable
             elif display_mode == 'bright':
                 brightness = 255
             elif not settings.get('auto_dim', True):
@@ -1132,13 +1132,19 @@ def api_settings():
         _weather_cache['fetched'] = 0
     # Immediately apply backlight when display_mode is explicitly set
     mode = settings.get('display_mode', 'auto')
-    if mode in ('night', 'bright'):
-        bp = _backlight_path()
-        if bp:
-            try:
-                open(bp, 'w').write(str(10 if mode == 'night' else 255))
-            except Exception:
-                pass
+    bp = _backlight_path()
+    if bp:
+        try:
+            if mode == 'night':
+                open(bp, 'w').write('30')        # dim but visible ~12%
+            elif mode == 'bright':
+                open(bp, 'w').write('255')
+            elif mode == 'auto':
+                # Restore manual brightness preference while auto takes over
+                pct = int(settings.get('brightness', 40))
+                open(bp, 'w').write(str(int(pct * 2.55)))
+        except Exception:
+            pass
     return jsonify({'ok': True, 'settings': settings})
 
 @app.route('/api/settings/brightness', methods=['POST'])
