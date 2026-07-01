@@ -301,9 +301,19 @@
     else showPage(e.state.page);
   });
 
-  // Child pages post 'back' message to close themselves
+  // Child pages post messages to parent
   window.addEventListener('message', (e) => {
-    if (e.data === 'spa-back') hidePage();
+    if (e.data === 'spa-back') { hidePage(); return; }
+    if (e.data?.action === 'screen_mode') {
+      // Instant screen_mode update from settings page — no 5s poll wait
+      if (typeof state !== 'undefined' && state.settings) {
+        if (e.data.mode === 'sleep') {
+          state._nightWakeUntil = null;
+          try { localStorage.removeItem('_nightWakeUntil'); } catch(e2) {}
+        }
+        state.settings.screen_mode = e.data.mode;
+      }
+    }
   });
 
   // NOTE: iframe preload disabled — Pi 3 A+ has insufficient RAM for two renderers simultaneously.

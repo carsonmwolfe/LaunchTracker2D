@@ -923,10 +923,9 @@ def _auto_brightness():
                 continue
             else:
                 sr_ts, ss_ts = _fetch_sun_times()
-                brightness = None
+                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
                 if sr_ts and ss_ts:
                     now_ts    = time.time()
-                    DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
                     after_sr  = now_ts - sr_ts
                     before_ss = ss_ts - now_ts
                     if after_sr < 0 or before_ss < 0:
@@ -937,6 +936,11 @@ def _auto_brightness():
                         brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * before_ss / FADE_SECS)
                     else:
                         brightness = DAY_MAX
+                else:
+                    # Fallback when Open-Meteo unreachable: dim 9pm-7am by local hour
+                    hour = datetime.now().hour
+                    brightness = NIGHT_MIN if (hour >= 21 or hour < 7) else DAY_MAX
+                    print(f'[{_ts()}] Sun times unavailable — using hour-based fallback ({hour}h → {brightness})')
 
             if brightness is not None:
                 print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
@@ -1159,19 +1163,20 @@ def api_settings():
         with _weather_lock:
             _weather_cache['data']    = None
             _weather_cache['fetched'] = 0
-    # Immediately apply backlight using screen_mode (not display_mode which can mislead)
-    sm  = settings.get('screen_mode', 'auto')
-    pct = int(settings.get('brightness', 40))
-    manual_raw = int(pct * 2.55)
-    bp = _backlight_path()
-    if bp:
-        try:
-            if sm == 'sleep':
-                open(bp, 'w').write(str(max(51, min(manual_raw, 102))))
-            else:  # auto or always_on — restore manual preference
-                open(bp, 'w').write(str(manual_raw))
-        except Exception:
-            pass
+    # Only touch backlight if screen_mode or brightness was explicitly in this request
+    if 'screen_mode' in changed or 'brightness' in changed:
+        sm  = settings.get('screen_mode', 'auto')
+        pct = int(settings.get('brightness', 40))
+        manual_raw = int(pct * 2.55)
+        bp = _backlight_path()
+        if bp:
+            try:
+                if sm == 'sleep':
+                    open(bp, 'w').write(str(max(51, min(manual_raw, 102))))
+                else:  # auto or always_on — restore manual preference
+                    open(bp, 'w').write(str(manual_raw))
+            except Exception:
+                pass
     return jsonify({'ok': True, 'settings': settings})
 
 @app.route('/api/settings/brightness', methods=['POST'])

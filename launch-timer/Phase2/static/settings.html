@@ -469,6 +469,10 @@
       document.getElementById('mode-always_on').classList.toggle('active', mode === 'always_on');
       document.getElementById('mode-sleep').classList.toggle('active',     mode === 'sleep');
       saveSettings();
+      // Notify parent frame immediately — don't wait for pollSettings() 5s cycle
+      if (window.parent !== window) {
+        window.parent.postMessage({action:'screen_mode', mode}, '*');
+      }
     }
 
     function setTimezone(tz) {
