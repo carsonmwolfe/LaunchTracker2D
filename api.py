@@ -267,7 +267,7 @@ def _load_state():
         with open(_STATE_FILE) as f:
             return json.load(f)
     except Exception:
-        return {'units': {}, 'commands': {}, 'acks': {}}
+        return {'units': {}, 'commands': {}, 'acks': {}, 'nicknames': {}}
 
 def _save_state(state):
     try:
@@ -302,6 +302,31 @@ def delete_unit(unit_id):
     with _state_lock:
         s = _load_state()
         s['units'].pop(unit_id, None)
+        _save_state(s)
+    return jsonify({'ok': True})
+
+# ── Nicknames — relay-stored so they persist across browsers/devices ─────────
+
+@app.route('/api/nicknames')
+def get_nicknames():
+    with _state_lock:
+        s = _load_state()
+    return jsonify(s.get('nicknames', {}))
+
+@app.route('/api/nickname', methods=['POST'])
+def set_nickname():
+    data    = request.get_json() or {}
+    unit_id = data.get('unit_id', '').strip()
+    nick    = data.get('nickname', '').strip()
+    if not unit_id:
+        return jsonify({'ok': False, 'error': 'unit_id required'}), 400
+    with _state_lock:
+        s = _load_state()
+        s.setdefault('nicknames', {})
+        if nick:
+            s['nicknames'][unit_id] = nick
+        else:
+            s['nicknames'].pop(unit_id, None)
         _save_state(s)
     return jsonify({'ok': True})
 

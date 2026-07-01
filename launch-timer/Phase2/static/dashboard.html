@@ -340,15 +340,29 @@
       renderUnits();
     }
 
-    // ── Nicknames ─────────────────────────────────────────────────────────────
+    // ── Nicknames — stored on relay, not localStorage ─────────────────────────
+    let nicknames  = {};   // populated from relay on load
     let editingNick = null;
-    function getNick(id) { return localStorage.getItem('nick_'+id) || ''; }
-    function saveNick(id, nick) {
+    function getNick(id) { return nicknames[id] || ''; }
+    async function saveNick(id, nick) {
       nick = nick.trim();
-      if (nick) localStorage.setItem('nick_'+id, nick);
-      else localStorage.removeItem('nick_'+id);
+      if (nick) nicknames[id] = nick; else delete nicknames[id];
       editingNick = null;
       renderUnits();
+      try {
+        await fetchWithTimeout(`${RELAY}/api/nickname`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id: id, nickname: nick}),
+        }, 5000);
+      } catch(e) { addLog(id, 'Nickname save failed: '+e.message, 'err'); }
+    }
+    async function loadNicknames() {
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/nicknames`, {}, 5000);
+        nicknames = await r.json();
+        renderUnits();
+      } catch(e) {}
     }
     function startNickEdit(id, e) {
       e.stopPropagation();
@@ -612,6 +626,7 @@
     // ── Boot ──────────────────────────────────────────────────────────────────
     renderLogs();
     renderUnits();
+    loadNicknames();
     pollAll();
     setInterval(pollAll, POLL_MS);
   </script>
