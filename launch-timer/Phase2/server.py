@@ -1130,6 +1130,15 @@ def api_settings():
     with _weather_lock:
         _weather_cache['data']    = None
         _weather_cache['fetched'] = 0
+    # Immediately apply backlight when display_mode is explicitly set
+    mode = settings.get('display_mode', 'auto')
+    if mode in ('night', 'bright'):
+        bp = _backlight_path()
+        if bp:
+            try:
+                open(bp, 'w').write(str(10 if mode == 'night' else 255))
+            except Exception:
+                pass
     return jsonify({'ok': True, 'settings': settings})
 
 @app.route('/api/settings/brightness', methods=['POST'])

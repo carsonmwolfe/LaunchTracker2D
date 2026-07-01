@@ -2577,6 +2577,16 @@ let lastFrame = 0;
 const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
+// ── Fast settings poll — picks up display_mode changes within 5s ─────────────
+async function pollSettings() {
+  try {
+    const r = await fetch('/api/settings', {cache:'no-store'});
+    const s = await r.json();
+    if (s && state.settings) state.settings = {...state.settings, ...s};
+  } catch(e) {}
+}
+setInterval(pollSettings, 5000);
+
 function drawNightMode() {
   const launch  = currentLaunch();
   const pulse   = 0.4 + 0.15 * Math.sin(Date.now() / 3000);
@@ -2645,10 +2655,13 @@ function render(now) {
   lastFrame = now;
   try {
 
+  const _infoBar = document.getElementById('info-bar');
   if (isNightMode()) {
+    if (_infoBar) _infoBar.style.opacity = '0';
     drawNightMode();
     return;
   }
+  if (_infoBar) _infoBar.style.opacity = '1';
 
   // ── Updates ──
   updateClouds();
