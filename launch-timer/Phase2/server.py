@@ -1024,7 +1024,7 @@ def api_data():
     events      = _data_cache.get('events', [])
     weather     = _get_weather()
     settings    = _load_settings()
-    age_seconds = int(time.time() - _data_cache.get('fetched_at', time.time()))
+    fetched = _data_cache.get('fetched_at', 0); age_seconds = int(time.time() - fetched) if fetched > 0 else 0
 
     # Compute year stats from cached year_launches
     now_dt    = datetime.now(timezone.utc)
@@ -1122,7 +1122,7 @@ def api_test_launch():
 def api_launches():
     """Thin wrapper over _data_cache — same data as /api/data.launches."""
     launches    = _data_cache.get('launches', [])
-    age_seconds = int(time.time() - _data_cache.get('fetched_at', time.time()))
+    fetched = _data_cache.get('fetched_at', 0); age_seconds = int(time.time() - fetched) if fetched > 0 else 0
     return jsonify({'launches': launches, 'age_seconds': age_seconds})
 
 @app.route('/api/weather')
