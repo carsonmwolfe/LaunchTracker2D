@@ -745,19 +745,37 @@ def _get_unit_id():
     _get_unit_id._cached = uid
     return uid
 
+def _get_tailscale_ip():
+    """Return Tailscale IPv4 address if Tailscale is running, else None."""
+    try:
+        r = subprocess.run(['tailscale', 'ip', '-4'],
+                           capture_output=True, text=True, timeout=3)
+        ip = r.stdout.strip()
+        if r.returncode == 0 and ip:
+            return ip
+    except Exception:
+        pass
+    return None
+
 def _ping_relay():
     """Ping the DO relay every 60 seconds."""
+    _ts_ip = _get_tailscale_ip()  # check once at startup, re-check every 10 pings
+    _ping_count = 0
     while True:
         try:
+            _ping_count += 1
+            if _ping_count % 10 == 0:
+                _ts_ip = _get_tailscale_ip()
             settings = _load_settings()
             unit_id  = _get_unit_id()
             wx       = _weather_cache.get('data') or {}
             requests.post(f'{RELAY_URL}/api/unit/ping', json={
-                'unit_id':   unit_id,
-                'version':   VERSION,
-                'site':      settings.get('site', 'cape'),
-                'condition': wx.get('condition', ''),
-                'temp_f':    wx.get('temp_f', 0),
+                'unit_id':      unit_id,
+                'version':      VERSION,
+                'site':         settings.get('site', 'cape'),
+                'condition':    wx.get('condition', ''),
+                'temp_f':       wx.get('temp_f', 0),
+                'tailscale_ip': _ts_ip,
             }, timeout=5)
         except Exception:
             pass

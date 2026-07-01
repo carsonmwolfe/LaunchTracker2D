@@ -131,6 +131,8 @@
     .unit-row.offline { opacity: 0.5; }
 
     .status-dot { width: 8px; height: 8px; flex-shrink: 0; margin-right: 12px; }
+    .ts-badge { font-size: 6px; padding: 1px 4px; border: 1px solid rgba(74,158,222,0.4); color: #4a9ede; background: rgba(74,158,222,0.08); flex-shrink: 0; margin-left: 4px; cursor: default; }
+    .ts-badge:hover { background: rgba(74,158,222,0.18); cursor: pointer; }
     .dot-online  { background: #00e87a; box-shadow: 0 0 5px #00e87a66; animation: pulse-dot 2s infinite; }
     .dot-offline { background: #ff4422; }
     .dot-warn    { background: #ffd93d; }
@@ -449,9 +451,14 @@
           cmdBadge = `<span style="font-size:6px;color:${col};margin-left:8px;">${cs.label}</span>`;
         }
 
+        const tsIp  = u.tailscale_ip || null;
+        const tsBadge = tsIp
+          ? `<span class="ts-badge" title="Tailscale: ${tsIp}" onclick="copySSH('${tsIp}');event.stopPropagation()">TS ✓</span>`
+          : '';
+
         let html = `<div class="unit-row ${isExp?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${id}')">
           <div class="status-dot ${dotCls}"></div>
-          <div class="unit-id">${nameHtml}${cmdBadge}</div>
+          <div class="unit-id">${nameHtml}${tsBadge}${cmdBadge}</div>
           <div class="unit-loc">${u.site||'—'}</div>
           <div class="unit-wifi">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div>
           <div class="unit-launch">${(u.version||'?').replace(/^v/,'').slice(0,7)}</div>
@@ -471,13 +478,14 @@
               <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${id}</div></div>
               <div class="detail-field"><div class="detail-label">VERSION</div><div class="detail-val ${isOutdated?'yellow':'green'}">${u.version||'—'}</div></div>
               <div class="detail-field"><div class="detail-label">LAST SEEN</div><div class="detail-val ${isOnline?'green':'red'}">${seenStr}</div></div>
-              <div class="detail-field"><div class="detail-label">SITE</div><div class="detail-val">${(u.site||'—').toUpperCase()}</div></div>
+              <div class="detail-field"><div class="detail-label">TAILSCALE</div><div class="detail-val ${tsIp?'green':'red'}">${tsIp||'NOT INSTALLED'}</div></div>
               <div class="detail-field"><div class="detail-label">WEATHER</div><div class="detail-val">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div></div>
             </div>
             <div class="detail-actions">
               <button class="hbtn hbtn-green" style="${updateBtnStyle}" onclick="cmdUnit('${id}','update',this);event.stopPropagation()">${updateBtnTxt}</button>
               <button class="hbtn hbtn-red"   style="${rebootBtnStyle}" onclick="cmdUnit('${id}','reboot',this);event.stopPropagation()">${rebootBtnTxt}</button>
               <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="cmdUnit('${id}','refresh',this);event.stopPropagation()">REFRESH DATA</button>
+              ${tsIp ? `<button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="copySSH('${tsIp}');event.stopPropagation()">COPY SSH</button>` : ''}
               <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
             </div>
           </div>`;
@@ -489,6 +497,15 @@
     function toggleExpand(id) {
       expandedId = expandedId===id ? null : id;
       renderUnits();
+    }
+
+    function copySSH(ip) {
+      const cmd = `ssh pi@${ip}`;
+      navigator.clipboard.writeText(cmd).then(() => {
+        addLog('SSH', `Copied: ${cmd}`, 'ok');
+      }).catch(() => {
+        addLog('SSH', `SSH command: ${cmd}`, '');
+      });
     }
 
     // ── Command state machine ─────────────────────────────────────────────────
