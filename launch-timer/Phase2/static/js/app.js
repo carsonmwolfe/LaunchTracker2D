@@ -83,8 +83,8 @@ const W = 800, H = 480;
 let state = {
   launches:    [],
   currentIdx:  0,
-  weather:     { condition: 'clear', temp_f: 75, wind_speed: 10, wind_dir: 'E', cloud_cover: 0, label: 'Clear sky' },
-  settings:    { temp_unit: 'f', time_format: 'local' },
+  weather:     JSON.parse(localStorage.getItem('_wx') || 'null') || { condition: 'clear', temp_f: 75, wind_speed: 10, wind_dir: 'E', cloud_cover: 0, label: 'Clear sky' },
+  settings:    JSON.parse(localStorage.getItem('_settings') || 'null') || { temp_unit: 'f', time_format: 'local' },
   // Countdown / launch
   launchTriggered: false,     // ← THE FIX: set true at T-0, reset on new mission
   isLaunching:     false,
@@ -2139,6 +2139,8 @@ async function fetchData(afterLaunch=false) {
     state.weather     = data.weather    || state.weather;
     state.liftoffWx   = data.liftoff_wx || null;
     state.settings    = data.settings   || state.settings;
+    try { localStorage.setItem('_wx', JSON.stringify(state.weather)); } catch(e) {}
+    try { localStorage.setItem('_settings', JSON.stringify(state.settings)); } catch(e) {}
     state.version     = data.version  || state.version || '';
     state.dataAge     = data.age_seconds || 0;
     state.lastFetchAt = Date.now();
