@@ -5,7 +5,7 @@
   <title>LaunchTracker2D — Mission Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; cursor: none !important; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #0a0e14;
       color: #fff;
@@ -287,35 +287,33 @@
 
   <script>
     const RELAY = 'http://45.55.245.193';
+    const ONLINE_TTL = 180;   // seconds — unit considered offline if not seen in 3 min
+    const POLL_MS    = 15000; // poll relay every 15s (was 30s)
+    const ACK_WAIT   = 60;    // seconds to wait for ack before giving up
 
-    // Known units — ip used for direct (same-network) polling only
-    let units = [
-      {
-        id:'LT-001', mac:'b8:27:eb:f0:f8:2a', ip:'192.168.1.93',
-        location:'Cape Canaveral, FL', wifi:'HomeNetwork',
-        uptime:'3d 4h 12m', version:'v1.0.0', brightness:40,
-        launch:'Starlink 17-15', status:'online', lastSeen: Date.now() - 12000,
-        ping: 28,
-      },
-    ];
-
+    let units = {};           // keyed by unit_id, populated from relay
     let currentFilter = 'all';
-    let expandedId = null;
+    let expandedId    = null;
+    let relayOk       = true;
+    let cmdState      = {};   // per-unit command state: {cmd, status, ts}
 
-    // ── Log ───────────────────────────────────────────────────────────────────
-    const logs = [
-      {ts:'18:42:01', unit:'LT-001', msg:'Heartbeat received · uptime 3d 4h · v1.0.0', type:'ok'},
-      {ts:'18:40:12', unit:'LT-001', msg:'Settings updated · brightness 40%', type:''},
-      {ts:'18:30:00', unit:'LT-001', msg:'Server started · v1.0.0', type:'ok'},
-    ];
-
-    function addLog(unit, msg, type='') {
-      const now = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-      logs.unshift({ts:now, unit, msg, type});
-      if (logs.length > 50) logs.pop();
-      renderLogs();
+    // ── Timestamps ───────────────────────────────────────────────────────────
+    function tsNow() {
+      return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    }
+    function relAge(secs) {
+      if (secs < 60)   return secs + 's ago';
+      if (secs < 3600) return Math.floor(secs/60) + 'm ago';
+      return Math.floor(secs/3600) + 'h ago';
     }
 
+    // ── Activity log ─────────────────────────────────────────────────────────
+    const logs = [];
+    function addLog(unit, msg, type='') {
+      logs.unshift({ts: tsNow(), unit, msg, type});
+      if (logs.length > 100) logs.pop();
+      renderLogs();
+    }
     function renderLogs() {
       document.getElementById('log-entries').innerHTML = logs.map(l =>
         `<div class="log-entry ${l.type}">
@@ -323,243 +321,242 @@
           <span class="log-unit">${l.unit}</span>
           <span class="log-msg">${l.msg}</span>
         </div>`
-      ).join('');
+      ).join('') || '<div class="log-entry"><span class="log-msg" style="color:rgba(255,255,255,0.15);">Waiting for activity…</span></div>';
     }
 
     // ── Filter ────────────────────────────────────────────────────────────────
     function setFilter(f) {
       currentFilter = f;
-      document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.fbtn, .nav-item').forEach(b => b.classList.remove('active'));
       document.getElementById('fbtn-'+f)?.classList.add('active');
       renderUnits();
     }
 
+    // ── Nicknames ─────────────────────────────────────────────────────────────
+    let editingNick = null;
+    function getNick(id) { return localStorage.getItem('nick_'+id) || ''; }
+    function saveNick(id, nick) {
+      nick = nick.trim();
+      if (nick) localStorage.setItem('nick_'+id, nick);
+      else localStorage.removeItem('nick_'+id);
+      editingNick = null;
+      renderUnits();
+    }
+    function startNickEdit(id, e) {
+      e.stopPropagation();
+      editingNick = id;
+      renderUnits();
+      setTimeout(() => { const el = document.getElementById('nick-input-'+id); if(el){el.focus();el.select();} }, 0);
+    }
+    function onNickKey(id, e) {
+      if (e.key==='Enter')  saveNick(id, e.target.value);
+      if (e.key==='Escape') { editingNick=null; renderUnits(); }
+    }
+
     // ── Stats ─────────────────────────────────────────────────────────────────
     function updateStats() {
-      const online   = units.filter(u=>u.status==='online').length;
-      const offline  = units.filter(u=>u.status==='offline').length;
-      const outdated = units.filter(u=>u.version!=='v1.0.0').length;
-      const avgPing  = units.filter(u=>u.ping).reduce((a,b)=>a+b.ping,0) / (units.filter(u=>u.ping).length||1);
+      const arr     = Object.values(units);
+      const online  = arr.filter(u=>u._online).length;
+      const offline = arr.filter(u=>!u._online).length;
 
-      document.getElementById('stat-total').textContent    = units.length;
+      // "outdated" = version differs from most common version
+      const verCounts = {};
+      arr.forEach(u=>{ if(u.version) verCounts[u.version]=(verCounts[u.version]||0)+1; });
+      const latestVer = Object.entries(verCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+      const outdated  = arr.filter(u=>u.version && u.version !== latestVer).length;
+      document.getElementById('cur-version').textContent = latestVer ? latestVer.slice(0,7) : '—';
+
+      document.getElementById('stat-total').textContent    = arr.length;
       document.getElementById('stat-online').textContent   = online;
       document.getElementById('stat-offline').textContent  = offline;
       document.getElementById('stat-outdated').textContent = outdated;
-      document.getElementById('stat-ping').textContent     = Math.round(avgPing)+'ms';
+      document.getElementById('stat-ping').textContent     = relayOk ? 'OK' : 'ERR';
 
-      document.getElementById('count-all').textContent      = units.length;
+      document.getElementById('count-all').textContent      = arr.length;
       document.getElementById('count-online').textContent   = online;
       document.getElementById('count-offline').textContent  = offline;
       document.getElementById('count-outdated').textContent = outdated;
       document.getElementById('alert-count').textContent    = offline + outdated;
     }
 
-    // ── Nicknames (stored in localStorage) ───────────────────────────────────
-    let editingNick = null;
-    function getNick(id) { return localStorage.getItem('nick_' + id) || ''; }
-    function saveNick(id, nick) {
-      nick = nick.trim();
-      if (nick) localStorage.setItem('nick_' + id, nick);
-      else localStorage.removeItem('nick_' + id);
-      editingNick = null;
-      renderUnits();
-    }
-    function startNickEdit(id, event) {
-      event.stopPropagation();
-      editingNick = id;
-      renderUnits();
-      setTimeout(() => {
-        const inp = document.getElementById('nick-input-' + id);
-        if (inp) { inp.focus(); inp.select(); }
-      }, 0);
-    }
-    function onNickKey(id, event) {
-      if (event.key === 'Enter') saveNick(id, event.target.value);
-      if (event.key === 'Escape') { editingNick = null; renderUnits(); }
-    }
-
     // ── Render units ──────────────────────────────────────────────────────────
     function renderUnits() {
-      const search = document.getElementById('search-input').value.toLowerCase();
-      let filtered = units.filter(u => {
-        if (currentFilter === 'online'   && u.status !== 'online') return false;
-        if (currentFilter === 'offline'  && u.status !== 'offline') return false;
-        if (currentFilter === 'outdated' && u.version === 'v1.0.0') return false;
-        if (search && !u.id.toLowerCase().includes(search) && !u.location.toLowerCase().includes(search) && !getNick(u.id).toLowerCase().includes(search)) return false;
+      const search = (document.getElementById('search-input')?.value||'').toLowerCase();
+      const arr = Object.values(units).sort((a,b) => (b._online?1:0)-(a._online?1:0) || a.unit_id.localeCompare(b.unit_id));
+
+      // version for outdated detection
+      const verCounts = {};
+      arr.forEach(u=>{ if(u.version) verCounts[u.version]=(verCounts[u.version]||0)+1; });
+      const latestVer = Object.entries(verCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+
+      let filtered = arr.filter(u => {
+        if (currentFilter==='online'   && !u._online) return false;
+        if (currentFilter==='offline'  &&  u._online) return false;
+        if (currentFilter==='outdated' && u.version===latestVer) return false;
+        const nick = getNick(u.unit_id).toLowerCase();
+        if (search && !u.unit_id.toLowerCase().includes(search) && !nick.includes(search)) return false;
         return true;
       });
 
       document.getElementById('unit-list').innerHTML = filtered.map(u => {
-        const isOnline  = u.status === 'online';
-        const isExpanded = expandedId === u.id;
+        const id        = u.unit_id;
+        const isOnline  = u._online;
+        const isExp     = expandedId === id;
         const dotCls    = isOnline ? 'dot-online' : 'dot-offline';
-        const verCls    = u.version === 'v1.0.0' ? 'ver-ok' : 'ver-old';
-        const seenStr   = isOnline ? Math.round((Date.now()-u.lastSeen)/1000)+'s ago' : 'offline';
+        const isOutdated = u.version && u.version !== latestVer;
+        const verCls    = isOutdated ? 'ver-old' : 'ver-ok';
+        const ageSecs   = u.last_seen ? Math.round(Date.now()/1000 - u.last_seen) : null;
+        const seenStr   = isOnline ? (ageSecs!==null ? relAge(ageSecs) : '—') : 'OFFLINE';
+        const cs        = cmdState[id];
 
-        const nick = getNick(u.id);
+        const nick = getNick(id);
         let nameHtml;
-        if (editingNick === u.id) {
-          nameHtml = `<input class="nick-input" id="nick-input-${u.id}" value="${nick}" placeholder="nickname..."
-            onblur="saveNick('${u.id}',this.value)"
-            onkeydown="onNickKey('${u.id}',event)"
-            onclick="event.stopPropagation()">
-            ${nick ? `<div class="unit-raw-id">${u.id}</div>` : ''}`;
+        if (editingNick===id) {
+          nameHtml = `<input class="nick-input" id="nick-input-${id}" value="${nick}" placeholder="nickname..."
+            onblur="saveNick('${id}',this.value)" onkeydown="onNickKey('${id}',event)" onclick="event.stopPropagation()">`;
         } else if (nick) {
-          nameHtml = `<div class="unit-nick">${nick} <button class="unit-nick-edit" onclick="startNickEdit('${u.id}',event)" title="Edit nickname">✎</button></div><div class="unit-raw-id">${u.id}</div>`;
+          nameHtml = `<div class="unit-nick">${nick} <button class="unit-nick-edit" onclick="startNickEdit('${id}',event)">✎</button></div><div class="unit-raw-id">${id}</div>`;
         } else {
-          nameHtml = `<div class="unit-nick">${u.id} <button class="unit-nick-edit" onclick="startNickEdit('${u.id}',event)" title="Set nickname">+</button></div>`;
+          nameHtml = `<div class="unit-nick">${id} <button class="unit-nick-edit" onclick="startNickEdit('${id}',event)">+</button></div>`;
         }
 
-        let html = `<div class="unit-row ${isExpanded?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${u.id}')">
+        // Command status badge
+        let cmdBadge = '';
+        if (cs) {
+          const col = cs.status==='ok'?'#00e87a':cs.status==='err'?'#ff4422':'#ffd93d';
+          cmdBadge = `<span style="font-size:6px;color:${col};margin-left:8px;">${cs.label}</span>`;
+        }
+
+        let html = `<div class="unit-row ${isExp?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${id}')">
           <div class="status-dot ${dotCls}"></div>
-          <div class="unit-id">${nameHtml}</div>
-          <div class="unit-loc">${u.location}</div>
-          <div class="unit-wifi">${u.wifi}</div>
-          <div class="unit-launch">${isOnline?(u.launch||'—'):'—'}</div>
-          <div class="unit-version"><span class="ver-badge ${verCls}">${u.version}</span></div>
+          <div class="unit-id">${nameHtml}${cmdBadge}</div>
+          <div class="unit-loc">${u.site||'—'}</div>
+          <div class="unit-wifi">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div>
+          <div class="unit-launch">v${(u.version||'?').slice(0,7)}</div>
+          <div class="unit-version"><span class="ver-badge ${verCls}">${isOutdated?'OUTDATED':'CURRENT'}</span></div>
           <div class="unit-seen">${seenStr}</div>
         </div>`;
 
-        if (isExpanded) {
+        if (isExp) {
+          const cs = cmdState[id];
+          let updateBtnStyle = '', updateBtnTxt = 'UPDATE';
+          let rebootBtnStyle = '', rebootBtnTxt = 'REBOOT';
+          if (cs?.cmd==='update') { updateBtnStyle='opacity:0.6;'; updateBtnTxt=cs.label; }
+          if (cs?.cmd==='reboot') { rebootBtnStyle='opacity:0.6;'; rebootBtnTxt=cs.label; }
+
           html += `<div class="unit-detail">
             <div class="detail-grid">
-              <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${u.id}</div></div>
-              <div class="detail-field"><div class="detail-label">IP ADDRESS</div><div class="detail-val">${u.ip}</div></div>
-              <div class="detail-field"><div class="detail-label">UPTIME</div><div class="detail-val green">${u.uptime}</div></div>
-              <div class="detail-field"><div class="detail-label">CURRENT LAUNCH</div><div class="detail-val yellow">${u.launch||'—'}</div></div>
+              <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${id}</div></div>
+              <div class="detail-field"><div class="detail-label">VERSION</div><div class="detail-val ${isOutdated?'yellow':'green'}">${u.version||'—'}</div></div>
+              <div class="detail-field"><div class="detail-label">LAST SEEN</div><div class="detail-val ${isOnline?'green':'red'}">${seenStr}</div></div>
+              <div class="detail-field"><div class="detail-label">SITE</div><div class="detail-val">${(u.site||'—').toUpperCase()}</div></div>
+              <div class="detail-field"><div class="detail-label">WEATHER</div><div class="detail-val">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div></div>
             </div>
-            <div style="display:flex;gap:12px;align-items:flex-start;">
-              <div class="detail-actions">
-                <button class="hbtn hbtn-blue" onclick="sshUnit('${u.id}','${u.ip}');event.stopPropagation()">SSH</button>
-                <button class="hbtn hbtn-green" onclick="updateUnit('${u.id}',this);event.stopPropagation()">UPDATE</button>
-                <button class="hbtn hbtn-red" onclick="rebootUnit('${u.id}','${u.ip}',this);event.stopPropagation()">REBOOT</button>
-                <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="viewLogs('${u.id}');event.stopPropagation()">VIEW LOGS</button>
-                <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="openUnit('${u.ip}');event.stopPropagation()">OPEN UI</button>
-              </div>
-              <div class="snapshot-wrap" id="snap-${u.id}">
-                <div class="no-signal-txt">NO SIGNAL<br>Open main screen<br>to activate</div>
-              </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-green" style="${updateBtnStyle}" onclick="cmdUnit('${id}','update',this);event.stopPropagation()">${updateBtnTxt}</button>
+              <button class="hbtn hbtn-red"   style="${rebootBtnStyle}" onclick="cmdUnit('${id}','reboot',this);event.stopPropagation()">${rebootBtnTxt}</button>
+              <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="cmdUnit('${id}','refresh',this);event.stopPropagation()">REFRESH DATA</button>
+              <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
             </div>
           </div>`;
         }
         return html;
-      }).join('');
-
-      // Load snapshot for expanded unit
-      if (expandedId) {
-        const u = units.find(u=>u.id===expandedId);
-        if (u && u.status==='online') loadSnapshot(u);
-      }
+      }).join('') || '<div style="padding:24px 14px;font-size:7px;color:rgba(255,255,255,0.2);">No units found.</div>';
     }
 
     function toggleExpand(id) {
-      expandedId = expandedId === id ? null : id;
+      expandedId = expandedId===id ? null : id;
       renderUnits();
     }
 
-    // ── Snapshot ──────────────────────────────────────────────────────────────
-    let snapInterval = null;
-    function loadSnapshot(u) {
-      clearInterval(snapInterval);
-      const wrap = document.getElementById('snap-'+u.id);
-      if (!wrap) return;
-      function refresh() {
-        const img = new Image();
-        img.onload = () => {
-          wrap.innerHTML = `<img src="${img.src}" alt="Live pad view">`;
-        };
-        img.onerror = () => {};
-        img.src = `http://${u.ip}:5001/api/snapshot?${Date.now()}`;
+    // ── Command state machine ─────────────────────────────────────────────────
+    async function cmdUnit(id, cmd, btn) {
+      if (cmdState[id]?.active) return;
+
+      const labels = {update:'UPDATE', reboot:'REBOOT', refresh:'REFRESH DATA'};
+      const setLabel = (label, status=null) => {
+        cmdState[id] = { cmd, label, status, active: status===null };
+        renderUnits();
+      };
+
+      setLabel('SENDING…');
+      addLog(id, `Sending ${cmd.toUpperCase()} via relay…`, '');
+
+      let relayReached = false;
+      try {
+        const r = await fetch(`${RELAY}/api/unit/command`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id:id, command:cmd}),
+          signal: AbortSignal.timeout(8000),
+        });
+        relayReached = r.ok;
+      } catch(e) {
+        relayReached = false;
       }
-      refresh();
-      snapInterval = setInterval(refresh, 500);
-    }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
-    function sshUnit(id, ip) {
-      addLog(id, `SSH session requested → ${ip}`, '');
-      alert(`SSH into Pi:\nssh pi@${ip}\n\nOr use Tailscale if on different network.`);
-    }
+      if (!relayReached) {
+        setLabel('RELAY ERR', 'err');
+        addLog(id, `FAILED — could not reach relay at ${RELAY}`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 5000);
+        return;
+      }
 
-    // ── Relay command helpers ─────────────────────────────────────────────────
-    async function sendRelayCmd(unitId, cmd) {
-      const r = await fetch(`${RELAY}/api/unit/command`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({unit_id: unitId, command: cmd}),
-        keepalive: true,
-      });
-      return r.ok;
-    }
+      addLog(id, `${cmd.toUpperCase()} queued — waiting for Pi to pick up (polls every 5s)…`, 'ok');
+      setLabel('WAITING…');
 
-    async function waitForAck(unitId, cmd, logId) {
-      for (let i = 0; i < 8; i++) {
-        await new Promise(r => setTimeout(r, 2000));
+      // Poll for ACK — Pi picks up commands every 5s and ACKs before executing
+      const deadline = Date.now() + ACK_WAIT * 1000;
+      let acked = false;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 3000));
         try {
-          const r = await fetch(`${RELAY}/api/unit/acks/${unitId}`);
-          const acks = await r.json();
-          if (acks.some(a => a.command === cmd)) {
-            addLog(logId, `${cmd.toUpperCase()} acknowledged — Pi is executing`, 'ok');
-            return;
-          }
+          const ar = await fetch(`${RELAY}/api/unit/acks/${id}`, {signal: AbortSignal.timeout(5000)});
+          const acks = await ar.json();
+          if (acks.some(a => a.command===cmd)) { acked=true; break; }
         } catch(e) {}
+        const remaining = Math.round((deadline-Date.now())/1000);
+        setLabel(`WAITING ${remaining}s`);
       }
-      addLog(logId, `${cmd.toUpperCase()} queued — no ack yet (Pi may be offline)`, 'warn');
+
+      if (acked) {
+        setLabel(cmd==='reboot'?'REBOOTING…':'UPDATING…', 'ok');
+        addLog(id, `${cmd.toUpperCase()} acknowledged — Pi is executing`, 'ok');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, cmd==='reboot'?15000:30000);
+      } else {
+        setLabel('NO ACK', 'err');
+        addLog(id, `${cmd.toUpperCase()} — no acknowledgement after ${ACK_WAIT}s. Pi may be offline or slow.`, 'warn');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+      }
     }
 
-    async function rebootUnit(id, ip, btn) {
-      if (!confirm(`Reboot ${id}?`)) return;
-      if (btn) { btn.disabled = true; btn.textContent = 'QUEUING…'; }
-      const ok = await sendRelayCmd(id, 'reboot');
-      addLog(id, ok ? 'Reboot queued via relay — waiting for Pi to pick up…' : 'Relay unreachable', ok ? 'warn' : 'err');
-      if (btn) { btn.disabled = false; btn.textContent = 'REBOOT'; }
-      if (ok) waitForAck(id, 'reboot', id);
-    }
-
-    async function updateUnit(id, btn) {
-      if (btn) { btn.disabled = true; btn.textContent = 'QUEUING…'; }
-      const ok = await sendRelayCmd(id, 'update');
-      addLog(id, ok ? 'Update queued via relay — waiting for Pi to pick up…' : 'Relay unreachable', ok ? 'ok' : 'err');
-      if (btn) { btn.disabled = false; btn.textContent = 'UPDATE'; }
-      if (ok) waitForAck(id, 'update', id);
-    }
-
-    function viewLogs(id) {
-      addLog(id, 'Log view requested', '');
-    }
-
-    function openUnit(ip) {
-      window.open(`http://${ip}:5001`, '_blank');
-    }
-
+    // ── Bulk actions ──────────────────────────────────────────────────────────
     function pushUpdate() {
-      if (!confirm('Push update to all online units?')) return;
-      units.forEach(u => {
-        sendRelayCmd(u.id, 'update')
-          .then(ok => {
-            addLog(u.id, ok ? 'Update queued via relay' : 'Relay unreachable', ok ? 'ok' : 'err');
-            if (ok) waitForAck(u.id, 'update', u.id);
-          });
-      });
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to update', 'warn'); return; }
+      if (!confirm(`Push update to ${online.length} online unit(s)?`)) return;
+      online.forEach(u => cmdUnit(u.unit_id, 'update', null));
     }
 
     function syncAll() {
-      units.filter(u=>u.status==='online').forEach(u => {
-        fetch(`http://${u.ip}:5001/api/launches/invalidate`, {method:'POST'}).catch(()=>{});
-        addLog(u.id, 'Force sync sent', 'ok');
-      });
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to sync', 'warn'); return; }
+      online.forEach(u => cmdUnit(u.unit_id, 'refresh', null));
     }
 
     function rebootAll() {
-      if (!confirm('Reboot ALL online units?')) return;
-      units.forEach(u => {
-        sendRelayCmd(u.id, 'reboot')
-          .then(ok => {
-            addLog(u.id, ok ? 'Reboot queued via relay' : 'Relay unreachable', ok ? 'warn' : 'err');
-            if (ok) waitForAck(u.id, 'reboot', u.id);
-          });
-      });
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to reboot', 'warn'); return; }
+      if (!confirm(`Reboot ALL ${online.length} online unit(s)?`)) return;
+      online.forEach(u => cmdUnit(u.unit_id, 'reboot', null));
+    }
+
+    function removeUnit(id) {
+      if (!confirm(`Remove ${id} from list? It will reappear when it next pings in.`)) return;
+      delete units[id];
+      delete cmdState[id];
+      if (expandedId===id) expandedId=null;
+      updateStats(); renderUnits();
     }
 
     function exportLogs() {
@@ -570,54 +567,49 @@
       a.click();
     }
 
-    // ── Heartbeat polling — direct first, relay fallback ─────────────────────
-    async function pollUnit(u) {
-      try {
-        const start = Date.now();
-        const r = await fetch(`http://${u.ip}:5001/api/launches`, {signal: AbortSignal.timeout(3000)});
-        const d = await r.json();
-        u.ping = Date.now() - start;
-        u.status = 'online';
-        u.lastSeen = Date.now();
-        u.launch = d.launches?.[0]?.name || '—';
-        const dr = await fetch(`http://${u.ip}:5001/api/device`, {signal: AbortSignal.timeout(3000)});
-        const dd = await dr.json();
-        u.version = dd.version || u.version;
-        u.mac = dd.mac || u.mac;
-      } catch(e) {
-        // Direct unreachable — check relay for last heartbeat
-        try {
-          const rr = await fetch(`${RELAY}/api/units`, {signal: AbortSignal.timeout(5000)});
-          const all = await rr.json();
-          const ru = all[u.id];
-          if (ru && (Date.now()/1000 - ru.last_seen) < 180) {
-            u.status = 'online';
-            u.version = ru.version || u.version;
-            u.lastSeen = ru.last_seen * 1000;
-            u.ping = null;
-          } else {
-            u.status = 'offline';
-          }
-        } catch(e2) {
-          u.status = 'offline';
-        }
-      }
-    }
-
+    // ── Poll relay for live unit data ─────────────────────────────────────────
     async function pollAll() {
-      await Promise.all(units.map(pollUnit));
+      const syncEl = document.getElementById('sync-time');
+      syncEl.textContent = 'SYNCING…';
+      try {
+        const r = await fetch(`${RELAY}/api/units`, {signal: AbortSignal.timeout(8000)});
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        relayOk = true;
+
+        const now = Date.now()/1000;
+        // Merge relay data into units dict
+        Object.entries(data).forEach(([id, u]) => {
+          const wasOnline = units[id]?._online;
+          u._online = (now - (u.last_seen||0)) < ONLINE_TTL;
+          units[id] = u;
+          // Log state changes
+          if (wasOnline===true && !u._online)  addLog(id, 'Unit went OFFLINE', 'err');
+          if (wasOnline===false && u._online)  addLog(id, 'Unit back ONLINE', 'ok');
+          if (wasOnline===undefined && u._online) addLog(id, `Unit discovered · v${u.version||'?'}`, 'ok');
+        });
+        // Mark units in our dict but not in relay response as offline
+        Object.keys(units).forEach(id => {
+          if (!data[id]) units[id]._online = false;
+        });
+
+        syncEl.textContent = 'LAST SYNC: ' + tsNow();
+        syncEl.style.color = '';
+      } catch(e) {
+        relayOk = false;
+        syncEl.textContent = '⚠ RELAY UNREACHABLE';
+        syncEl.style.color = '#ff4422';
+        addLog('RELAY', `Poll failed: ${e.message}`, 'err');
+      }
       updateStats();
       renderUnits();
-      document.getElementById('sync-time').textContent =
-        'LAST SYNC: ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) + ' UTC';
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
     renderLogs();
-    updateStats();
     renderUnits();
     pollAll();
-    setInterval(pollAll, 30000); // poll every 30 seconds
+    setInterval(pollAll, POLL_MS);
   </script>
 </body>
 </html>
