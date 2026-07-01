@@ -904,6 +904,10 @@ def settings_page():
 def wifi_page():
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'wifi.html')
 
+@app.route('/dashboard')
+def dashboard_page():
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'dashboard.html')
+
 @app.route('/positioner')
 def positioner_page():
     return send_from_directory(os.path.join(BASE_DIR, 'static'), 'asset-positioner.html')
