@@ -52,6 +52,16 @@
     }
     #btn-launches:hover { background: rgba(74,158,222,0.35); }
 
+    #btn-wake {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
     #page-frame {
       display: none;
       position: absolute;
@@ -189,6 +199,7 @@
     <canvas id="c" width="800" height="480"></canvas>
     <button id="btn-test">TEST LAUNCH</button>
     <button id="btn-launches" onclick="showPage('/launches')">LAUNCHES & EVENTS</button>
+    <button id="btn-wake" onclick="disableNightMode()" title="Tap to wake"></button>
     <iframe id="page-frame" src="about:blank"></iframe>
 
     <div id="info-bar">

@@ -2580,6 +2580,17 @@ const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────
+async function disableNightMode() {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({display_mode: 'auto'}),
+    });
+    if (state.settings) state.settings.display_mode = 'auto';
+  } catch(e) {}
+}
+
 async function pollSettings() {
   try {
     const r = await fetch('/api/settings', {cache:'no-store'});
@@ -2657,13 +2668,19 @@ function render(now) {
   lastFrame = now;
   try {
 
-  const _infoBar = document.getElementById('info-bar');
+  const _infoBar   = document.getElementById('info-bar');
+  const _btnLaunch = document.getElementById('btn-launches');
+  const _btnWake   = document.getElementById('btn-wake');
   if (isNightMode()) {
-    if (_infoBar) _infoBar.style.opacity = '0';
+    if (_infoBar)   _infoBar.style.opacity   = '0';
+    if (_btnLaunch) _btnLaunch.style.display  = 'none';
+    if (_btnWake)   _btnWake.style.display    = 'block';
     drawNightMode();
     return;
   }
-  if (_infoBar) _infoBar.style.opacity = '1';
+  if (_infoBar)   _infoBar.style.opacity   = '1';
+  if (_btnLaunch) _btnLaunch.style.display  = '';
+  if (_btnWake)   _btnWake.style.display    = 'none';
 
   // ── Updates ──
   updateClouds();
