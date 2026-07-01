@@ -2580,15 +2580,9 @@ const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────
-async function disableNightMode() {
-  try {
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({display_mode: 'auto'}),
-    });
-    if (state.settings) state.settings.display_mode = 'auto';
-  } catch(e) {}
+function disableNightMode() {
+  // Local 1-hour wake override — instant, no API call, works even in auto night mode
+  state._nightWakeUntil = Date.now() + 60 * 60 * 1000;
 }
 
 async function pollSettings() {
@@ -2641,7 +2635,7 @@ function drawNightMode() {
   }
 
   // Touch to wake hint — slow breathe, bottom of screen
-  ctx.fillStyle = `rgba(255,255,255,${0.06 + pulse * 0.06})`;
+  ctx.fillStyle = `rgba(255,255,255,${0.25 + pulse * 0.15})`;
   ctx.font = '11px "Press Start 2P"';
   ctx.textAlign = 'center';
   ctx.fillText('TOUCH TO WAKE', W/2, H - 40);
@@ -2651,6 +2645,8 @@ function drawNightMode() {
 }
 
 function isNightMode() {
+  // Wake override — tapping screen suppresses night mode for 1 hour
+  if (state._nightWakeUntil && Date.now() < state._nightWakeUntil) return false;
   const mode = state.settings?.display_mode || 'auto';
   if (mode === 'night') return true;
   if (mode === 'bright') return false;
