@@ -2622,7 +2622,14 @@ async function pollSettings() {
   try {
     const r = await fetch('/api/settings', {cache:'no-store'});
     const s = await r.json();
-    if (s && state.settings) state.settings = {...state.settings, ...s};
+    if (s && state.settings) {
+      // If sleep mode was explicitly set, clear any tap-to-wake override
+      if (s.screen_mode === 'sleep' && state.settings.screen_mode !== 'sleep') {
+        state._nightWakeUntil = null;
+        try { localStorage.removeItem('_nightWakeUntil'); } catch(e) {}
+      }
+      state.settings = {...state.settings, ...s};
+    }
   } catch(e) {}
 }
 setInterval(pollSettings, 5000);

@@ -1159,19 +1159,17 @@ def api_settings():
         with _weather_lock:
             _weather_cache['data']    = None
             _weather_cache['fetched'] = 0
-    # Immediately apply backlight based on screen_mode
-    mode = settings.get('display_mode', 'auto')
+    # Immediately apply backlight using screen_mode (not display_mode which can mislead)
+    sm  = settings.get('screen_mode', 'auto')
+    pct = int(settings.get('brightness', 40))
+    manual_raw = int(pct * 2.55)
     bp = _backlight_path()
     if bp:
         try:
-            if mode == 'night':
-                open(bp, 'w').write('51')        # dim but visible 20%
-            elif mode == 'bright':
-                open(bp, 'w').write('255')
-            elif mode == 'auto':
-                # Restore manual brightness preference while auto takes over
-                pct = int(settings.get('brightness', 40))
-                open(bp, 'w').write(str(int(pct * 2.55)))
+            if sm == 'sleep':
+                open(bp, 'w').write(str(max(51, min(manual_raw, 102))))
+            else:  # auto or always_on — restore manual preference
+                open(bp, 'w').write(str(manual_raw))
         except Exception:
             pass
     return jsonify({'ok': True, 'settings': settings})
