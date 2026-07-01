@@ -2703,10 +2703,9 @@ function isNightMode() {
   // Safety: never sleep if launch is within 30 minutes regardless of mode
   if (minsToLaunch < 30) return false;
 
-  if (sm === 'sleep')     return true;
   if (sm === 'always_on') return false;
 
-  // auto: sleep when nighttime AND no launch within 3 hours
+  // Both 'sleep' and 'auto' respect sunrise/sunset — sleep just activates immediately
   const wx = state.weather || {};
   const isNight = !!(wx.sunrise && wx.sunset && (() => {
     try {
@@ -2714,6 +2713,8 @@ function isNightMode() {
       return now < new Date(wx.sunrise) || now > new Date(wx.sunset);
     } catch(e) { return false; }
   })());
+  // sleep = activate now (no launch timing check), auto = only when launch > 3h away
+  if (sm === 'sleep') return isNight;
   return isNight && minsToLaunch > 180;
 }
 
