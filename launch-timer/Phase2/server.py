@@ -1122,14 +1122,17 @@ def invalidate_launches():
 def api_settings():
     if request.method == 'GET':
         return jsonify(_load_settings())
+    changed  = request.get_json() or {}
     settings = _load_settings()
-    settings.update(request.get_json() or {})
+    settings.update(changed)
     _save_settings(settings)
-    global _location_cache
-    _location_cache = None
-    with _weather_lock:
-        _weather_cache['data']    = None
-        _weather_cache['fetched'] = 0
+    # Only clear weather cache when site changes — not for brightness/display_mode/etc
+    if 'site' in changed:
+        global _location_cache
+        _location_cache = None
+        with _weather_lock:
+            _weather_cache['data']    = None
+            _weather_cache['fetched'] = 0
     # Immediately apply backlight when display_mode is explicitly set
     mode = settings.get('display_mode', 'auto')
     bp = _backlight_path()

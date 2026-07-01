@@ -2136,10 +2136,13 @@ async function fetchData(afterLaunch=false) {
 
     const hadData = state.launches.length > 0;
     state.launches    = newLaunches;
-    state.weather     = data.weather    || state.weather;
+    // Only overwrite weather if data looks real (not the 'Loading...' default)
+    if (data.weather && data.weather.label !== 'Loading...') {
+      state.weather = data.weather;
+      try { localStorage.setItem('_wx', JSON.stringify(state.weather)); } catch(e) {}
+    }
     state.liftoffWx   = data.liftoff_wx || null;
     state.settings    = data.settings   || state.settings;
-    try { localStorage.setItem('_wx', JSON.stringify(state.weather)); } catch(e) {}
     try { localStorage.setItem('_settings', JSON.stringify(state.settings)); } catch(e) {}
     state.version     = data.version  || state.version || '';
     state.dataAge     = data.age_seconds || 0;
