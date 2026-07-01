@@ -469,12 +469,17 @@
           ? `<span class="ts-badge" title="Tailscale: ${tsIp}" onclick="copySSH('${tsIp}');event.stopPropagation()">TS ✓</span>`
           : '';
 
+        const launchShort = u.current_launch
+          ? u.current_launch.split(' | ').pop().replace(/\s*\(.*?\)/g,'').trim().slice(0,28)
+          : '—';
+        const dimIcon = u.display_mode==='night'?'🌙 ':u.display_mode==='bright'?'☀ ':'';
+
         let html = `<div class="unit-row ${isExp?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${id}')">
           <div class="status-dot ${dotCls}"></div>
           <div class="unit-id">${nameHtml}${tsBadge}${cmdBadge}</div>
-          <div class="unit-loc">${u.site||'—'}</div>
+          <div class="unit-loc">${dimIcon}${u.site||'—'}</div>
           <div class="unit-wifi">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div>
-          <div class="unit-launch">${(u.version||'?').replace(/^v/,'').slice(0,7)}</div>
+          <div class="unit-launch" style="font-size:6px;color:rgba(255,211,61,0.7);">${launchShort}</div>
           <div class="unit-version"><span class="ver-badge ${verCls}">${isOutdated?'OUTDATED':'CURRENT'}</span></div>
           <div class="unit-seen">${seenStr}</div>
         </div>`;
@@ -514,6 +519,9 @@
               ${tsIp ? `<button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="copySSH('${tsIp}');event.stopPropagation()">COPY SSH</button>` : ''}
               ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:#ffd93d;" onclick="openLog('${id}','${tsIp}');event.stopPropagation()">VIEW LOG</button>` : ''}
               ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:#00e87a;" onclick="openUnit('${tsIp}');event.stopPropagation()">OPEN UI ↗</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:${u.display_mode==='night'?'#ffd93d':'rgba(255,211,61,0.35)'};" onclick="setDisplayMode('${tsIp}','${id}','night');event.stopPropagation()">🌙 NIGHT</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#fff;color:${u.display_mode==='bright'?'#fff':'rgba(255,255,255,0.25)'};" onclick="setDisplayMode('${tsIp}','${id}','bright');event.stopPropagation()">☀ BRIGHT</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:${(!u.display_mode||u.display_mode==='auto')?'#00e87a':'rgba(0,232,122,0.3)'};" onclick="setDisplayMode('${tsIp}','${id}','auto');event.stopPropagation()">⟳ AUTO</button>` : ''}
               <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
             </div>
             <div class="detail-controls" onclick="event.stopPropagation()">
@@ -608,6 +616,19 @@
         addLog(id, `${cmd} → ✗ no response after ${ACK_WAIT}s`, 'err');
         setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
       }
+    }
+
+    // ── Display mode (night/bright/auto) ─────────────────────────────────────
+    async function setDisplayMode(tsIp, id, mode) {
+      try {
+        await fetchWithTimeout(`http://${tsIp}:5001/api/settings`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({display_mode: mode}),
+        }, 5000);
+        if (units[id]) units[id].display_mode = mode;
+        addLog(id, `Display mode → ${mode.toUpperCase()}`, 'ok');
+        renderUnits();
+      } catch(e) { addLog(id, `Mode change failed: ${e.message}`, 'err'); }
     }
 
     // ── Brightness control ────────────────────────────────────────────────────

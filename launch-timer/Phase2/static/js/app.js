@@ -2577,11 +2577,78 @@ let lastFrame = 0;
 const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
+function drawNightMode() {
+  const launch  = currentLaunch();
+  const pulse   = 0.4 + 0.15 * Math.sin(Date.now() / 3000);
+
+  // Near-black background
+  ctx.fillStyle = '#010305';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle star field
+  ctx.fillStyle = `rgba(255,255,255,${pulse * 0.6})`;
+  [[80,40],[200,70],[350,30],[500,55],[650,40],[750,80],[120,100],[420,90],[580,20]].forEach(([x,y]) => {
+    ctx.fillRect(x, y, 1, 1);
+  });
+
+  // Time (large, center)
+  const now2 = new Date();
+  const timeStr = now2.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  ctx.fillStyle = `rgba(255,255,255,${0.15 + pulse * 0.1})`;
+  ctx.font = '48px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(timeStr, W/2, H/2 - 30);
+
+  // Next launch info
+  if (launch) {
+    const nm    = (launch.name||'').split(' | ').pop().replace(/\s*\(.*?\)/g,'').trim();
+    const cd    = computeCountdown(launch.t0);
+    let cdStr   = 'TBD';
+    if (cd && cd !== 'LAUNCHED') {
+      const {days,hours,minutes} = cd;
+      cdStr = days > 0 ? `T- ${days}d ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}` : `T- ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+    }
+    ctx.fillStyle = `rgba(0,232,122,${0.35 + pulse * 0.15})`;
+    ctx.font = '9px "Press Start 2P"';
+    ctx.fillText(nm.length > 36 ? nm.slice(0,34)+'…' : nm, W/2, H/2 + 30);
+    ctx.fillStyle = `rgba(255,255,255,${0.2 + pulse * 0.08})`;
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillText(cdStr, W/2, H/2 + 52);
+  }
+
+  ctx.textBaseline = 'alphabetic';
+  drawGearIcon();
+}
+
+function isNightMode() {
+  const mode = state.settings?.display_mode || 'auto';
+  if (mode === 'night') return true;
+  if (mode === 'bright') return false;
+  // auto: night mode when it's actually nighttime AND no launch within 12 hours
+  const wx = state.weather || {};
+  const launch = currentLaunch();
+  const isNight = !!(wx.sunrise && wx.sunset && (() => {
+    try {
+      const now = new Date();
+      const sr  = new Date(wx.sunrise); const ss = new Date(wx.sunset);
+      return now < sr || now > ss;
+    } catch(e) { return false; }
+  })());
+  const launchSoon = launch?.t0 && (new Date(launch.t0) - new Date()) < 12 * 3600000;
+  return isNight && !launchSoon;
+}
+
 function render(now) {
   requestAnimationFrame(render);
   if (now - lastFrame < FRAME_MS) return;
   lastFrame = now;
   try {
+
+  if (isNightMode()) {
+    drawNightMode();
+    return;
+  }
 
   // ── Updates ──
   updateClouds();

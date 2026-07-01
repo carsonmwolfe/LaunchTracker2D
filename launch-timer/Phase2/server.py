@@ -97,7 +97,7 @@ def _load_settings():
         with open(SETTINGS_FILE) as f:
             return json.load(f)
     except Exception:
-        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': '', 'auto_dim': True}
+        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': '', 'auto_dim': True, 'display_mode': 'auto'}
 
 def _save_settings(data):
     try:
@@ -805,8 +805,11 @@ def _ping_relay():
                 'disk_pct':     _get_disk_pct(),
                 'mem_free_mb':  mem.get('free'),
                 'mem_total_mb': mem.get('total'),
-                'data_age':     data_age,
-                'brightness':   settings.get('brightness', 40),
+                'data_age':        data_age,
+                'brightness':      settings.get('brightness', 40),
+                'display_mode':    settings.get('display_mode', 'auto'),
+                'current_launch':  (_data_cache.get('launches') or [{}])[0].get('name', ''),
+                'current_t0':      (_data_cache.get('launches') or [{}])[0].get('t0', ''),
             }, timeout=5)
         except Exception:
             pass
@@ -885,27 +888,36 @@ def _fetch_sun_times():
 def _auto_brightness():
     while True:
         try:
-            if not _load_settings().get('auto_dim', True):
+            settings = _load_settings()
+            display_mode = settings.get('display_mode', 'auto')
+
+            # display_mode overrides auto_dim
+            if display_mode == 'night':
+                brightness = 10  # nearly off
+            elif display_mode == 'bright':
+                brightness = 255
+            elif not settings.get('auto_dim', True):
                 time.sleep(300)
                 continue
-            sr_ts, ss_ts = _fetch_sun_times()
-            if sr_ts and ss_ts:
-                now_ts    = time.time()
-                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
-                after_sr  = now_ts - sr_ts
-                before_ss = ss_ts - now_ts
-                if after_sr < 0 or before_ss < 0:
-                    brightness = NIGHT_MIN
-                elif after_sr < FADE_SECS:
-                    brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * after_sr / FADE_SECS)
-                elif before_ss < FADE_SECS:
-                    brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * before_ss / FADE_SECS)
-                else:
-                    brightness = DAY_MAX
-                sr_lt = datetime.fromtimestamp(sr_ts).strftime('%H:%M')
-                ss_lt = datetime.fromtimestamp(ss_ts).strftime('%H:%M')
-                print(f'[{_ts()}] Auto brightness → {brightness} '
-                      f'(sr={sr_lt} ss={ss_lt} now={datetime.now().strftime("%H:%M")})')
+            else:
+                sr_ts, ss_ts = _fetch_sun_times()
+                brightness = None
+                if sr_ts and ss_ts:
+                    now_ts    = time.time()
+                    DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
+                    after_sr  = now_ts - sr_ts
+                    before_ss = ss_ts - now_ts
+                    if after_sr < 0 or before_ss < 0:
+                        brightness = NIGHT_MIN
+                    elif after_sr < FADE_SECS:
+                        brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * after_sr / FADE_SECS)
+                    elif before_ss < FADE_SECS:
+                        brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * before_ss / FADE_SECS)
+                    else:
+                        brightness = DAY_MAX
+
+            if brightness is not None:
+                print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
                 try:
                     bp = _backlight_path()
                     if bp:
