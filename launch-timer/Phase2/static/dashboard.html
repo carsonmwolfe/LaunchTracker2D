@@ -276,7 +276,7 @@
         <input class="search-input" placeholder="Search unit ID or location..." id="search-input" oninput="renderUnits()">
       </div>
 
-      <div class="unit-list" id="unit-list"></div>
+      <div class="unit-list" id="unit-list"><div style="padding:24px 14px;font-size:7px;color:rgba(255,255,255,0.3);">CONNECTING TO RELAY…</div></div>
 
       <div class="log-panel">
         <div class="log-header">> ACTIVITY LOG</div>
@@ -286,10 +286,18 @@
   </div>
 
   <script>
-    const RELAY = 'http://45.55.245.193';
+    const RELAY      = 'http://45.55.245.193';
     const ONLINE_TTL = 180;   // seconds — unit considered offline if not seen in 3 min
-    const POLL_MS    = 15000; // poll relay every 15s (was 30s)
+    const POLL_MS    = 15000; // poll relay every 15s
     const ACK_WAIT   = 60;    // seconds to wait for ack before giving up
+
+    // fetch with timeout that works in all browsers (no AbortSignal.timeout)
+    function fetchWithTimeout(url, opts={}, ms=8000) {
+      return Promise.race([
+        fetch(url, opts),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after '+ms+'ms')), ms)),
+      ]);
+    }
 
     let units = {};           // keyed by unit_id, populated from relay
     let currentFilter = 'all';
@@ -484,12 +492,11 @@
 
       let relayReached = false;
       try {
-        const r = await fetch(`${RELAY}/api/unit/command`, {
+        const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({unit_id:id, command:cmd}),
-          signal: AbortSignal.timeout(8000),
-        });
+        }, 8000);
         relayReached = r.ok;
       } catch(e) {
         relayReached = false;
@@ -511,7 +518,7 @@
       while (Date.now() < deadline) {
         await new Promise(r => setTimeout(r, 3000));
         try {
-          const ar = await fetch(`${RELAY}/api/unit/acks/${id}`, {signal: AbortSignal.timeout(5000)});
+          const ar = await fetchWithTimeout(`${RELAY}/api/unit/acks/${id}`, {}, 5000);
           const acks = await ar.json();
           if (acks.some(a => a.command===cmd)) { acked=true; break; }
         } catch(e) {}
@@ -572,7 +579,7 @@
       const syncEl = document.getElementById('sync-time');
       syncEl.textContent = 'SYNCING…';
       try {
-        const r = await fetch(`${RELAY}/api/units`, {signal: AbortSignal.timeout(8000)});
+        const r = await fetchWithTimeout(`${RELAY}/api/units`, {}, 8000);
         if (!r.ok) throw new Error('HTTP '+r.status);
         const data = await r.json();
         relayOk = true;
