@@ -472,7 +472,7 @@
         const launchShort = u.current_launch
           ? u.current_launch.split(' | ').pop().replace(/\s*\(.*?\)/g,'').trim().slice(0,28)
           : '—';
-        const dimIcon = u.display_mode==='night'?'🌙 ':u.display_mode==='bright'?'☀ ':'';
+        const dimIcon = u.screen_mode==='sleep'?'🌙 ':u.screen_mode==='always_on'?'☀ ':'';
 
         let html = `<div class="unit-row ${isExp?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${id}')">
           <div class="status-dot ${dotCls}"></div>
@@ -519,9 +519,9 @@
               ${tsIp ? `<button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="copySSH('${tsIp}');event.stopPropagation()">COPY SSH</button>` : ''}
               ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:#ffd93d;" onclick="openLog('${id}','${tsIp}');event.stopPropagation()">VIEW LOG</button>` : ''}
               ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:#00e87a;" onclick="openUnit('${tsIp}');event.stopPropagation()">OPEN UI ↗</button>` : ''}
-              ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:${u.display_mode==='night'?'#ffd93d':'rgba(255,211,61,0.35)'};" onclick="setDisplayMode('${tsIp}','${id}','night');event.stopPropagation()">🌙 NIGHT</button>` : ''}
-              ${tsIp ? `<button class="hbtn" style="border-color:#fff;color:${u.display_mode==='bright'?'#fff':'rgba(255,255,255,0.25)'};" onclick="setDisplayMode('${tsIp}','${id}','bright');event.stopPropagation()">☀ BRIGHT</button>` : ''}
-              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:${(!u.display_mode||u.display_mode==='auto')?'#00e87a':'rgba(0,232,122,0.3)'};" onclick="setDisplayMode('${tsIp}','${id}','auto');event.stopPropagation()">⟳ AUTO</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:${u.screen_mode==='sleep'?'#ffd93d':'rgba(255,211,61,0.35)'};" onclick="setDisplayMode('${tsIp}','${id}','sleep');event.stopPropagation()">🌙 SLEEP</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#fff;color:${u.screen_mode==='always_on'?'#fff':'rgba(255,255,255,0.25)'};" onclick="setDisplayMode('${tsIp}','${id}','always_on');event.stopPropagation()">● ALWAYS ON</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:${(!u.screen_mode||u.screen_mode==='auto')?'#00e87a':'rgba(0,232,122,0.3)'};" onclick="setDisplayMode('${tsIp}','${id}','auto');event.stopPropagation()">⟳ AUTO</button>` : ''}
               <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
             </div>
             <div class="detail-controls" onclick="event.stopPropagation()">
@@ -623,9 +623,9 @@
       try {
         await fetchWithTimeout(`http://${tsIp}:5001/api/settings`, {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({display_mode: mode}),
+          body: JSON.stringify({screen_mode: mode}),
         }, 5000);
-        if (units[id]) units[id].display_mode = mode;
+        if (units[id]) units[id].screen_mode = mode;
         addLog(id, `Display mode → ${mode.toUpperCase()}`, 'ok');
         renderUnits();
       } catch(e) { addLog(id, `Mode change failed: ${e.message}`, 'err'); }

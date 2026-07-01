@@ -92,12 +92,27 @@ def _send_alert(subject, body):
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
+_SCREEN_MODE_MAP = {
+    'auto':      {'auto_dim': True,  'display_mode': 'auto'},
+    'always_on': {'auto_dim': False, 'display_mode': 'bright'},
+    'sleep':     {'auto_dim': True,  'display_mode': 'night'},
+}
+
 def _load_settings():
     try:
         with open(SETTINGS_FILE) as f:
-            return json.load(f)
+            s = json.load(f)
+        # Derive screen_mode from legacy fields if not present
+        if 'screen_mode' not in s:
+            dm = s.get('display_mode', 'auto')
+            ad = s.get('auto_dim', True)
+            if dm == 'night':   s['screen_mode'] = 'sleep'
+            elif not ad:        s['screen_mode'] = 'always_on'
+            else:               s['screen_mode'] = 'auto'
+        return s
     except Exception:
-        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local', 'unit_id': '', 'auto_dim': True, 'display_mode': 'auto'}
+        return {'brightness': 40, 'temp_unit': 'f', 'site': 'cape', 'time_format': 'local',
+                'unit_id': '', 'auto_dim': True, 'display_mode': 'auto', 'screen_mode': 'auto'}
 
 def _save_settings(data):
     try:
@@ -891,14 +906,18 @@ def _auto_brightness():
             settings = _load_settings()
             display_mode = settings.get('display_mode', 'auto')
 
-            # display_mode overrides auto_dim
-            SLEEP_MIN = 51  # floor for sleep/night mode — always visible
-            if display_mode == 'night':
-                # Respect manual brightness but never go below SLEEP_MIN
+            # screen_mode drives all brightness decisions
+            SLEEP_MIN    = 51
+            screen_mode  = settings.get('screen_mode', 'auto')
+            display_mode = settings.get('display_mode', 'auto')
+            if screen_mode == 'always_on' or display_mode == 'bright':
+                # Respect manual brightness exactly — no auto changes
                 manual = int(settings.get('brightness', 40) * 2.55)
-                brightness = max(SLEEP_MIN, min(manual, 102))  # cap at 40% in sleep
-            elif display_mode == 'bright':
-                brightness = 255
+                brightness = max(0, min(255, manual))
+            elif screen_mode == 'sleep' or display_mode == 'night':
+                # Sleep: respect manual pref but floor at SLEEP_MIN, cap at 40%
+                manual = int(settings.get('brightness', 40) * 2.55)
+                brightness = max(SLEEP_MIN, min(manual, 102))
             elif not settings.get('auto_dim', True):
                 time.sleep(300)
                 continue
@@ -1128,15 +1147,19 @@ def api_settings():
     changed  = request.get_json() or {}
     settings = _load_settings()
     settings.update(changed)
+    # Translate screen_mode → auto_dim + display_mode
+    if 'screen_mode' in changed:
+        mapped = _SCREEN_MODE_MAP.get(changed['screen_mode'], {})
+        settings.update(mapped)
     _save_settings(settings)
-    # Only clear weather cache when site changes — not for brightness/display_mode/etc
+    # Only clear weather cache when site changes
     if 'site' in changed:
         global _location_cache
         _location_cache = None
         with _weather_lock:
             _weather_cache['data']    = None
             _weather_cache['fetched'] = 0
-    # Immediately apply backlight when display_mode is explicitly set
+    # Immediately apply backlight based on screen_mode
     mode = settings.get('display_mode', 'auto')
     bp = _backlight_path()
     if bp:

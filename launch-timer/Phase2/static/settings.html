@@ -302,11 +302,12 @@
         </div>
 
         <div class="setting-cell bot">
-          <div class="s-label">AUTO DIM</div>
-          <div class="s-sub">Dim screen 10pm–6am</div>
-          <div class="s-control" style="flex-direction:row;">
-            <button class="tog" id="dim-on"  onclick="setAutoDim(true)">ON</button>
-            <button class="tog" id="dim-off" onclick="setAutoDim(false)">OFF</button>
+          <div class="s-label">DISPLAY</div>
+          <div class="s-sub">Screen &amp; brightness</div>
+          <div class="s-control" style="flex-direction:column; gap:4px;">
+            <button class="tog" id="mode-auto"      onclick="setScreenMode('auto')">⟳ AUTO</button>
+            <button class="tog" id="mode-always_on" onclick="setScreenMode('always_on')">● ALWAYS ON</button>
+            <button class="tog yellow" id="mode-sleep" onclick="setScreenMode('sleep')">🌙 SLEEP NOW</button>
           </div>
         </div>
 
@@ -379,7 +380,7 @@
   </div>
 
   <script>
-    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'', timezone:'America/New_York', auto_dim:true };
+    let settings = { brightness:40, temp_unit:'f', site:'cape', time_format:'local', unit_id:'', timezone:'America/New_York', auto_dim:true, screen_mode:'auto' };
 
     // Show first-run banner if redirected from home with ?setup=1
     if (new URLSearchParams(window.location.search).get('setup') === '1') {
@@ -415,8 +416,10 @@
       document.getElementById('time-site').classList.toggle('active',  settings.time_format === 'site');
       document.getElementById('time-local').classList.toggle('active', settings.time_format === 'local');
       document.getElementById('tz-select').value = settings.timezone || 'America/New_York';
-      document.getElementById('dim-on').classList.toggle('active',  settings.auto_dim !== false);
-      document.getElementById('dim-off').classList.toggle('active', settings.auto_dim === false);
+      const sm = settings.screen_mode || (settings.auto_dim === false ? 'always_on' : 'auto');
+      document.getElementById('mode-auto').classList.toggle('active',      sm === 'auto');
+      document.getElementById('mode-always_on').classList.toggle('active', sm === 'always_on');
+      document.getElementById('mode-sleep').classList.toggle('active',     sm === 'sleep');
       // unit_id managed server-side via MAC address
     }
 
@@ -460,11 +463,11 @@
     }
 
 
-    function setAutoDim(v) {
-      settings.auto_dim = v;
-      document.getElementById('dim-on').classList.toggle('active',  v === true);
-      document.getElementById('dim-off').classList.toggle('active', v === false);
-      if (window._setAutoDim) window._setAutoDim(v);
+    function setScreenMode(mode) {
+      settings.screen_mode = mode;
+      document.getElementById('mode-auto').classList.toggle('active',      mode === 'auto');
+      document.getElementById('mode-always_on').classList.toggle('active', mode === 'always_on');
+      document.getElementById('mode-sleep').classList.toggle('active',     mode === 'sleep');
       saveSettings();
     }
 

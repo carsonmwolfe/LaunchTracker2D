@@ -2584,15 +2584,15 @@ const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────
 async function disableNightMode() {
-  const mode = state.settings?.display_mode || 'auto';
-  if (mode === 'night') {
-    // Forced night — reset to auto via API so it doesn't come back after local override expires
+  const sm = state.settings?.screen_mode || (state.settings?.display_mode === 'night' ? 'sleep' : 'auto');
+  if (sm === 'sleep') {
+    // Forced sleep — reset to auto via API so it doesn't come back after local override expires
     try {
       await fetch('/api/settings', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({display_mode: 'auto'}),
+        body: JSON.stringify({screen_mode: 'auto'}),
       });
-      if (state.settings) state.settings.display_mode = 'auto';
+      if (state.settings) { state.settings.screen_mode = 'auto'; state.settings.display_mode = 'auto'; }
     } catch(e) {}
   }
   // Wake until next sunrise — compute from weather data, fall back to 6 hours
@@ -2607,8 +2607,15 @@ async function disableNightMode() {
     }
   } catch(e) {}
   state._nightWakeUntil = wakeUntil;
-  // Persist across refreshes
   try { localStorage.setItem('_nightWakeUntil', String(wakeUntil)); } catch(e) {}
+  // Restore manual brightness — don't blast to 100%
+  const pref = state.settings?.brightness || 40;
+  try {
+    await fetch('/api/settings/brightness', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({value: pref}),
+    });
+  } catch(e) {}
 }
 
 async function pollSettings() {
@@ -2681,15 +2688,16 @@ function isNightMode() {
   // Wake override active — user tapped, stay awake until next sunrise
   if (state._nightWakeUntil && Date.now() < state._nightWakeUntil) return false;
 
-  const mode    = state.settings?.display_mode || 'auto';
-  const launch  = currentLaunch();
+  // Unified screen_mode — falls back to legacy display_mode if not set
+  const sm     = state.settings?.screen_mode || (state.settings?.display_mode === 'night' ? 'sleep' : state.settings?.display_mode === 'bright' ? 'always_on' : 'auto');
+  const launch = currentLaunch();
   const minsToLaunch = launch?.t0 ? (new Date(launch.t0) - new Date()) / 60000 : Infinity;
 
   // Safety: never sleep if launch is within 30 minutes regardless of mode
   if (minsToLaunch < 30) return false;
 
-  if (mode === 'night') return true;
-  if (mode === 'bright') return false;
+  if (sm === 'sleep')     return true;
+  if (sm === 'always_on') return false;
 
   // auto: sleep when nighttime AND no launch within 3 hours
   const wx = state.weather || {};
