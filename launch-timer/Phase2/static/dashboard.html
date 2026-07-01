@@ -454,7 +454,7 @@
           <div class="unit-id">${nameHtml}${cmdBadge}</div>
           <div class="unit-loc">${u.site||'—'}</div>
           <div class="unit-wifi">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div>
-          <div class="unit-launch">v${(u.version||'?').slice(0,7)}</div>
+          <div class="unit-launch">${(u.version||'?').replace(/^v/,'').slice(0,7)}</div>
           <div class="unit-version"><span class="ver-badge ${verCls}">${isOutdated?'OUTDATED':'CURRENT'}</span></div>
           <div class="unit-seen">${seenStr}</div>
         </div>`;
