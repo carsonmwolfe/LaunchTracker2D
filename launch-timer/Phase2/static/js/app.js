@@ -2705,15 +2705,11 @@ function isNightMode() {
 
   if (sm === 'always_on') return false;
 
-  // Both 'sleep' and 'auto' respect sunrise/sunset — sleep just activates immediately
-  const wx = state.weather || {};
-  const isNight = !!(wx.sunrise && wx.sunset && (() => {
-    try {
-      const now = new Date();
-      return now < new Date(wx.sunrise) || now > new Date(wx.sunset);
-    } catch(e) { return false; }
-  })());
-  // sleep = activate now (no launch timing check), auto = only when launch > 3h away
+  // Night window: 10pm–7am local time
+  const h = new Date().getHours();
+  const isNight = h >= 22 || h < 7;
+
+  // sleep = activate now regardless of launch timing, auto = only when launch > 3h away
   if (sm === 'sleep') return isNight;
   return isNight && minsToLaunch > 180;
 }
