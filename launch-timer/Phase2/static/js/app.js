@@ -2677,6 +2677,13 @@ function render(now) {
   const _btnLaunch = document.getElementById('btn-launches');
   const _btnWake   = document.getElementById('btn-wake');
   if (isNightMode()) {
+    // Close any open sub-page so night mode takes full control
+    const _frame = document.getElementById('page-frame');
+    if (_frame && _frame.style.display !== 'none') {
+      _frame.style.display = 'none';
+      _frame.src = 'about:blank';
+      history.replaceState({page:'/'}, '', '/');
+    }
     if (_infoBar)   _infoBar.style.opacity   = '0';
     if (_btnLaunch) _btnLaunch.style.display  = 'none';
     if (_btnWake)   _btnWake.style.display    = 'block';

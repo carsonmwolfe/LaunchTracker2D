@@ -892,8 +892,11 @@ def _auto_brightness():
             display_mode = settings.get('display_mode', 'auto')
 
             # display_mode overrides auto_dim
+            SLEEP_MIN = 51  # floor for sleep/night mode — always visible
             if display_mode == 'night':
-                brightness = 51  # dim but readable (20%)
+                # Respect manual brightness but never go below SLEEP_MIN
+                manual = int(settings.get('brightness', 40) * 2.55)
+                brightness = max(SLEEP_MIN, min(manual, 102))  # cap at 40% in sleep
             elif display_mode == 'bright':
                 brightness = 255
             elif not settings.get('auto_dim', True):
