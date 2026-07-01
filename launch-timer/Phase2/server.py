@@ -757,9 +757,32 @@ def _get_tailscale_ip():
         pass
     return None
 
+def _get_cpu_temp():
+    try:
+        return round(int(open('/sys/class/thermal/thermal_zone0/temp').read().strip()) / 1000, 1)
+    except Exception:
+        return None
+
+def _get_disk_pct():
+    try:
+        r = subprocess.run(['df', '/'], capture_output=True, text=True, timeout=3)
+        return int(r.stdout.splitlines()[1].split()[4].replace('%', ''))
+    except Exception:
+        return None
+
+def _get_mem_mb():
+    try:
+        lines = open('/proc/meminfo').readlines()
+        mem = {l.split(':')[0]: int(l.split()[1]) for l in lines if ':' in l}
+        free = (mem.get('MemAvailable') or mem.get('MemFree') or 0) // 1024
+        total = (mem.get('MemTotal') or 0) // 1024
+        return {'free': free, 'total': total}
+    except Exception:
+        return None
+
 def _ping_relay():
-    """Ping the DO relay every 60 seconds."""
-    _ts_ip = _get_tailscale_ip()  # check once at startup, re-check every 10 pings
+    """Ping the DO relay every 60 seconds with health data."""
+    _ts_ip = _get_tailscale_ip()
     _ping_count = 0
     while True:
         try:
@@ -769,6 +792,8 @@ def _ping_relay():
             settings = _load_settings()
             unit_id  = _get_unit_id()
             wx       = _weather_cache.get('data') or {}
+            mem      = _get_mem_mb() or {}
+            data_age = int(time.time() - _data_cache.get('fetched_at', 0))
             requests.post(f'{RELAY_URL}/api/unit/ping', json={
                 'unit_id':      unit_id,
                 'version':      VERSION,
@@ -776,6 +801,12 @@ def _ping_relay():
                 'condition':    wx.get('condition', ''),
                 'temp_f':       wx.get('temp_f', 0),
                 'tailscale_ip': _ts_ip,
+                'cpu_temp':     _get_cpu_temp(),
+                'disk_pct':     _get_disk_pct(),
+                'mem_free_mb':  mem.get('free'),
+                'mem_total_mb': mem.get('total'),
+                'data_age':     data_age,
+                'brightness':   settings.get('brightness', 40),
             }, timeout=5)
         except Exception:
             pass
@@ -1174,6 +1205,17 @@ def api_device():
         last_check = '—'
     return jsonify({'mac': mac, 'unit_id': unit_id, 'version': VERSION, 'temp': temp,
                     'last_update': last_deploy, 'last_check': last_check})
+
+
+@app.route('/api/log')
+def api_log():
+    """Return last N lines of server.log for Mission Control log viewer."""
+    n = min(int(request.args.get('n', 80)), 200)
+    try:
+        lines = open('/home/pi/server.log').readlines()
+        return jsonify({'lines': [l.rstrip() for l in lines[-n:]]})
+    except Exception as e:
+        return jsonify({'lines': [], 'error': str(e)})
 
 
 # ── Pi notification (shown on all pages) ──────────────────────────────────────

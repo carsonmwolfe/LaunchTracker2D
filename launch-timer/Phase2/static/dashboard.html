@@ -171,7 +171,20 @@
     .detail-val.green { color: #00e87a; }
     .detail-val.yellow { color: #ffd93d; }
     .detail-val.red { color: #ff4422; }
-    .detail-actions { display: flex; gap: 6px; }
+    .detail-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .detail-controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .ctrl-label { font-size: 6px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+    .brightness-slider { width: 120px; accent-color: #ffd93d; cursor: pointer; }
+    .notify-input { font-family: 'Press Start 2P', monospace; font-size: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; width: 160px; }
+    /* Pi server log modal */
+    #log-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; }
+    #log-modal.open { display:flex; }
+    #log-box { background:#05080d; border:2px solid #00e87a; width:700px; max-height:480px; display:flex; flex-direction:column; }
+    #log-box-header { background:#0d1620; padding:8px 14px; font-size:7px; color:#00e87a; display:flex; justify-content:space-between; }
+    #log-box-close { cursor:pointer; color:#ff4422; background:none; border:none; font-family:'Press Start 2P',monospace; font-size:7px; }
+    #log-box-lines { flex:1; overflow-y:auto; padding:10px 14px; font-size:7px; color:rgba(255,255,255,0.5); line-height:2; font-family:monospace; }
+    #log-box-lines::-webkit-scrollbar { width:3px; }
+    #log-box-lines::-webkit-scrollbar-thumb { background:#1a2030; }
 
     /* LOG PANEL */
     .log-panel {
@@ -473,20 +486,39 @@
           if (cs?.cmd==='update') { updateBtnStyle='opacity:0.6;'; updateBtnTxt=cs.label; }
           if (cs?.cmd==='reboot') { rebootBtnStyle='opacity:0.6;'; rebootBtnTxt=cs.label; }
 
+          const cpuTemp  = u.cpu_temp != null ? u.cpu_temp + '°C' : '—';
+          const cpuCls   = u.cpu_temp > 75 ? 'red' : u.cpu_temp > 60 ? 'yellow' : 'green';
+          const diskPct  = u.disk_pct != null ? u.disk_pct + '%' : '—';
+          const diskCls  = u.disk_pct > 85 ? 'red' : u.disk_pct > 70 ? 'yellow' : 'green';
+          const memStr   = u.mem_free_mb != null ? `${u.mem_free_mb}MB free` : '—';
+          const dataAgeStr = u.data_age != null ? (u.data_age > 600 ? `⚠ ${Math.round(u.data_age/60)}m old` : `${u.data_age}s`) : '—';
+          const dataAgeCls = u.data_age > 600 ? 'red' : u.data_age > 300 ? 'yellow' : 'green';
+
           html += `<div class="unit-detail">
             <div class="detail-grid">
-              <div class="detail-field"><div class="detail-label">UNIT ID</div><div class="detail-val">${id}</div></div>
-              <div class="detail-field"><div class="detail-label">VERSION</div><div class="detail-val ${isOutdated?'yellow':'green'}">${u.version||'—'}</div></div>
-              <div class="detail-field"><div class="detail-label">LAST SEEN</div><div class="detail-val ${isOnline?'green':'red'}">${seenStr}</div></div>
+              <div class="detail-field"><div class="detail-label">CPU TEMP</div><div class="detail-val ${cpuCls}">${cpuTemp}</div></div>
+              <div class="detail-field"><div class="detail-label">DISK</div><div class="detail-val ${diskCls}">${diskPct}</div></div>
+              <div class="detail-field"><div class="detail-label">MEMORY</div><div class="detail-val">${memStr}</div></div>
+              <div class="detail-field"><div class="detail-label">DATA AGE</div><div class="detail-val ${dataAgeCls}">${dataAgeStr}</div></div>
               <div class="detail-field"><div class="detail-label">TAILSCALE</div><div class="detail-val ${tsIp?'green':'red'}">${tsIp||'NOT INSTALLED'}</div></div>
+              <div class="detail-field"><div class="detail-label">VERSION</div><div class="detail-val ${isOutdated?'yellow':'green'}">${(u.version||'—').slice(0,7)}</div></div>
+              <div class="detail-field"><div class="detail-label">BRIGHTNESS</div><div class="detail-val">${u.brightness!=null?u.brightness+'%':'—'}</div></div>
+              <div class="detail-field"><div class="detail-label">LAST SEEN</div><div class="detail-val ${isOnline?'green':'red'}">${seenStr}</div></div>
               <div class="detail-field"><div class="detail-label">WEATHER</div><div class="detail-val">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div></div>
+              <div class="detail-field"><div class="detail-label">SITE</div><div class="detail-val">${(u.site||'—').toUpperCase()}</div></div>
             </div>
             <div class="detail-actions">
               <button class="hbtn hbtn-green" style="${updateBtnStyle}" onclick="cmdUnit('${id}','update',this);event.stopPropagation()">${updateBtnTxt}</button>
               <button class="hbtn hbtn-red"   style="${rebootBtnStyle}" onclick="cmdUnit('${id}','reboot',this);event.stopPropagation()">${rebootBtnTxt}</button>
               <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="cmdUnit('${id}','refresh',this);event.stopPropagation()">REFRESH DATA</button>
               ${tsIp ? `<button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="copySSH('${tsIp}');event.stopPropagation()">COPY SSH</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:#ffd93d;" onclick="openLog('${id}','${tsIp}');event.stopPropagation()">VIEW LOG</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:#00e87a;" onclick="openUnit('${tsIp}');event.stopPropagation()">OPEN UI ↗</button>` : ''}
               <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
+            </div>
+            <div class="detail-controls" onclick="event.stopPropagation()">
+              ${tsIp ? `<span class="ctrl-label">BRIGHTNESS</span><input type="range" class="brightness-slider" min="20" max="100" value="${u.brightness||40}" oninput="setBrightness('${tsIp}',this.value)" title="Drag to set brightness">` : ''}
+              ${tsIp ? `<span class="ctrl-label">NOTIFY</span><input class="notify-input" placeholder="Message to display..." onkeydown="if(event.key==='Enter')sendNotify('${tsIp}',this)">` : ''}
             </div>
           </div>`;
         }
@@ -504,8 +536,135 @@
       navigator.clipboard.writeText(cmd).then(() => {
         addLog('SSH', `Copied: ${cmd}`, 'ok');
       }).catch(() => {
-        addLog('SSH', `SSH command: ${cmd}`, '');
+        addLog('SSH', `SSH: ${cmd}`, '');
       });
+    }
+
+    // ── Direct Tailscale commands (instant — no relay delay) ──────────────────
+    async function cmdUnit(id, cmd, btn) {
+      if (cmdState[id]?.active) return;
+      const setLabel = (label, status=null) => {
+        cmdState[id] = { cmd, label, status, active: status===null };
+        renderUnits();
+      };
+
+      const u    = units[id];
+      const tsIp = u?.tailscale_ip;
+
+      setLabel('SENDING…');
+
+      // Try direct via Tailscale first (instant confirmation)
+      if (tsIp) {
+        try {
+          const endpoint = cmd === 'refresh' ? 'launches/invalidate' : cmd;
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/${endpoint}`, {method:'POST'}, 6000);
+          if (r.ok) {
+            setLabel('✓ SENT DIRECT', 'ok');
+            addLog(id, `${cmd} → ✓ direct via Tailscale`, 'ok');
+            setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+            return;
+          }
+        } catch(e) {
+          addLog(id, `Tailscale direct failed, trying relay…`, '');
+        }
+      }
+
+      // Relay fallback with ACK polling
+      let relayReached = false;
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id:id, command:cmd}),
+        }, 8000);
+        relayReached = r.ok;
+      } catch(e) { relayReached = false; }
+
+      if (!relayReached) {
+        setLabel('✗ RELAY DOWN', 'err');
+        addLog(id, `${cmd} → ✗ relay unreachable`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 6000);
+        return;
+      }
+
+      setLabel('⏳ WAITING…');
+      const deadline = Date.now() + ACK_WAIT * 1000;
+      let acked = false;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const ar = await fetchWithTimeout(`${RELAY}/api/unit/acks/${id}`, {}, 5000);
+          const acks = await ar.json();
+          if (acks.some(a => a.command===cmd)) { acked=true; break; }
+        } catch(e) {}
+        setLabel(`⏳ ${Math.round((deadline-Date.now())/1000)}s`);
+      }
+
+      if (acked) {
+        setLabel('✓ CONFIRMED', 'ok');
+        addLog(id, `${cmd} → ✓ Pi confirmed via relay`, 'ok');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 12000);
+      } else {
+        setLabel('✗ NO RESPONSE', 'err');
+        addLog(id, `${cmd} → ✗ no response after ${ACK_WAIT}s`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+      }
+    }
+
+    // ── Brightness control ────────────────────────────────────────────────────
+    let _brightnessTimer = null;
+    function setBrightness(tsIp, value) {
+      clearTimeout(_brightnessTimer);
+      _brightnessTimer = setTimeout(async () => {
+        try {
+          await fetchWithTimeout(`http://${tsIp}:5001/api/settings/brightness`,
+            {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value:parseInt(value)})}, 5000);
+          addLog('CTRL', `Brightness → ${value}%`, 'ok');
+        } catch(e) { addLog('CTRL', `Brightness failed: ${e.message}`, 'err'); }
+      }, 400);
+    }
+
+    // ── Send notification to Pi screen ────────────────────────────────────────
+    async function sendNotify(tsIp, input) {
+      const msg = input.value.trim();
+      if (!msg) return;
+      try {
+        await fetchWithTimeout(`http://${tsIp}:5001/api/notify-push`,
+          {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'MISSION CONTROL', msg})}, 5000);
+        addLog('NOTIFY', `Sent: "${msg}"`, 'ok');
+        input.value = '';
+      } catch(e) { addLog('NOTIFY', `Send failed: ${e.message}`, 'err'); }
+    }
+
+    // ── Pi server log viewer ──────────────────────────────────────────────────
+    async function openLog(unitId, tsIp) {
+      document.getElementById('log-box-title').textContent = `SERVER LOG — ${getNick(unitId)||unitId}`;
+      document.getElementById('log-box-lines').textContent = 'Loading…';
+      document.getElementById('log-modal').classList.add('open');
+      try {
+        const r = await fetchWithTimeout(`http://${tsIp}:5001/api/log?n=80`, {}, 8000);
+        const d = await r.json();
+        const el = document.getElementById('log-box-lines');
+        el.textContent = (d.lines||[]).join('\n') || '(empty)';
+        el.scrollTop = el.scrollHeight;
+      } catch(e) {
+        document.getElementById('log-box-lines').textContent = 'Failed to load: ' + e.message;
+      }
+    }
+    function closeLog() {
+      document.getElementById('log-modal').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeLog(); });
+
+    // ── Browser offline alerts ────────────────────────────────────────────────
+    function requestNotifPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+    function browserAlert(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {body, icon: ''});
+      }
     }
 
     // ── Command state machine ─────────────────────────────────────────────────
@@ -619,9 +778,12 @@
           u._online = (now - (u.last_seen||0)) < ONLINE_TTL;
           units[id] = u;
           // Log state changes
-          if (wasOnline===true && !u._online)  addLog(id, 'Unit went OFFLINE', 'err');
-          if (wasOnline===false && u._online)  addLog(id, 'Unit back ONLINE', 'ok');
-          if (wasOnline===undefined && u._online) addLog(id, `Unit discovered · v${u.version||'?'}`, 'ok');
+          if (wasOnline===true && !u._online) {
+            addLog(id, `${getNick(id)||id} went OFFLINE`, 'err');
+            browserAlert(`⚠ ${getNick(id)||id} OFFLINE`, 'LaunchTracker unit lost connection to relay');
+          }
+          if (wasOnline===false && u._online)  addLog(id, `${getNick(id)||id} back ONLINE`, 'ok');
+          if (wasOnline===undefined && u._online) addLog(id, `${getNick(id)||id} discovered · v${(u.version||'?').slice(0,7)}`, 'ok');
         });
         // Mark units in our dict but not in relay response as offline
         Object.keys(units).forEach(id => {
@@ -641,11 +803,23 @@
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
+    requestNotifPermission();
     renderLogs();
     renderUnits();
     loadNicknames();
     pollAll();
     setInterval(pollAll, POLL_MS);
   </script>
+
+  <!-- Pi log viewer modal -->
+  <div id="log-modal">
+    <div id="log-box">
+      <div id="log-box-header">
+        <span id="log-box-title">SERVER LOG</span>
+        <button id="log-box-close" onclick="closeLog()">✕ CLOSE</button>
+      </div>
+      <div id="log-box-lines">Loading…</div>
+    </div>
+  </div>
 </body>
 </html>
