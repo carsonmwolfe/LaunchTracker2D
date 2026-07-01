@@ -787,7 +787,7 @@ def _ping_relay():
     while True:
         try:
             _ping_count += 1
-            if _ping_count % 10 == 0:
+            if _ts_ip is None or _ping_count % 10 == 0:
                 _ts_ip = _get_tailscale_ip()
             settings = _load_settings()
             unit_id  = _get_unit_id()
