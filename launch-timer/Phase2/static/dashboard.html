@@ -488,7 +488,6 @@
       };
 
       setLabel('SENDING…');
-      addLog(id, `Sending ${cmd.toUpperCase()} via relay…`, '');
 
       let relayReached = false;
       try {
@@ -503,16 +502,14 @@
       }
 
       if (!relayReached) {
-        setLabel('RELAY ERR', 'err');
-        addLog(id, `FAILED — could not reach relay at ${RELAY}`, 'err');
-        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 5000);
+        setLabel('✗ RELAY DOWN', 'err');
+        addLog(id, `${cmd} → ✗ relay unreachable`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 6000);
         return;
       }
 
-      addLog(id, `${cmd.toUpperCase()} queued — waiting for Pi to pick up (polls every 5s)…`, 'ok');
-      setLabel('WAITING…');
-
-      // Poll for ACK — Pi picks up commands every 5s and ACKs before executing
+      // Relay accepted — now wait for Pi to pick up and ACK
+      setLabel('⏳ WAITING…');
       const deadline = Date.now() + ACK_WAIT * 1000;
       let acked = false;
       while (Date.now() < deadline) {
@@ -523,16 +520,16 @@
           if (acks.some(a => a.command===cmd)) { acked=true; break; }
         } catch(e) {}
         const remaining = Math.round((deadline-Date.now())/1000);
-        setLabel(`WAITING ${remaining}s`);
+        setLabel(`⏳ ${remaining}s`);
       }
 
       if (acked) {
-        setLabel(cmd==='reboot'?'REBOOTING…':'UPDATING…', 'ok');
-        addLog(id, `${cmd.toUpperCase()} acknowledged — Pi is executing`, 'ok');
+        setLabel('✓ CONFIRMED', 'ok');
+        addLog(id, `${cmd} → ✓ Pi confirmed — executing now`, 'ok');
         setTimeout(() => { delete cmdState[id]; renderUnits(); }, cmd==='reboot'?15000:30000);
       } else {
-        setLabel('NO ACK', 'err');
-        addLog(id, `${cmd.toUpperCase()} — no acknowledgement after ${ACK_WAIT}s. Pi may be offline or slow.`, 'warn');
+        setLabel('✗ NO RESPONSE', 'err');
+        addLog(id, `${cmd} → ✗ no response after ${ACK_WAIT}s — Pi offline or not polling`, 'err');
         setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
       }
     }
