@@ -893,7 +893,7 @@ def _auto_brightness():
 
             # display_mode overrides auto_dim
             if display_mode == 'night':
-                brightness = 30  # dim but readable
+                brightness = 51  # dim but readable (20%)
             elif display_mode == 'bright':
                 brightness = 255
             elif not settings.get('auto_dim', True):
@@ -1136,7 +1136,7 @@ def api_settings():
     if bp:
         try:
             if mode == 'night':
-                open(bp, 'w').write('30')        # dim but visible ~12%
+                open(bp, 'w').write('51')        # dim but visible 20%
             elif mode == 'bright':
                 open(bp, 'w').write('255')
             elif mode == 'auto':
