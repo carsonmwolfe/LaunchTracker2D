@@ -2583,9 +2583,32 @@ const TARGET_FPS = 20;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────
-function disableNightMode() {
-  // Local 1-hour wake override — instant, no API call, works even in auto night mode
-  state._nightWakeUntil = Date.now() + 60 * 60 * 1000;
+async function disableNightMode() {
+  const mode = state.settings?.display_mode || 'auto';
+  if (mode === 'night') {
+    // Forced night — reset to auto via API so it doesn't come back after local override expires
+    try {
+      await fetch('/api/settings', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({display_mode: 'auto'}),
+      });
+      if (state.settings) state.settings.display_mode = 'auto';
+    } catch(e) {}
+  }
+  // Wake until next sunrise — compute from weather data, fall back to 6 hours
+  let wakeUntil = Date.now() + 6 * 3600000;
+  try {
+    const wx = state.weather || {};
+    if (wx.sunrise) {
+      const sr = new Date(wx.sunrise);
+      // If sunrise is in the past (already today), use tomorrow's approximate sunrise
+      const nextSr = sr < new Date() ? new Date(sr.getTime() + 86400000) : sr;
+      wakeUntil = nextSr.getTime();
+    }
+  } catch(e) {}
+  state._nightWakeUntil = wakeUntil;
+  // Persist across refreshes
+  try { localStorage.setItem('_nightWakeUntil', String(wakeUntil)); } catch(e) {}
 }
 
 async function pollSettings() {
@@ -2648,23 +2671,35 @@ function drawNightMode() {
 }
 
 function isNightMode() {
-  // Wake override — tapping screen suppresses night mode for 1 hour
+  // Restore wake override from localStorage on first call
+  if (!state._nightWakeUntil) {
+    try {
+      const stored = localStorage.getItem('_nightWakeUntil');
+      if (stored) state._nightWakeUntil = parseInt(stored);
+    } catch(e) {}
+  }
+  // Wake override active — user tapped, stay awake until next sunrise
   if (state._nightWakeUntil && Date.now() < state._nightWakeUntil) return false;
-  const mode = state.settings?.display_mode || 'auto';
+
+  const mode    = state.settings?.display_mode || 'auto';
+  const launch  = currentLaunch();
+  const minsToLaunch = launch?.t0 ? (new Date(launch.t0) - new Date()) / 60000 : Infinity;
+
+  // Safety: never sleep if launch is within 30 minutes regardless of mode
+  if (minsToLaunch < 30) return false;
+
   if (mode === 'night') return true;
   if (mode === 'bright') return false;
-  // auto: night mode when it's actually nighttime AND no launch within 12 hours
+
+  // auto: sleep when nighttime AND no launch within 3 hours
   const wx = state.weather || {};
-  const launch = currentLaunch();
   const isNight = !!(wx.sunrise && wx.sunset && (() => {
     try {
       const now = new Date();
-      const sr  = new Date(wx.sunrise); const ss = new Date(wx.sunset);
-      return now < sr || now > ss;
+      return now < new Date(wx.sunrise) || now > new Date(wx.sunset);
     } catch(e) { return false; }
   })());
-  const launchSoon = launch?.t0 && (new Date(launch.t0) - new Date()) < 12 * 3600000;
-  return isNight && !launchSoon;
+  return isNight && minsToLaunch > 180;
 }
 
 function render(now) {
