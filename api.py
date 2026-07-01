@@ -223,6 +223,7 @@ def _refresh():
     print(f"Cache refreshed at {time.strftime('%H:%M:%S')}")
 
 def _bg_refresh():
+    time.sleep(10)  # startup delay — let gunicorn finish booting before hitting LL2
     while True:
         try:
             _refresh()
