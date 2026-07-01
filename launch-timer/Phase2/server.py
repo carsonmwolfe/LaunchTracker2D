@@ -939,7 +939,7 @@ def _auto_brightness():
                 else:
                     # Fallback when Open-Meteo unreachable: dim 9pm-7am by local hour
                     hour = datetime.now().hour
-                    brightness = NIGHT_MIN if (hour >= 21 or hour < 7) else DAY_MAX
+                    brightness = NIGHT_MIN if (hour >= 22 or hour < 7) else DAY_MAX
                     print(f'[{_ts()}] Sun times unavailable — using hour-based fallback ({hour}h → {brightness})')
 
             if brightness is not None:
