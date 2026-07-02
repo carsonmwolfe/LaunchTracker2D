@@ -20,6 +20,20 @@ sleep 2
 fuser -k 5001/tcp 2>/dev/null || true
 sleep 1
 
+# ── Sanity check: server.py must not be empty (SD corruption guard) ──────────
+if [ ! -s "$APP_DIR/server.py" ]; then
+    echo "[$(date '+%H:%M:%S')] CRITICAL: server.py is empty — SD card corruption detected" >> "$SERVER_LOG"
+    echo "[$(date '+%H:%M:%S')] Attempting git recovery..." >> "$SERVER_LOG"
+    cd /home/pi/Desktop/LaunchTracker2D || exit 1
+    git fetch origin Phase2 --quiet 2>>"$SERVER_LOG" && \
+    git reset --hard origin/Phase2 2>>"$SERVER_LOG"
+    if [ ! -s "$APP_DIR/server.py" ]; then
+        echo "[$(date '+%H:%M:%S')] Recovery failed — cannot start" >> "$SERVER_LOG"
+        exit 1
+    fi
+    echo "[$(date '+%H:%M:%S')] Recovery succeeded" >> "$SERVER_LOG"
+fi
+
 # ── Start server ──────────────────────────────────────────────────────────────
 cd "$APP_DIR" || exit 1
 nohup python3 server.py >> "$SERVER_LOG" 2>&1 &

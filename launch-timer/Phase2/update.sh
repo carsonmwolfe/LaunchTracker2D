@@ -76,6 +76,19 @@ if [ $RESET_EXIT -ne 0 ]; then
     exit 1
 fi
 
+# Verify server.py wasn't corrupted (SD card write failure during power cut)
+SERVER_PY="$REPO_DIR/launch-timer/Phase2/server.py"
+if [ ! -s "$SERVER_PY" ]; then
+    echo "$LOG_PREFIX ERROR: server.py is empty after git reset (SD card corruption?) — retrying fetch"
+    git fetch origin "$BRANCH" --quiet
+    git reset --hard "origin/$BRANCH"
+    if [ ! -s "$SERVER_PY" ]; then
+        echo "$LOG_PREFIX ERROR: server.py still empty after retry — aborting update"
+        exit 1
+    fi
+    echo "$LOG_PREFIX server.py recovered successfully"
+fi
+
 # Verify we actually got to the right commit
 NEW_HEAD=$(git rev-parse HEAD)
 if [ "$NEW_HEAD" != "$REMOTE" ]; then
