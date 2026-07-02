@@ -620,15 +620,34 @@
 
     // ── Display mode (night/bright/auto) ─────────────────────────────────────
     async function setDisplayMode(tsIp, id, mode) {
-      try {
-        await fetchWithTimeout(`http://${tsIp}:5001/api/settings`, {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({screen_mode: mode}),
-        }, 5000);
+      // Try Tailscale direct first, fall back to relay command
+      let ok = false;
+      if (tsIp) {
+        try {
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/settings`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({screen_mode: mode}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (!ok) {
+        // Relay fallback — Pi handles set_mode:<value> command
+        try {
+          const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({unit_id: id, command: `set_mode:${mode}`}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (ok) {
         if (units[id]) units[id].screen_mode = mode;
         addLog(id, `Display mode → ${mode.toUpperCase()}`, 'ok');
         renderUnits();
-      } catch(e) { addLog(id, `Mode change failed: ${e.message}`, 'err'); }
+      } else {
+        addLog(id, `Mode change failed — no Tailscale or relay connection`, 'err');
+      }
     }
 
     // ── Brightness control ────────────────────────────────────────────────────

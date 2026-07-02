@@ -863,6 +863,17 @@ def _execute_command(cmd):
             _data_cache['fetched_at'] = 0
             threading.Thread(target=_refresh_all, daemon=True).start()
             print(f'[{_ts()}] Remote refresh triggered')
+        elif cmd.startswith('set_mode:'):
+            mode = cmd.split(':', 1)[1].strip()
+            if mode in ('auto', 'always_on', 'sleep'):
+                s = _load_settings()
+                s['screen_mode'] = mode
+                mapped = {'auto': {'auto_dim': True, 'display_mode': 'auto'},
+                          'always_on': {'auto_dim': False, 'display_mode': 'bright'},
+                          'sleep': {'auto_dim': True, 'display_mode': 'night'}}.get(mode, {})
+                s.update(mapped)
+                _save_settings(s)
+                print(f'[{_ts()}] Display mode set to {mode} via relay')
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
