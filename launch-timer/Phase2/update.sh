@@ -6,7 +6,11 @@
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
 
 REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
-BRANCH="Phase3"
+# Default to release branch — override by creating /home/pi/.rangetrack_branch
+BRANCH="release"
+if [ -f /home/pi/.rangetrack_branch ]; then
+    BRANCH=$(cat /home/pi/.rangetrack_branch | tr -d '[:space:]')
+fi
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 UPDATE_LOG="/home/pi/.rangetrack_updates.json"
 LOCK_FILE="/tmp/rangetrack_update.lock"
