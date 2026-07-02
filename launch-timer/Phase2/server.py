@@ -54,6 +54,7 @@ SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
 LL2_BASE      = 'https://ll.thespacedevs.com/2.3.0'
 LL2_TIMEOUT   = 15
 RELAY_URL     = 'http://45.55.245.193'  # DO relay — Pi fetches from here instead of LL2 directly
+_wake_until   = 0  # Unix timestamp set by /api/wake — holds brightness after tap-to-wake
 
 # ── Email alerts ──────────────────────────────────────────────────────────────
 ALERT_TO      = 'carzspam001@gmail.com'
@@ -1282,8 +1283,6 @@ def api_log():
 
 
 # ── Wake override — tells auto_brightness to hold manual brightness after tap ──
-
-_wake_until = 0  # Unix timestamp; 0 = no override
 
 @app.route('/api/wake', methods=['POST'])
 def set_wake():
