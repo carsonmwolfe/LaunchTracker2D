@@ -21,18 +21,37 @@ fuser -k 5001/tcp 2>/dev/null || true
 sleep 1
 
 # ── Sanity check: server.py must not be empty (SD corruption guard) ──────────
+BACKUP_PY="/home/pi/.rangetrack_server_backup.py"
 if [ ! -s "$APP_DIR/server.py" ]; then
-    echo "[$(date '+%H:%M:%S')] CRITICAL: server.py is empty — SD card corruption detected" >> "$SERVER_LOG"
-    echo "[$(date '+%H:%M:%S')] Attempting git recovery..." >> "$SERVER_LOG"
-    cd /home/pi/Desktop/LaunchTracker2D || exit 1
+    echo "[$(date '+%H:%M:%S')] CRITICAL: server.py empty — SD card corruption detected" >> "$SERVER_LOG"
+
+    # Layer 1: try git recovery (needs internet)
+    cd /home/pi/Desktop/LaunchTracker2D 2>/dev/null
     git fetch origin Phase2 --quiet 2>>"$SERVER_LOG" && \
     git reset --hard origin/Phase2 2>>"$SERVER_LOG"
-    if [ ! -s "$APP_DIR/server.py" ]; then
-        echo "[$(date '+%H:%M:%S')] Recovery failed — cannot start" >> "$SERVER_LOG"
+
+    if [ -s "$APP_DIR/server.py" ]; then
+        echo "[$(date '+%H:%M:%S')] Recovered via git" >> "$SERVER_LOG"
+
+    # Layer 2: restore from local backup (works offline)
+    elif [ -s "$BACKUP_PY" ]; then
+        cp "$BACKUP_PY" "$APP_DIR/server.py"
+        echo "[$(date '+%H:%M:%S')] Recovered from local backup (offline)" >> "$SERVER_LOG"
+
+    else
+        echo "[$(date '+%H:%M:%S')] Recovery failed — no git, no backup. Manual intervention needed." >> "$SERVER_LOG"
         exit 1
     fi
-    echo "[$(date '+%H:%M:%S')] Recovery succeeded" >> "$SERVER_LOG"
 fi
+
+# After successful start, save backup so offline recovery always has latest version
+_save_backup() {
+    sleep 30
+    if curl -s -o /dev/null http://localhost:5001/ --max-time 3 2>/dev/null; then
+        cp "$APP_DIR/server.py" "$BACKUP_PY" 2>/dev/null
+    fi
+}
+_save_backup &
 
 # ── Start server ──────────────────────────────────────────────────────────────
 cd "$APP_DIR" || exit 1
