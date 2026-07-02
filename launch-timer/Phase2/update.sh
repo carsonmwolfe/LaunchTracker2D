@@ -79,6 +79,9 @@ fi
 # Back up server.py BEFORE the reset so corruption recovery has a fallback
 BACKUP_PY="/home/pi/.rangetrack_server_backup.py"
 cp "$REPO_DIR/launch-timer/Phase2/server.py" "$BACKUP_PY" 2>/dev/null
+# Ensure key files are owned by pi so server.py can write settings etc.
+chown pi:pi "$REPO_DIR/launch-timer/Phase2/settings.json" 2>/dev/null
+chown pi:pi "$REPO_DIR/launch-timer/Phase2/data_cache.json" 2>/dev/null
 
 # Verify server.py wasn't corrupted (SD card write failure during power cut)
 SERVER_PY="$REPO_DIR/launch-timer/Phase2/server.py"

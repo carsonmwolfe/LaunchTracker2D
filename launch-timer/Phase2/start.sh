@@ -32,10 +32,12 @@ if [ ! -s "$APP_DIR/server.py" ]; then
 
     if [ -s "$APP_DIR/server.py" ]; then
         echo "[$(date '+%H:%M:%S')] Recovered via git" >> "$SERVER_LOG"
+        chown pi:pi "$APP_DIR/settings.json" "$APP_DIR/data_cache.json" 2>/dev/null
 
     # Layer 2: restore from local backup (works offline)
     elif [ -s "$BACKUP_PY" ]; then
         cp "$BACKUP_PY" "$APP_DIR/server.py"
+        chown pi:pi "$APP_DIR/settings.json" "$APP_DIR/data_cache.json" 2>/dev/null
         echo "[$(date '+%H:%M:%S')] Recovered from local backup (offline)" >> "$SERVER_LOG"
 
     else
