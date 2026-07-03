@@ -929,8 +929,9 @@ def _auto_brightness():
             if _wake_until and time.time() < _wake_until:
                 brightness = manual_raw
             elif screen_mode == 'always_on' or display_mode == 'bright':
-                # Respect manual brightness exactly — no auto changes
-                brightness = max(0, min(255, manual_raw))
+                # Manual control — don't touch the backlight at all
+                time.sleep(300)
+                continue
             elif screen_mode == 'sleep' or display_mode == 'night':
                 # Sleep: respect manual pref but floor at SLEEP_MIN, cap at 40%
                 brightness = max(SLEEP_MIN, min(manual_raw, 102))
