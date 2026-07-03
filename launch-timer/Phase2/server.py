@@ -48,6 +48,7 @@ def _cors(response):
     response.headers['Access-Control-Allow-Origin']  = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Private-Network'] = 'true'
     return response
 
 SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
@@ -863,6 +864,25 @@ def _execute_command(cmd):
             _data_cache['fetched_at'] = 0
             threading.Thread(target=_refresh_all, daemon=True).start()
             print(f'[{_ts()}] Remote refresh triggered')
+        elif cmd.startswith('set_brightness:'):
+            try:
+                val = max(20, min(100, int(cmd.split(':', 1)[1])))
+                mapped = int(val * 2.55)
+                bp = _backlight_path()
+                if bp:
+                    open(bp, 'w').write(str(mapped))
+                s = _load_settings()
+                s['brightness'] = val
+                _save_settings(s)
+                print(f'[{_ts()}] Brightness set to {val}% via relay')
+            except Exception as e:
+                print(f'[{_ts()}] set_brightness error: {e}')
+        elif cmd.startswith('notify:'):
+            parts = cmd.split(':', 1)[1].split('|', 1)
+            title = parts[0] if parts else 'MISSION CONTROL'
+            msg   = parts[1] if len(parts) > 1 else ''
+            _notify_write(title, msg)
+            print(f'[{_ts()}] Notification pushed via relay: {title}')
         elif cmd.startswith('set_mode:'):
             mode = cmd.split(':', 1)[1].strip()
             if mode in ('auto', 'always_on', 'sleep'):

@@ -525,8 +525,8 @@
               <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
             </div>
             <div class="detail-controls" onclick="event.stopPropagation()">
-              ${tsIp ? `<span class="ctrl-label">BRIGHTNESS</span><input type="range" class="brightness-slider" min="20" max="100" value="${u.brightness||40}" oninput="setBrightness('${tsIp}',this.value)" title="Drag to set brightness">` : ''}
-              ${tsIp ? `<span class="ctrl-label">NOTIFY</span><input class="notify-input" placeholder="Message to display..." onkeydown="if(event.key==='Enter')sendNotify('${tsIp}',this)">` : ''}
+              ${tsIp ? `<span class="ctrl-label">BRIGHTNESS</span><input type="range" class="brightness-slider" min="20" max="100" value="${u.brightness||40}" oninput="setBrightness('${tsIp}','${id}',this.value)" title="Drag to set brightness">` : ''}
+              ${tsIp ? `<span class="ctrl-label">NOTIFY</span><input class="notify-input" placeholder="Message to display..." onkeydown="if(event.key==='Enter')sendNotify('${tsIp}',this,'${id}')">` : ''}
             </div>
           </div>`;
         }
@@ -650,29 +650,58 @@
       }
     }
 
-    // ── Brightness control ────────────────────────────────────────────────────
+    // ── Brightness control — relay fallback for non-Tailscale browsers ───────
     let _brightnessTimer = null;
-    function setBrightness(tsIp, value) {
+    function setBrightness(tsIp, id, value) {
       clearTimeout(_brightnessTimer);
       _brightnessTimer = setTimeout(async () => {
-        try {
-          await fetchWithTimeout(`http://${tsIp}:5001/api/settings/brightness`,
-            {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value:parseInt(value)})}, 5000);
-          addLog('CTRL', `Brightness → ${value}%`, 'ok');
-        } catch(e) { addLog('CTRL', `Brightness failed: ${e.message}`, 'err'); }
+        let ok = false;
+        // Try Tailscale direct first
+        if (tsIp) {
+          try {
+            const r = await fetchWithTimeout(`http://${tsIp}:5001/api/settings/brightness`,
+              {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value:parseInt(value)})}, 5000);
+            ok = r.ok;
+          } catch(e) {}
+        }
+        // Relay fallback
+        if (!ok) {
+          try {
+            const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({unit_id: id, command: `set_brightness:${parseInt(value)}`}),
+            }, 5000);
+            ok = r.ok;
+          } catch(e) {}
+        }
+        if (ok) addLog('CTRL', `Brightness → ${value}%`, 'ok');
+        else addLog('CTRL', `Brightness failed`, 'err');
       }, 400);
     }
 
     // ── Send notification to Pi screen ────────────────────────────────────────
-    async function sendNotify(tsIp, input) {
+    async function sendNotify(tsIp, input, id) {
       const msg = input.value.trim();
       if (!msg) return;
-      try {
-        await fetchWithTimeout(`http://${tsIp}:5001/api/notify-push`,
-          {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'MISSION CONTROL', msg})}, 5000);
-        addLog('NOTIFY', `Sent: "${msg}"`, 'ok');
-        input.value = '';
-      } catch(e) { addLog('NOTIFY', `Send failed: ${e.message}`, 'err'); }
+      let ok = false;
+      if (tsIp) {
+        try {
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/notify-push`,
+            {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'MISSION CONTROL', msg})}, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (!ok) {
+        try {
+          const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({unit_id: id, command: `notify:MISSION CONTROL|${msg}`}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (ok) { addLog('NOTIFY', `Sent: "${msg}"`, 'ok'); input.value = ''; }
+      else addLog('NOTIFY', `Send failed`, 'err');
     }
 
     // ── Pi server log viewer ──────────────────────────────────────────────────
