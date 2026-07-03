@@ -911,26 +911,6 @@ def _backlight_path():
         return p
     return None
 
-def _fetch_sun_times():
-    """Fetch today's sunrise/sunset as UTC Unix timestamps from Open-Meteo.
-    Using unixtime format avoids all timezone ambiguity."""
-    try:
-        lat, lon = _get_location()
-        r = requests.get('https://api.open-meteo.com/v1/forecast', params={
-            'latitude': lat, 'longitude': lon,
-            'daily': 'sunrise,sunset',
-            'timezone': 'UTC',
-            'timeformat': 'unixtime',
-            'forecast_days': 1,
-        }, timeout=8)
-        r.raise_for_status()
-        d = r.json().get('daily', {})
-        sr = (d.get('sunrise') or [None])[0]
-        ss = (d.get('sunset')  or [None])[0]
-        return sr, ss
-    except Exception as e:
-        print(f'[{_ts()}] Sun times fetch error: {e}')
-        return None, None
 
 def _auto_brightness():
     while True:
@@ -958,25 +938,13 @@ def _auto_brightness():
                 time.sleep(300)
                 continue
             else:
-                sr_ts, ss_ts = _fetch_sun_times()
-                DAY_MAX, NIGHT_MIN, FADE_SECS = 255, 51, 45 * 60
-                if sr_ts and ss_ts:
-                    now_ts    = time.time()
-                    after_sr  = now_ts - sr_ts
-                    before_ss = ss_ts - now_ts
-                    if after_sr < 0 or before_ss < 0:
-                        brightness = NIGHT_MIN
-                    elif after_sr < FADE_SECS:
-                        brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * after_sr / FADE_SECS)
-                    elif before_ss < FADE_SECS:
-                        brightness = int(NIGHT_MIN + (DAY_MAX - NIGHT_MIN) * before_ss / FADE_SECS)
-                    else:
-                        brightness = DAY_MAX
+                # Use same 10pm-7am schedule as the sleep canvas — consistent UX
+                DAY_MAX, NIGHT_MIN = 255, 51
+                hour = datetime.now().hour
+                if hour >= 22 or hour < 7:
+                    brightness = NIGHT_MIN
                 else:
-                    # Fallback when Open-Meteo unreachable: dim 9pm-7am by local hour
-                    hour = datetime.now().hour
-                    brightness = NIGHT_MIN if (hour >= 22 or hour < 7) else DAY_MAX
-                    print(f'[{_ts()}] Sun times unavailable — using hour-based fallback ({hour}h → {brightness})')
+                    brightness = DAY_MAX
 
             if brightness is not None:
                 print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
