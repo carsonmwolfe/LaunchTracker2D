@@ -939,13 +939,13 @@ def _auto_brightness():
                 time.sleep(300)
                 continue
             else:
-                # Use same 10pm-7am schedule as the sleep canvas — consistent UX
-                DAY_MAX, NIGHT_MIN = 255, 51
+                # Day: use manual brightness preference. Night (10pm-7am): dim to minimum.
+                NIGHT_MIN = 51
                 hour = datetime.now().hour
                 if hour >= 22 or hour < 7:
                     brightness = NIGHT_MIN
                 else:
-                    brightness = DAY_MAX
+                    brightness = manual_raw  # respect user's set brightness during the day
 
             if brightness is not None:
                 print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
