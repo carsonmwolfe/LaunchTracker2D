@@ -1840,11 +1840,11 @@ function updateInfoBar() {
     const cond = wx.condition || 'clear';
     let wxClass, wxLabel;
     if (cond === 'thunderstorm' || wind > 30 || cloud > 75 || cond === 'rain') {
-      wxClass = 'wx-nogo';     wxLabel = '✕ UNFAVORABLE';
+      wxClass = 'wx-nogo';     wxLabel = '✕ NO-GO';
     } else if (wind > 20 || cloud > 50 || cond === 'light_rain' || cond === 'fog') {
       wxClass = 'wx-marginal'; wxLabel = '~ MARGINAL';
     } else {
-      wxClass = 'wx-go';       wxLabel = '✓ FAVORABLE';
+      wxClass = 'wx-go';       wxLabel = '✓ GO';
     }
     // Add probability if available
     const launch = currentLaunch();
