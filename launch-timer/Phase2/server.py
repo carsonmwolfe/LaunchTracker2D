@@ -885,7 +885,7 @@ def _execute_command(cmd):
             print(f'[{_ts()}] Notification pushed via relay: {title}')
         elif cmd.startswith('set_mode:'):
             mode = cmd.split(':', 1)[1].strip()
-            if mode in ('auto', 'always_on', 'sleep'):
+            if mode in ('auto', 'always_on'):
                 s = _load_settings()
                 s['screen_mode'] = mode
                 mapped = {'auto': {'auto_dim': True, 'display_mode': 'auto'},
@@ -932,7 +932,7 @@ def _auto_brightness():
                 # Manual control — don't touch the backlight at all
                 time.sleep(300)
                 continue
-            elif screen_mode == 'sleep' or display_mode == 'night':
+            elif display_mode == 'night':
                 # Sleep: respect manual pref but floor at SLEEP_MIN, cap at 40%
                 brightness = max(SLEEP_MIN, min(manual_raw, 102))
             elif not settings.get('auto_dim', True):
