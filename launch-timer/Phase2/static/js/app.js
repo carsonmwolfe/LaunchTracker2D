@@ -2584,41 +2584,19 @@ const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────
 async function disableNightMode() {
-  const sm = state.settings?.screen_mode || (state.settings?.display_mode === 'night' ? 'sleep' : 'auto');
-  if (sm === 'sleep') {
-    // Forced sleep — reset to auto via API so it doesn't come back after local override expires
-    try {
-      await fetch('/api/settings', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({screen_mode: 'auto'}),
-      });
-      if (state.settings) { state.settings.screen_mode = 'auto'; state.settings.display_mode = 'auto'; }
-    } catch(e) {}
-  }
-  // Wake until next sunrise — compute from weather data, fall back to 6 hours
-  let wakeUntil = Date.now() + 6 * 3600000;
-  try {
-    const wx = state.weather || {};
-    if (wx.sunrise) {
-      const sr = new Date(wx.sunrise);
-      // If sunrise is in the past (already today), use tomorrow's approximate sunrise
-      const nextSr = sr < new Date() ? new Date(sr.getTime() + 86400000) : sr;
-      wakeUntil = nextSr.getTime();
-    }
-  } catch(e) {}
+  // Wake until 7am — the end of the night window
+  const now = new Date();
+  const nextSeven = new Date(now);
+  nextSeven.setHours(7, 0, 0, 0);
+  if (now.getHours() >= 7) nextSeven.setDate(nextSeven.getDate() + 1);
+  const wakeUntil = nextSeven.getTime();
   state._nightWakeUntil = wakeUntil;
   try { localStorage.setItem('_nightWakeUntil', String(wakeUntil)); } catch(e) {}
-  // Tell server about wake so auto_brightness holds manual level (not NIGHT_MIN)
+  // Restore manual brightness on server
   const pref = state.settings?.brightness || 40;
   try {
-    await fetch('/api/wake', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({until: wakeUntil / 1000}),
-    });
-    await fetch('/api/settings/brightness', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({value: pref}),
-    });
+    await fetch('/api/wake', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({until: wakeUntil/1000})});
+    await fetch('/api/settings/brightness', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value: pref})});
   } catch(e) {}
 }
 
@@ -2627,11 +2605,6 @@ async function pollSettings() {
     const r = await fetch('/api/settings', {cache:'no-store'});
     const s = await r.json();
     if (s && state.settings) {
-      // If sleep mode was explicitly set, clear any tap-to-wake override
-      if (s.screen_mode === 'sleep' && state.settings.screen_mode !== 'sleep') {
-        state._nightWakeUntil = null;
-        try { localStorage.removeItem('_nightWakeUntil'); } catch(e) {}
-      }
       state.settings = {...state.settings, ...s};
     }
   } catch(e) {}
@@ -2689,33 +2662,23 @@ function drawNightMode() {
 }
 
 function isNightMode() {
-  // Restore wake override from localStorage on first call
+  // Restore wake override from localStorage
   if (!state._nightWakeUntil) {
-    try {
-      const stored = localStorage.getItem('_nightWakeUntil');
-      if (stored) state._nightWakeUntil = parseInt(stored);
-    } catch(e) {}
+    try { const s = localStorage.getItem('_nightWakeUntil'); if (s) state._nightWakeUntil = parseInt(s); } catch(e) {}
   }
-  // Wake override active — user tapped, stay awake until next sunrise
   if (state._nightWakeUntil && Date.now() < state._nightWakeUntil) return false;
 
-  // Unified screen_mode — falls back to legacy display_mode if not set
-  const sm     = state.settings?.screen_mode || (state.settings?.display_mode === 'night' ? 'sleep' : state.settings?.display_mode === 'bright' ? 'always_on' : 'auto');
-  const launch = currentLaunch();
-  const minsToLaunch = launch?.t0 ? (new Date(launch.t0) - new Date()) / 60000 : Infinity;
+  const sm = state.settings?.screen_mode || (state.settings?.display_mode === 'bright' ? 'always_on' : 'auto');
 
-  // Safety: never sleep if launch is within 30 minutes regardless of mode
-  if (minsToLaunch < 30) return false;
+  // Safety: never sleep within 30 min of launch
+  const launch = currentLaunch();
+  if (launch?.t0 && (new Date(launch.t0) - new Date()) / 60000 < 30) return false;
 
   if (sm === 'always_on') return false;
 
-  // Night window: 10pm–7am local time
+  // Auto: 10pm–7am
   const h = new Date().getHours();
-  const isNight = h >= 22 || h < 7;
-
-  // sleep = activate now regardless of launch timing, auto = only when launch > 3h away
-  if (sm === 'sleep') return isNight;
-  return isNight && minsToLaunch > 180;
+  return h >= 22 || h < 7;
 }
 
 function render(now) {
