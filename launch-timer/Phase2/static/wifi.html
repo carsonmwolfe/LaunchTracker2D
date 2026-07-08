@@ -17,8 +17,6 @@
       background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
       pointer-events: none; z-index: 100;
     }
-
-    /* TOP BAR */
     .topbar {
       height: 32px; flex-shrink: 0;
       background: #0d1620; border-bottom: 3px solid #00e87a;
@@ -37,12 +35,11 @@
     .top-title { font-size: 8px; color: #fff; }
     .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
 
-    /* CONNECTION STATUS BAR — sits just above keyboard */
+    /* CONNECTION STATUS */
     #conn-bar {
       flex-shrink: 0; display: none;
       background: #061a0e; border-top: 2px solid #00e87a;
-      padding: 5px 14px;
-      align-items: center; gap: 10px;
+      padding: 5px 14px; align-items: center; gap: 10px;
     }
     #conn-bar.visible { display: flex; }
     .conn-dot { width: 8px; height: 8px; background: #00e87a; flex-shrink: 0; }
@@ -51,22 +48,18 @@
     #no-conn-bar {
       flex-shrink: 0; display: none;
       background: #1a0808; border-top: 2px solid #ff4422;
-      padding: 5px 14px;
-      align-items: center; gap: 10px;
+      padding: 5px 14px; align-items: center; gap: 10px;
     }
     #no-conn-bar.visible { display: flex; }
     .no-conn-dot { width: 8px; height: 8px; background: #ff4422; flex-shrink: 0; }
     .no-conn-lbl { font-size: 7px; color: #ff4422; }
 
-    /* TOP PANEL — networks left, connect right */
     .top-panel {
       display: flex; flex-direction: row;
-      flex: 1;
-      border-bottom: none;
-      overflow: hidden;
+      flex: 1; overflow: hidden;
     }
 
-    /* LEFT — network list */
+    /* NETWORK LIST */
     .left-col {
       width: 340px; flex-shrink: 0;
       display: flex; flex-direction: column;
@@ -104,13 +97,12 @@
     .network-badge { font-size: 6px; color: #00e87a; flex-shrink: 0; background: rgba(0,232,122,0.1); border: 1px solid #00e87a; padding: 3px 6px; }
     .scan-msg { font-size: 7px; color: rgba(255,255,255,0.5); text-align: center; padding: 20px 8px; }
 
-    /* RIGHT — connect panel */
+    /* CONNECT PANEL */
     .right-col {
       flex: 1; display: flex; flex-direction: column;
       padding: 12px 14px; background: #0c1018; gap: 10px;
     }
     .connect-hdr { font-size: 8px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
-
     .ssid-display {
       background: #141e2e; border: 2px solid #2a3a50;
       padding: 12px 14px; flex: 1;
@@ -121,7 +113,6 @@
     .ssid-display-val { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 10px; }
 
-    /* Password row */
     .pw-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .pw-label { font-size: 8px; color: #4a9ede; letter-spacing: 1px; flex-shrink: 0; }
     .pw-input-wrap { flex: 1; position: relative; }
@@ -130,8 +121,10 @@
       padding: 14px 44px 14px 12px; color: #ffffff;
       font-family: 'Press Start 2P', monospace; font-size: 10px;
       outline: none; caret-color: #00e87a;
+      /* No readonly — WebKit2GTK bug: readonly inputs don't return JS-modified .value correctly */
     }
     input.pw-field:focus { border-color: #00e87a; background: #0a1f12; }
+    .pw-field.has-value { border-color: rgba(0,232,122,0.5); }
     .show-toggle {
       position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
       font-family: 'Press Start 2P', monospace; font-size: 6px;
@@ -139,8 +132,8 @@
       user-select: none; background: none; border: none; padding: 4px;
     }
     .show-toggle:hover { color: #ffd93d; }
+    .pw-hint { font-size: 6px; color: rgba(255,255,255,0.3); flex-shrink: 0; }
 
-    /* Connect btn + status */
     .connect-btn {
       width: 100%; padding: 10px;
       font-family: 'Press Start 2P', monospace; font-size: 9px;
@@ -149,6 +142,7 @@
       flex-shrink: 0;
     }
     .connect-btn:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
+
     .status-bar {
       flex-shrink: 0; font-size: 7px; color: #ffd93d;
       letter-spacing: 1px; min-height: 14px;
@@ -156,8 +150,9 @@
     }
     .status-bar.success { color: #00e87a; }
     .status-bar.error   { color: #ff4422; }
+    .status-bar.info    { color: #4a9ede; }
 
-    /* KEYBOARD — full width, fixed height */
+    /* KEYBOARD */
     .kb-section {
       flex: 0 0 210px; background: #080c12;
       padding: 5px 6px;
@@ -179,6 +174,7 @@
     .kb-key.shift.active { background: #1a1800; border-color: #ffd93d; }
     .kb-key.space { flex: 4; }
     .kb-key.sym-toggle { flex: 1.3; font-size: 9px; }
+    .kb-key.clear-key { background: #1a1020; color: #ff9933; border-color: #3a1a30; flex: 1.5; font-size: 8px; }
   </style>
 </head>
 <body>
@@ -197,10 +193,7 @@
     </div>
   </div>
 
-  <!-- TOP PANEL: networks + connect side by side -->
   <div class="top-panel">
-
-    <!-- LEFT: network list -->
     <div class="left-col">
       <div class="phdr">
         <div class="phdr-left">
@@ -214,7 +207,6 @@
       </div>
     </div>
 
-    <!-- RIGHT: connect panel -->
     <div class="right-col">
       <div class="connect-hdr">> CONNECT TO NETWORK</div>
 
@@ -226,21 +218,24 @@
       <div class="pw-row">
         <div class="pw-label">PASSWORD</div>
         <div class="pw-input-wrap">
-          <input type="password" class="pw-field" id="password"
-                 placeholder="••••••••"
+          <input type="text" class="pw-field" id="password"
+                 placeholder="tap keys below"
                  autocomplete="off" autocorrect="off"
-                 autocapitalize="off" spellcheck="false" readonly>
+                 autocapitalize="off" spellcheck="false"
+                 onfocus="suppressNativeKeyboard()"
+                 onclick="suppressNativeKeyboard()"
+                 oninput="onPasswordInput()"
+                 style="-webkit-text-security: disc;">
           <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
         </div>
+        <div class="pw-hint" id="pw-hint"></div>
       </div>
 
       <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
       <div class="status-bar" id="status"></div>
     </div>
-
   </div>
 
-  <!-- CONNECTION STATUS BAR — just above keyboard -->
   <div id="conn-bar">
     <div class="conn-dot"></div>
     <div class="conn-lbl">CONNECTED TO</div>
@@ -251,7 +246,6 @@
     <div class="no-conn-lbl">NOT CONNECTED TO ANY NETWORK</div>
   </div>
 
-  <!-- BOTTOM: full-width keyboard -->
   <div class="kb-section" id="kb">
     <div class="kb-row" id="kb-row0"></div>
     <div class="kb-row" id="kb-row1"></div>
@@ -265,21 +259,27 @@
     let showPassword = false;
     let shiftOn = false;
     let symMode = false;
+    let currentSsid = '';
+    let connectAttempts = 0;
 
     const ROWS_ALPHA = [
       ['1','2','3','4','5','6','7','8','9','0','⌫'],
       ['q','w','e','r','t','y','u','i','o','p'],
       ['a','s','d','f','g','h','j','k','l'],
       ['⇧','z','x','c','v','b','n','m','-'],
-      ['SYM','@','_','.','SPACE','!','✓'],
+      ['SYM','@','_','.','SPACE','CLR','✓'],
     ];
     const ROWS_SYM = [
       ['1','2','3','4','5','6','7','8','9','0','⌫'],
-      ['!','@','#','$','%','^','&','*','(', ')'],
+      ['!','@','#','$','%','^','&','*','(',')'],
       ['-','_','=','+','[',']','{','}','|'],
       ['⇧',';',':','\'','"',',','.','?','⌫'],
-      ['ABC','~','`','\\','SPACE','/','✓'],
+      ['ABC','~','`','\\','SPACE','CLR','✓'],
     ];
+
+    function suppressNativeKeyboard() {
+      fetch('/api/osk?show=0').catch(() => {});
+    }
 
     function buildKeyboard() {
       const rows = symMode ? ROWS_SYM : ROWS_ALPHA;
@@ -291,16 +291,16 @@
           btn.className = 'kb-key';
           let label = key;
 
-          if (key === '⌫') { btn.classList.add('backspace'); }
+          if (key === '⌫')  { btn.classList.add('backspace'); }
           else if (key === '⇧') { btn.classList.add('shift'); if (shiftOn) btn.classList.add('active'); }
           else if (key === 'SPACE') { btn.classList.add('space'); btn.textContent = 'SPACE'; }
           else if (key === '✓') { btn.classList.add('special'); label = '✓ DONE'; }
+          else if (key === 'CLR') { btn.classList.add('clear-key'); label = 'CLR'; }
           else if (key === 'SYM' || key === 'ABC') { btn.classList.add('special', 'sym-toggle'); }
           else if (!symMode && shiftOn && key.match(/[a-z]/)) { label = key.toUpperCase(); }
 
           if (key !== 'SPACE') btn.textContent = label;
-
-          btn.addEventListener('click', () => handleKey(key));
+          btn.addEventListener('click', (e) => { e.preventDefault(); handleKey(key); });
           rowEl.appendChild(btn);
         });
       });
@@ -310,42 +310,96 @@
       const input = document.getElementById('password');
       if (key === '⌫') {
         input.value = input.value.slice(0, -1);
+      } else if (key === 'CLR') {
+        input.value = '';
       } else if (key === '⇧') {
         shiftOn = !shiftOn;
         buildKeyboard();
+        return;
       } else if (key === 'SYM') {
-        symMode = true; shiftOn = false;
-        buildKeyboard();
+        symMode = true; shiftOn = false; buildKeyboard(); return;
       } else if (key === 'ABC') {
-        symMode = false; shiftOn = false;
-        buildKeyboard();
+        symMode = false; shiftOn = false; buildKeyboard(); return;
       } else if (key === 'SPACE') {
         input.value += ' ';
       } else if (key === '✓') {
-        // done
+        if (selectedSsid) connect();
+        return;
       } else {
         const ch = (!symMode && shiftOn) ? key.toUpperCase() : key;
         input.value += ch;
         if (shiftOn && !symMode) { shiftOn = false; buildKeyboard(); }
+      }
+      onPasswordInput();
+    }
+
+    function onPasswordInput() {
+      const pw = document.getElementById('password').value;
+      const hint = document.getElementById('pw-hint');
+      const field = document.getElementById('password');
+
+      // Visual feedback on password field
+      field.classList.toggle('has-value', pw.length > 0);
+
+      // Helpful hints
+      if (pw.length === 0) {
+        hint.textContent = '';
+      } else if (pw.length < 8) {
+        hint.textContent = pw.length + ' chars — min 8';
+        hint.style.color = '#ff9933';
+      } else {
+        hint.textContent = pw.length + ' chars';
+        hint.style.color = 'rgba(0,232,122,0.6)';
       }
     }
 
     function toggleShow() {
       showPassword = !showPassword;
       const input = document.getElementById('password');
-      input.type = showPassword ? 'text' : 'password';
+      // Toggle -webkit-text-security instead of type (avoids WebKit input reset)
+      input.style.webkitTextSecurity = showPassword ? 'none' : 'disc';
       document.getElementById('show-toggle').textContent = showPassword ? 'HIDE' : 'SHOW';
     }
 
+    function friendlyError(raw) {
+      if (!raw) return 'Connection failed — check password';
+      const r = raw.toLowerCase();
+      if (r.includes('psk') || r.includes('password') || r.includes('802-11')) {
+        return 'Wrong password — try again';
+      }
+      if (r.includes('timeout') || r.includes('timed out')) {
+        return 'Timed out — move closer to router';
+      }
+      if (r.includes('no network') || r.includes('not found')) {
+        return 'Network not found — tap scan';
+      }
+      if (r.includes('ssid') && r.includes('not')) {
+        return 'Network not found — tap scan';
+      }
+      if (r.includes('dhcp') || r.includes('ip address')) {
+        return 'Connected but no IP — reboot router';
+      }
+      return 'Failed — check password and try again';
+    }
+
     function selectNetwork(ssid, isCurrent) {
+      const wasAlreadySelected = selectedSsid === ssid;
       selectedSsid = ssid;
       const valEl = document.getElementById('ssid-val');
       valEl.textContent = ssid;
       valEl.classList.remove('placeholder');
       document.getElementById('ssid-display').classList.add('has-selection');
       document.getElementById('btn-connect').disabled = false;
-      document.getElementById('password').value = '';
-      setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), '');
+      connectAttempts = 0;
+
+      // Only clear password if selecting a DIFFERENT network
+      if (!wasAlreadySelected) {
+        document.getElementById('password').value = '';
+        document.getElementById('pw-hint').textContent = '';
+        document.getElementById('password').classList.remove('has-value');
+      }
+
+      setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), 'info');
     }
 
     function setStatus(msg, type) {
@@ -362,9 +416,28 @@
 
     function connect() {
       if (!selectedSsid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
+
       const password = document.getElementById('password').value;
+
+      // Client-side validation
+      if (password.length === 0) {
+        setStatus('ENTER PASSWORD FIRST', 'error');
+        document.getElementById('password').style.borderColor = '#ff4422';
+        return;
+      }
+      if (password.length < 8) {
+        setStatus('PASSWORD TOO SHORT (MIN 8 CHARS)', 'error');
+        document.getElementById('password').style.borderColor = '#ff9933';
+        return;
+      }
+
+      // Reset field styling
+      document.getElementById('password').style.borderColor = '';
+
+      connectAttempts++;
       setConnecting(true);
       setStatus('CONNECTING TO ' + selectedSsid.toUpperCase() + '...', '');
+
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -373,15 +446,22 @@
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
-          setStatus('CONNECTED — RETURNING TO HOME', 'success');
+          setStatus('CONNECTED! RETURNING TO HOME...', 'success');
           setTimeout(() => { window.location = '/'; }, 2500);
         } else {
-          setStatus('FAILED: ' + (data.error || 'UNKNOWN ERROR').toUpperCase(), 'error');
+          const msg = friendlyError(data.error);
+          setStatus(msg, 'error');
           setConnecting(false);
+
+          // After 2+ failures on same network, suggest clearing saved data
+          if (connectAttempts >= 2) {
+            setStatus(msg + ' — TAP CONNECT AGAIN TO RETRY WITH CLEAN PROFILE', 'error');
+          }
         }
       })
       .catch(() => {
-        setStatus('CONNECTED — RETURNING TO HOME', 'success');
+        // Fetch threw — server might have disconnected (can happen on successful connect)
+        setStatus('CONNECTED! RETURNING TO HOME...', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
       });
     }
@@ -390,8 +470,6 @@
       const container = document.getElementById('networks');
       container.innerHTML = '<div class="scan-msg">SCANNING...</div>';
       document.getElementById('btn-scan').disabled = true;
-
-      let currentSsid = '';
 
       fetch('/api/wifi/current').then(r => r.json()).then(d => {
         currentSsid = (d.ssid || '').trim();
@@ -411,7 +489,7 @@
         document.getElementById('btn-scan').disabled = false;
         container.innerHTML = '';
         if (!data.networks || !data.networks.length) {
-          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND</div>';
+          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND — TAP SCAN TO RETRY</div>';
           return;
         }
         data.networks.forEach(ssid => {
@@ -446,10 +524,12 @@
         });
       }).catch(() => {
         document.getElementById('btn-scan').disabled = false;
-        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN</div>';
+        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN TO RETRY</div>';
       });
     }
 
+    // Suppress native OSK on load
+    suppressNativeKeyboard();
     buildKeyboard();
     scanNetworks();
   </script>

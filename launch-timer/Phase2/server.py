@@ -1417,10 +1417,17 @@ def wifi_connect():
     data     = request.get_json() or {}
     ssid     = data.get('ssid', '')
     password = data.get('password', '')
+    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} pw_empty={password == ""}')
+
+    if not ssid:
+        return jsonify({'ok': False, 'error': 'No network selected'})
+    if not password:
+        return jsonify({'ok': False, 'error': 'No password provided'})
+
     try:
         if _use_nmcli():
-            # Delete ALL saved wifi connections for this SSID (by name and by SSID property)
-            # nmcli con delete <ssid> only works if connection name == ssid, which isn't always true
+            # Aggressively delete ALL saved profiles for this SSID
+            # (nmcli con delete <name> only works when connection name == ssid)
             try:
                 con_list = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
                                           capture_output=True, text=True, timeout=5)
@@ -1434,23 +1441,26 @@ def wifi_connect():
                         if ssid in con_info.stdout:
                             subprocess.run(['nmcli', 'con', 'delete', con_name],
                                            capture_output=True, timeout=5)
-            except Exception:
+                            print(f'[{_ts()}] Deleted stale profile: {con_name}')
+            except Exception as e:
+                print(f'[{_ts()}] Profile cleanup error: {e}')
                 subprocess.run(['nmcli', 'con', 'delete', ssid], capture_output=True, timeout=5)
-            if password:
-                result = subprocess.run(
-                    ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password],
-                    capture_output=True, text=True, timeout=30)
-            else:
-                result = subprocess.run(
-                    ['nmcli', 'dev', 'wifi', 'connect', ssid],
-                    capture_output=True, text=True, timeout=30)
+
+            # Connect — explicitly set WPA-PSK to avoid auth type confusion
+            result = subprocess.run(
+                ['nmcli', 'dev', 'wifi', 'connect', ssid,
+                 'password', password,
+                 'wifi-sec.key-mgmt', 'wpa-psk'],
+                capture_output=True, text=True, timeout=30)
+
+            print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
             connected = result.returncode == 0 and 'successfully activated' in result.stdout
             if connected:
                 _data_cache['fetched_at'] = 0
                 return jsonify({'ok': True})
             else:
                 err = result.stderr.strip() or result.stdout.strip()
-                return jsonify({'ok': False, 'error': err or 'Could not connect — wrong password?'})
+                return jsonify({'ok': False, 'error': err or 'Could not connect'})
         else:
             result = subprocess.run(
                 ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
