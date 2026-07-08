@@ -1457,16 +1457,16 @@ def wifi_connect():
                 subprocess.run(['nmcli', 'con', 'delete', ssid], capture_output=True, timeout=5)
 
             # Connect — explicitly set security type to avoid auth type confusion
+            is_hidden = data.get('hidden', False)
             if is_open:
-                result = subprocess.run(
-                    ['nmcli', 'dev', 'wifi', 'connect', ssid],
-                    capture_output=True, text=True, timeout=30)
+                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
             else:
-                result = subprocess.run(
-                    ['nmcli', 'dev', 'wifi', 'connect', ssid,
-                     'password', password,
-                     'wifi-sec.key-mgmt', 'wpa-psk'],
-                    capture_output=True, text=True, timeout=30)
+                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid,
+                       'password', password,
+                       'wifi-sec.key-mgmt', 'wpa-psk']
+            if is_hidden:
+                cmd += ['hidden', 'yes']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
             connected = result.returncode == 0 and 'successfully activated' in result.stdout

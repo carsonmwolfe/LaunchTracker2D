@@ -222,8 +222,8 @@
                  placeholder="tap keys below"
                  autocomplete="off" autocorrect="off"
                  autocapitalize="off" spellcheck="false"
-                 onfocus="suppressNativeKeyboard()"
-                 onclick="suppressNativeKeyboard()"
+                 onfocus="suppressNativeKeyboard();switchKeyboardTarget('password')"
+                 onclick="suppressNativeKeyboard();switchKeyboardTarget('password')"
                  oninput="onPasswordInput()"
                  style="-webkit-text-security: disc;">
           <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
@@ -345,27 +345,49 @@
       }
     }
 
+    let isHiddenNetwork = false;
+
     function toggleManualSsid() {
       const row = document.getElementById('manual-ssid-row');
       const btn = document.getElementById('btn-manual');
       const visible = row.style.display !== 'none';
+      isHiddenNetwork = !visible;
       row.style.display = visible ? 'none' : 'flex';
       btn.style.borderColor = visible ? '#344558' : '#4a9ede';
       btn.style.color = visible ? 'rgba(74,158,222,0.6)' : '#4a9ede';
       if (!visible) {
-        setStatus('TYPE HIDDEN NETWORK NAME — TAP SSID FIELD FIRST', 'info');
+        // Switch keyboard to SSID field, clear any selected network
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TYPE NETWORK NAME —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('ssid-display').classList.remove('has-selection');
+        document.getElementById('btn-connect').disabled = true;
         switchKeyboardTarget('manual-ssid');
-        // Selecting manual SSID
-        document.getElementById('manual-ssid').addEventListener('input', () => {
-          const val = document.getElementById('manual-ssid').value.trim();
+        setStatus('STEP 1: TYPE HIDDEN NETWORK NAME  STEP 2: TAP PASSWORD FIELD', 'info');
+        // Update SSID selection as user types
+        const ssidInput = document.getElementById('manual-ssid');
+        ssidInput.oninput = () => {
+          const val = ssidInput.value.trim();
           if (val) {
             selectedSsid = val;
             document.getElementById('ssid-val').textContent = val;
             document.getElementById('ssid-val').classList.remove('placeholder');
             document.getElementById('ssid-display').classList.add('has-selection');
             document.getElementById('btn-connect').disabled = false;
+            setStatus('NETWORK: ' + val + ' — NOW TAP PASSWORD FIELD AND TYPE PASSWORD', 'info');
+          } else {
+            selectedSsid = '';
+            document.getElementById('btn-connect').disabled = true;
           }
-        });
+        };
+      } else {
+        isHiddenNetwork = false;
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TAP A NETWORK —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('manual-ssid').value = '';
+        switchKeyboardTarget('password');
+        setStatus('', '');
       }
     }
 
@@ -518,7 +540,7 @@
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssid: selectedSsid, password, open: isOpenNetwork })
+        body: JSON.stringify({ ssid: selectedSsid, password, open: isOpenNetwork, hidden: isHiddenNetwork })
       })
       .then(r => r.json())
       .then(data => {
