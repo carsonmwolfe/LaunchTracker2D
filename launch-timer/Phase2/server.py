@@ -1419,9 +1419,23 @@ def wifi_connect():
     password = data.get('password', '')
     try:
         if _use_nmcli():
-            # Delete any existing saved connection with this SSID first
-            subprocess.run(['nmcli', 'con', 'delete', ssid],
-                           capture_output=True, timeout=5)
+            # Delete ALL saved wifi connections for this SSID (by name and by SSID property)
+            # nmcli con delete <ssid> only works if connection name == ssid, which isn't always true
+            try:
+                con_list = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
+                                          capture_output=True, text=True, timeout=5)
+                for line in con_list.stdout.splitlines():
+                    parts = line.split(':')
+                    if len(parts) >= 2 and '802-11-wireless' in parts[1]:
+                        con_name = parts[0]
+                        con_info = subprocess.run(['nmcli', '-t', '-f', '802-11-wireless.ssid',
+                                                   'con', 'show', con_name],
+                                                  capture_output=True, text=True, timeout=5)
+                        if ssid in con_info.stdout:
+                            subprocess.run(['nmcli', 'con', 'delete', con_name],
+                                           capture_output=True, timeout=5)
+            except Exception:
+                subprocess.run(['nmcli', 'con', 'delete', ssid], capture_output=True, timeout=5)
             if password:
                 result = subprocess.run(
                     ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password],
