@@ -231,7 +231,18 @@
         <div class="pw-hint" id="pw-hint"></div>
       </div>
 
-      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <button class="connect-btn" id="btn-connect" onclick="connect()" disabled style="flex:1;">CONNECT</button>
+        <button id="btn-open" onclick="toggleOpenNetwork()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:10px 8px;background:#141e2e;border:2px solid #344558;color:rgba(255,255,255,0.4);cursor:pointer;flex-shrink:0;white-space:nowrap;">OPEN</button>
+        <button id="btn-manual" onclick="toggleManualSsid()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:10px 8px;background:#141e2e;border:2px solid #344558;color:rgba(74,158,222,0.6);cursor:pointer;flex-shrink:0;white-space:nowrap;">HIDDEN</button>
+      </div>
+      <div id="manual-ssid-row" style="display:none;gap:8px;align-items:center;flex-shrink:0;">
+        <div style="font-size:7px;color:#4a9ede;flex-shrink:0;">SSID</div>
+        <input type="text" id="manual-ssid" placeholder="enter network name"
+               style="flex:1;background:#1a2535;border:2px solid #344558;padding:8px;color:#fff;font-family:'Press Start 2P',monospace;font-size:8px;outline:none;"
+               onfocus="suppressNativeKeyboard();switchKeyboardTarget('manual-ssid')"
+               onclick="suppressNativeKeyboard();switchKeyboardTarget('manual-ssid')">
+      </div>
       <div class="status-bar" id="status"></div>
     </div>
   </div>
@@ -261,6 +272,9 @@
     let symMode = false;
     let currentSsid = '';
     let connectAttempts = 0;
+    let isOpenNetwork = false;
+    let isConnecting = false;
+    let keyboardTarget = 'password'; // which input keyboard types into
 
     const ROWS_ALPHA = [
       ['1','2','3','4','5','6','7','8','9','0','⌫'],
@@ -306,8 +320,57 @@
       });
     }
 
+    function switchKeyboardTarget(id) {
+      keyboardTarget = id;
+    }
+
+    function toggleOpenNetwork() {
+      isOpenNetwork = !isOpenNetwork;
+      const btn = document.getElementById('btn-open');
+      const pwRow = document.querySelector('.pw-row');
+      if (isOpenNetwork) {
+        btn.style.borderColor = '#00e87a';
+        btn.style.color = '#00e87a';
+        pwRow.style.opacity = '0.3';
+        pwRow.style.pointerEvents = 'none';
+        document.getElementById('password').value = '';
+        document.getElementById('pw-hint').textContent = '';
+        setStatus('OPEN NETWORK — NO PASSWORD REQUIRED', 'info');
+      } else {
+        btn.style.borderColor = '#344558';
+        btn.style.color = 'rgba(255,255,255,0.4)';
+        pwRow.style.opacity = '1';
+        pwRow.style.pointerEvents = '';
+        setStatus('', '');
+      }
+    }
+
+    function toggleManualSsid() {
+      const row = document.getElementById('manual-ssid-row');
+      const btn = document.getElementById('btn-manual');
+      const visible = row.style.display !== 'none';
+      row.style.display = visible ? 'none' : 'flex';
+      btn.style.borderColor = visible ? '#344558' : '#4a9ede';
+      btn.style.color = visible ? 'rgba(74,158,222,0.6)' : '#4a9ede';
+      if (!visible) {
+        setStatus('TYPE HIDDEN NETWORK NAME — TAP SSID FIELD FIRST', 'info');
+        switchKeyboardTarget('manual-ssid');
+        // Selecting manual SSID
+        document.getElementById('manual-ssid').addEventListener('input', () => {
+          const val = document.getElementById('manual-ssid').value.trim();
+          if (val) {
+            selectedSsid = val;
+            document.getElementById('ssid-val').textContent = val;
+            document.getElementById('ssid-val').classList.remove('placeholder');
+            document.getElementById('ssid-display').classList.add('has-selection');
+            document.getElementById('btn-connect').disabled = false;
+          }
+        });
+      }
+    }
+
     function handleKey(key) {
-      const input = document.getElementById('password');
+      const input = document.getElementById(keyboardTarget) || document.getElementById('password');
       if (key === '⌫') {
         input.value = input.value.slice(0, -1);
       } else if (key === 'CLR') {
@@ -362,22 +425,28 @@
     }
 
     function friendlyError(raw) {
-      if (!raw) return 'Connection failed — check password';
+      if (!raw) return 'Failed — check password and try again';
       const r = raw.toLowerCase();
-      if (r.includes('psk') || r.includes('password') || r.includes('802-11')) {
-        return 'Wrong password — try again';
+      if (r.includes('802.1x') || r.includes('enterprise') || r.includes('eap')) {
+        return 'Enterprise WiFi not supported — needs IT setup';
+      }
+      if (r.includes('psk') || r.includes('password') || r.includes('802-11') || r.includes('secrets')) {
+        return 'Wrong password — check carefully and retry';
       }
       if (r.includes('timeout') || r.includes('timed out')) {
-        return 'Timed out — move closer to router';
+        return 'Timed out — move closer to router and retry';
       }
-      if (r.includes('no network') || r.includes('not found')) {
-        return 'Network not found — tap scan';
+      if (r.includes('no network') || r.includes('not found') || r.includes('unknown')) {
+        return 'Network not found — tap ↺ SCAN first';
       }
-      if (r.includes('ssid') && r.includes('not')) {
-        return 'Network not found — tap scan';
+      if (r.includes('dhcp') || r.includes('ip address') || r.includes('lease')) {
+        return 'No IP from router — reboot router and retry';
       }
-      if (r.includes('dhcp') || r.includes('ip address')) {
-        return 'Connected but no IP — reboot router';
+      if (r.includes('deactivat') || r.includes('disconnect')) {
+        return 'Disconnected immediately — wrong password?';
+      }
+      if (r.includes('blocked') || r.includes('rfkill')) {
+        return 'WiFi is blocked — reboot the Pi';
       }
       return 'Failed — check password and try again';
     }
@@ -415,53 +484,74 @@
     }
 
     function connect() {
+      if (isConnecting) return; // prevent double-tap
       if (!selectedSsid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
 
-      const password = document.getElementById('password').value;
+      const password = isOpenNetwork ? '' : document.getElementById('password').value;
 
       // Client-side validation
-      if (password.length === 0) {
-        setStatus('ENTER PASSWORD FIRST', 'error');
-        document.getElementById('password').style.borderColor = '#ff4422';
-        return;
-      }
-      if (password.length < 8) {
-        setStatus('PASSWORD TOO SHORT (MIN 8 CHARS)', 'error');
-        document.getElementById('password').style.borderColor = '#ff9933';
-        return;
+      if (!isOpenNetwork) {
+        if (password.length === 0) {
+          setStatus('ENTER PASSWORD FIRST', 'error');
+          document.getElementById('password').style.borderColor = '#ff4422';
+          return;
+        }
+        if (password.length < 8) {
+          setStatus('PASSWORD TOO SHORT — WPA2 REQUIRES AT LEAST 8 CHARACTERS', 'error');
+          document.getElementById('password').style.borderColor = '#ff9933';
+          return;
+        }
+        if (password.length > 63) {
+          setStatus('PASSWORD TOO LONG — MAX 63 CHARACTERS FOR WPA2', 'error');
+          return;
+        }
       }
 
-      // Reset field styling
       document.getElementById('password').style.borderColor = '';
-
+      isConnecting = true;
       connectAttempts++;
       setConnecting(true);
-      setStatus('CONNECTING TO ' + selectedSsid.toUpperCase() + '...', '');
+
+      const shortSsid = selectedSsid.length > 16 ? selectedSsid.slice(0,14)+'…' : selectedSsid;
+      setStatus('CONNECTING TO ' + shortSsid.toUpperCase() + '...', '');
 
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssid: selectedSsid, password })
+        body: JSON.stringify({ ssid: selectedSsid, password, open: isOpenNetwork })
       })
       .then(r => r.json())
       .then(data => {
+        isConnecting = false;
         if (data.ok) {
-          setStatus('CONNECTED! RETURNING TO HOME...', 'success');
-          setTimeout(() => { window.location = '/'; }, 2500);
+          // Verify internet actually works (not just connected to AP)
+          setStatus('CONNECTED — VERIFYING INTERNET...', 'success');
+          setTimeout(() => {
+            fetch('/api/health', { cache: 'no-store' })
+              .then(() => {
+                setStatus('CONNECTED + INTERNET VERIFIED!', 'success');
+                setTimeout(() => { window.location = '/'; }, 1500);
+              })
+              .catch(() => {
+                // Connected to AP but no internet — could be captive portal
+                setStatus('CONNECTED TO WIFI — NO INTERNET YET (CAPTIVE PORTAL?)', 'warn');
+                setTimeout(() => { window.location = '/'; }, 3000);
+              });
+          }, 3000);
         } else {
           const msg = friendlyError(data.error);
-          setStatus(msg, 'error');
-          setConnecting(false);
-
-          // After 2+ failures on same network, suggest clearing saved data
           if (connectAttempts >= 2) {
-            setStatus(msg + ' — TAP CONNECT AGAIN TO RETRY WITH CLEAN PROFILE', 'error');
+            setStatus(msg + ' (' + connectAttempts + ' ATTEMPTS — CHECK PASSWORD)', 'error');
+          } else {
+            setStatus(msg, 'error');
           }
+          setConnecting(false);
         }
       })
       .catch(() => {
-        // Fetch threw — server might have disconnected (can happen on successful connect)
-        setStatus('CONNECTED! RETURNING TO HOME...', 'success');
+        isConnecting = false;
+        // Server disconnected mid-request — usually means connect succeeded
+        setStatus('CONNECTED — RETURNING TO HOME...', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
       });
     }
@@ -492,18 +582,28 @@
           container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND — TAP SCAN TO RETRY</div>';
           return;
         }
-        data.networks.forEach(ssid => {
+        data.networks.forEach(net => {
+          // Support both string SSIDs (old) and object {ssid, band, security} (new)
+          const ssid     = typeof net === 'string' ? net : net.ssid;
+          const band     = typeof net === 'object' ? net.band : '';
+          const security = typeof net === 'object' ? net.security : '';
           const isCurrent = ssid === currentSsid;
+          const is5ghz   = band === '5GHz';
+          const isEnterprise = security && security.toLowerCase().includes('enterprise');
+
           const div = document.createElement('div');
-          div.className = 'network' + (isCurrent ? ' current-net' : '');
+          div.className = 'network' + (isCurrent ? ' current-net' : '') + (is5ghz ? ' disabled-net' : '');
+          if (is5ghz) div.style.opacity = '0.5';
 
           const sig = document.createElement('span');
           sig.className = 'network-signal';
-          sig.textContent = '|||';
+          sig.textContent = is5ghz ? '5G' : '|||';
+          if (is5ghz) sig.style.color = '#ff9933';
 
           const name = document.createElement('span');
           name.className = 'network-name';
           name.textContent = ssid;
+          if (isEnterprise) name.style.color = '#ff9933';
 
           div.appendChild(sig);
           div.appendChild(name);
@@ -513,9 +613,31 @@
             badge.className = 'network-badge';
             badge.textContent = '✓ CONNECTED';
             div.appendChild(badge);
+          } else if (is5ghz) {
+            const badge = document.createElement('span');
+            badge.className = 'network-badge';
+            badge.textContent = '5GHz';
+            badge.style.borderColor = '#ff9933';
+            badge.style.color = '#ff9933';
+            div.appendChild(badge);
+          } else if (isEnterprise) {
+            const badge = document.createElement('span');
+            badge.className = 'network-badge';
+            badge.textContent = 'ENTERPRISE';
+            badge.style.borderColor = '#ff9933';
+            badge.style.color = '#ff9933';
+            div.appendChild(badge);
           }
 
           div.addEventListener('click', () => {
+            if (is5ghz) {
+              setStatus('5GHz NOT SUPPORTED ON THIS PI — USE 2.4GHz NETWORK', 'error');
+              return;
+            }
+            if (isEnterprise) {
+              setStatus('ENTERPRISE WIFI — NEEDS USERNAME+PASSWORD — NOT SUPPORTED', 'error');
+              return;
+            }
             document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
             div.classList.add('selected');
             selectNetwork(ssid, isCurrent);

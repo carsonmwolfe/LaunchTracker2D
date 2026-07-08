@@ -1370,23 +1370,32 @@ def wifi_scan():
         if _use_nmcli():
             subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], capture_output=True, timeout=10)
             result = subprocess.check_output(
-                ['nmcli', '-t', '-f', 'SSID', 'dev', 'wifi', 'list'],
+                ['nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list'],
                 text=True, timeout=15)
             networks = []
+            seen = set()
             for line in result.strip().split('\n'):
-                ssid = line.strip()
-                if ssid and ssid not in networks:
-                    networks.append(ssid)
+                parts = line.split(':')
+                if len(parts) < 1: continue
+                ssid = parts[0].strip()
+                freq = parts[1].strip() if len(parts) > 1 else ''
+                security = parts[2].strip() if len(parts) > 2 else ''
+                if not ssid or ssid in seen: continue
+                seen.add(ssid)
+                band = '5GHz' if freq.startswith('5') else '2.4GHz'
+                networks.append({'ssid': ssid, 'band': band, 'security': security})
         else:
             subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
             time.sleep(1)
             result = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True, timeout=15)
             networks = []
+            seen = set()
             for line in result.split('\n'):
                 if 'ESSID:' in line:
                     ssid = line.split('ESSID:')[1].strip().strip('"')
-                    if ssid and ssid not in networks:
-                        networks.append(ssid)
+                    if ssid and ssid not in seen:
+                        seen.add(ssid)
+                        networks.append({'ssid': ssid, 'band': '', 'security': ''})
         return jsonify({'networks': networks})
     except Exception as e:
         return jsonify({'networks': [], 'error': str(e)})
@@ -1414,14 +1423,15 @@ def wifi_current():
 
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():
-    data     = request.get_json() or {}
-    ssid     = data.get('ssid', '')
-    password = data.get('password', '')
-    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} pw_empty={password == ""}')
+    data        = request.get_json() or {}
+    ssid        = data.get('ssid', '')
+    password    = data.get('password', '')
+    is_open     = data.get('open', False)
+    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} open={is_open}')
 
     if not ssid:
         return jsonify({'ok': False, 'error': 'No network selected'})
-    if not password:
+    if not is_open and not password:
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
@@ -1446,12 +1456,17 @@ def wifi_connect():
                 print(f'[{_ts()}] Profile cleanup error: {e}')
                 subprocess.run(['nmcli', 'con', 'delete', ssid], capture_output=True, timeout=5)
 
-            # Connect — explicitly set WPA-PSK to avoid auth type confusion
-            result = subprocess.run(
-                ['nmcli', 'dev', 'wifi', 'connect', ssid,
-                 'password', password,
-                 'wifi-sec.key-mgmt', 'wpa-psk'],
-                capture_output=True, text=True, timeout=30)
+            # Connect — explicitly set security type to avoid auth type confusion
+            if is_open:
+                result = subprocess.run(
+                    ['nmcli', 'dev', 'wifi', 'connect', ssid],
+                    capture_output=True, text=True, timeout=30)
+            else:
+                result = subprocess.run(
+                    ['nmcli', 'dev', 'wifi', 'connect', ssid,
+                     'password', password,
+                     'wifi-sec.key-mgmt', 'wpa-psk'],
+                    capture_output=True, text=True, timeout=30)
 
             print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
             connected = result.returncode == 0 and 'successfully activated' in result.stdout
