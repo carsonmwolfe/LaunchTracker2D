@@ -231,10 +231,10 @@
         <div class="pw-hint" id="pw-hint"></div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <button class="connect-btn" id="btn-connect" onclick="connect()" disabled style="flex:1;">CONNECT</button>
-        <button id="btn-open" onclick="toggleOpenNetwork()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:10px 8px;background:#141e2e;border:2px solid #344558;color:rgba(255,255,255,0.4);cursor:pointer;flex-shrink:0;white-space:nowrap;">OPEN</button>
-        <button id="btn-manual" onclick="toggleManualSsid()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:10px 8px;background:#141e2e;border:2px solid #344558;color:rgba(74,158,222,0.6);cursor:pointer;flex-shrink:0;white-space:nowrap;">HIDDEN</button>
+      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button id="btn-open" onclick="toggleOpenNetwork()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:6px;background:#141e2e;border:2px solid #344558;color:rgba(255,255,255,0.4);cursor:pointer;flex:1;">NO PASSWORD (OPEN)</button>
+        <button id="btn-manual" onclick="toggleManualSsid()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:6px;background:#141e2e;border:2px solid #344558;color:rgba(74,158,222,0.6);cursor:pointer;flex:1;">HIDDEN NETWORK</button>
       </div>
       <div id="manual-ssid-row" style="display:none;gap:8px;align-items:center;flex-shrink:0;">
         <div style="font-size:7px;color:#4a9ede;flex-shrink:0;">SSID</div>
@@ -364,22 +364,7 @@
         document.getElementById('btn-connect').disabled = true;
         switchKeyboardTarget('manual-ssid');
         setStatus('STEP 1: TYPE HIDDEN NETWORK NAME  STEP 2: TAP PASSWORD FIELD', 'info');
-        // Update SSID selection as user types
-        const ssidInput = document.getElementById('manual-ssid');
-        ssidInput.oninput = () => {
-          const val = ssidInput.value.trim();
-          if (val) {
-            selectedSsid = val;
-            document.getElementById('ssid-val').textContent = val;
-            document.getElementById('ssid-val').classList.remove('placeholder');
-            document.getElementById('ssid-display').classList.add('has-selection');
-            document.getElementById('btn-connect').disabled = false;
-            setStatus('NETWORK: ' + val + ' — NOW TAP PASSWORD FIELD AND TYPE PASSWORD', 'info');
-          } else {
-            selectedSsid = '';
-            document.getElementById('btn-connect').disabled = true;
-          }
-        };
+        // SSID updates handled by handleKey → updateHiddenSsid()
       } else {
         isHiddenNetwork = false;
         selectedSsid = '';
@@ -388,6 +373,24 @@
         document.getElementById('manual-ssid').value = '';
         switchKeyboardTarget('password');
         setStatus('', '');
+      }
+    }
+
+    function updateHiddenSsid() {
+      const val = (document.getElementById('manual-ssid').value || '').trim();
+      if (val) {
+        selectedSsid = val;
+        document.getElementById('ssid-val').textContent = val;
+        document.getElementById('ssid-val').classList.remove('placeholder');
+        document.getElementById('ssid-display').classList.add('has-selection');
+        document.getElementById('btn-connect').disabled = false;
+        setStatus('NETWORK: ' + val + ' — TAP PASSWORD FIELD THEN TYPE PASSWORD', 'info');
+      } else {
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TYPE NETWORK NAME —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('ssid-display').classList.remove('has-selection');
+        document.getElementById('btn-connect').disabled = true;
       }
     }
 
@@ -415,7 +418,12 @@
         input.value += ch;
         if (shiftOn && !symMode) { shiftOn = false; buildKeyboard(); }
       }
-      onPasswordInput();
+      // Update SSID selection if typing into hidden network field
+      if (keyboardTarget === 'manual-ssid') {
+        updateHiddenSsid();
+      } else {
+        onPasswordInput();
+      }
     }
 
     function onPasswordInput() {
