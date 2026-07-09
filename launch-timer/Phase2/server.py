@@ -1448,37 +1448,30 @@ def wifi_connect():
 
     try:
         if _use_nmcli():
-            # Aggressively delete ALL saved profiles for this SSID
-            # (nmcli con delete <name> only works when connection name == ssid)
+            # Nuke ALL saved wifi connection profiles before connecting.
+            # This is the only reliable way to prevent stale profiles from
+            # causing "psk not given" errors regardless of profile names.
             try:
                 con_list = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
                                           capture_output=True, text=True, timeout=5)
                 for line in con_list.stdout.splitlines():
                     parts = line.split(':')
                     if len(parts) >= 2 and '802-11-wireless' in parts[1]:
-                        con_name = parts[0]
-                        con_info = subprocess.run(['nmcli', '-t', '-f', '802-11-wireless.ssid',
-                                                   'con', 'show', con_name],
-                                                  capture_output=True, text=True, timeout=5)
-                        if ssid in con_info.stdout:
-                            subprocess.run(['nmcli', 'con', 'delete', con_name],
-                                           capture_output=True, timeout=5)
-                            print(f'[{_ts()}] Deleted stale profile: {con_name}')
+                        subprocess.run(['nmcli', 'con', 'delete', parts[0]],
+                                       capture_output=True, timeout=5)
+                        print(f'[{_ts()}] Deleted wifi profile: {parts[0]}')
             except Exception as e:
                 print(f'[{_ts()}] Profile cleanup error: {e}')
-                subprocess.run(['nmcli', 'con', 'delete', ssid], capture_output=True, timeout=5)
 
             # Connect — explicitly set security type to avoid auth type confusion
             is_hidden = data.get('hidden', False)
             if is_open:
                 cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
             else:
-                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid,
-                       'password', password,
-                       'wifi-sec.key-mgmt', 'wpa-psk']
+                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password]
             if is_hidden:
                 cmd += ['hidden', 'yes']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
             connected = result.returncode == 0 and 'successfully activated' in result.stdout
