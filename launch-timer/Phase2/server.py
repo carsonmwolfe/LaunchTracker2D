@@ -1475,20 +1475,35 @@ def wifi_connect():
             is_hidden = data.get('hidden', False)
             con_name  = 'rangetrack-wifi'
 
-            # Delete our named profile if it exists (clean slate every time)
-            subprocess.run(['sudo', 'nmcli', 'con', 'delete', con_name],
-                           capture_output=True, timeout=5)
+            # Check if our profile already exists
+            existing = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'],
+                                      capture_output=True, text=True, timeout=5)
+            profile_exists = con_name in existing.stdout.splitlines()
 
-            # Build explicit profile — same approach native nmtui uses
-            add_cmd = ['sudo', 'nmcli', 'con', 'add', 'type', 'wifi',
-                       'con-name', con_name, 'ifname', '*', 'ssid', ssid]
-            if not is_open:
-                add_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
-            if is_hidden:
-                add_cmd += ['802-11-wireless.hidden', 'yes']
+            if profile_exists:
+                # Modify in place — never deletes active connection so WiFi stays up
+                mod_cmd = ['sudo', 'nmcli', 'con', 'modify', con_name,
+                           '802-11-wireless.ssid', ssid]
+                if not is_open:
+                    mod_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
+                else:
+                    mod_cmd += ['wifi-sec.key-mgmt', '', 'remove', 'wifi-security']
+                if is_hidden:
+                    mod_cmd += ['802-11-wireless.hidden', 'yes']
+                else:
+                    mod_cmd += ['802-11-wireless.hidden', 'no']
+                add_result = subprocess.run(mod_cmd, capture_output=True, text=True, timeout=10)
+            else:
+                # Create fresh profile
+                add_cmd = ['sudo', 'nmcli', 'con', 'add', 'type', 'wifi',
+                           'con-name', con_name, 'ifname', '*', 'ssid', ssid]
+                if not is_open:
+                    add_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
+                if is_hidden:
+                    add_cmd += ['802-11-wireless.hidden', 'yes']
+                add_result = subprocess.run(add_cmd, capture_output=True, text=True, timeout=10)
 
-            add_result = subprocess.run(add_cmd, capture_output=True, text=True, timeout=10)
-            print(f'[{_ts()}] nmcli con add rc={add_result.returncode} err={add_result.stderr[:100]}')
+            print(f'[{_ts()}] nmcli profile {"modify" if profile_exists else "add"} rc={add_result.returncode} err={add_result.stderr[:100]}')
 
             if add_result.returncode != 0:
                 return jsonify({'ok': False, 'error': add_result.stderr.strip() or 'Could not create connection'})
