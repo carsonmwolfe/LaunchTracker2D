@@ -1463,18 +1463,33 @@ def wifi_connect():
             except Exception as e:
                 print(f'[{_ts()}] Profile cleanup error: {e}')
 
-            # Connect — explicitly set security type to avoid auth type confusion
             is_hidden = data.get('hidden', False)
-            if is_open:
-                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
-            else:
-                cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password]
-            if is_hidden:
-                cmd += ['hidden', 'yes']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            con_name  = 'rangetrack-wifi'
 
-            print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
-            connected = result.returncode == 0 and 'successfully activated' in result.stdout
+            # Delete our named profile if it exists (clean slate every time)
+            subprocess.run(['nmcli', 'con', 'delete', con_name],
+                           capture_output=True, timeout=5)
+
+            # Build explicit profile — same approach native nmtui uses
+            add_cmd = ['nmcli', 'con', 'add', 'type', 'wifi',
+                       'con-name', con_name, 'ifname', '*', 'ssid', ssid]
+            if not is_open:
+                add_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
+            if is_hidden:
+                add_cmd += ['802-11-wireless.hidden', 'yes']
+
+            add_result = subprocess.run(add_cmd, capture_output=True, text=True, timeout=10)
+            print(f'[{_ts()}] nmcli con add rc={add_result.returncode} err={add_result.stderr[:100]}')
+
+            if add_result.returncode != 0:
+                return jsonify({'ok': False, 'error': add_result.stderr.strip() or 'Could not create connection'})
+
+            # Activate the profile
+            result = subprocess.run(['nmcli', 'con', 'up', con_name],
+                                    capture_output=True, text=True, timeout=30)
+
+            print(f'[{_ts()}] nmcli con up rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
+            connected = result.returncode == 0
             if connected:
                 _data_cache['fetched_at'] = 0
                 return jsonify({'ok': True})
