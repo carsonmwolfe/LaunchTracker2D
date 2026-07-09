@@ -1421,6 +1421,18 @@ def wifi_current():
     except Exception:
         return jsonify({'ssid': ''})
 
+@app.route('/api/wifi/restart', methods=['POST'])
+def wifi_restart():
+    """Restart NetworkManager — clears stuck state without full reboot."""
+    try:
+        subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
+                       timeout=15, check=True)
+        print(f'[{_ts()}] NetworkManager restarted via WiFi page')
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f'[{_ts()}] NetworkManager restart failed: {e}')
+        return jsonify({'ok': False, 'error': str(e)})
+
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():
     data        = request.get_json() or {}
@@ -1466,7 +1478,7 @@ def wifi_connect():
                        'wifi-sec.key-mgmt', 'wpa-psk']
             if is_hidden:
                 cmd += ['hidden', 'yes']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
             print(f'[{_ts()}] nmcli result rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
             connected = result.returncode == 0 and 'successfully activated' in result.stdout

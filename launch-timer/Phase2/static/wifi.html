@@ -244,6 +244,7 @@
                onclick="suppressNativeKeyboard();switchKeyboardTarget('manual-ssid')">
       </div>
       <div class="status-bar" id="status"></div>
+      <button id="btn-restart-wifi" onclick="restartWifi()" style="display:none;font-family:'Press Start 2P',monospace;font-size:7px;padding:8px;background:#1a0808;border:2px solid #ff4422;color:#ff4422;cursor:pointer;width:100%;flex-shrink:0;">⟳ RESTART WIFI</button>
     </div>
   </div>
 
@@ -498,7 +499,16 @@
         document.getElementById('password').classList.remove('has-value');
       }
 
-      setStatus(isCurrent ? 'ALREADY CONNECTED — RECONNECT TO CHANGE' : 'SELECTED: ' + ssid.toUpperCase(), 'info');
+      if (isCurrent) {
+        setStatus('ALREADY CONNECTED TO THIS NETWORK', 'info');
+        document.getElementById('btn-connect').textContent = 'RECONNECT';
+      } else if (currentSsid && currentSsid !== ssid) {
+        setStatus('⚠ WILL DISCONNECT FROM ' + currentSsid.toUpperCase() + ' TO CONNECT HERE', 'warn');
+        document.getElementById('btn-connect').textContent = 'CONNECT';
+      } else {
+        setStatus('SELECTED: ' + ssid.toUpperCase(), 'info');
+        document.getElementById('btn-connect').textContent = 'CONNECT';
+      }
     }
 
     function setStatus(msg, type) {
@@ -545,6 +555,11 @@
       const shortSsid = selectedSsid.length > 16 ? selectedSsid.slice(0,14)+'…' : selectedSsid;
       setStatus('CONNECTING TO ' + shortSsid.toUpperCase() + '...', '');
 
+      // Show "still trying" after 15s — slow DHCP routers can take 45-60s
+      const slowTimer = setTimeout(() => {
+        if (isConnecting) setStatus('STILL CONNECTING — SLOW ROUTER? PLEASE WAIT...', '');
+      }, 15000);
+
       fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -552,6 +567,7 @@
       })
       .then(r => r.json())
       .then(data => {
+        clearTimeout(slowTimer);
         isConnecting = false;
         if (data.ok) {
           // Verify internet actually works (not just connected to AP)
@@ -570,7 +586,10 @@
           }, 3000);
         } else {
           const msg = friendlyError(data.error);
-          if (connectAttempts >= 2) {
+          if (connectAttempts >= 3) {
+            setStatus(msg + ' — ' + connectAttempts + ' FAILURES — TRY RESTARTING WIFI', 'error');
+            document.getElementById('btn-restart-wifi').style.display = 'block';
+          } else if (connectAttempts >= 2) {
             setStatus(msg + ' (' + connectAttempts + ' ATTEMPTS — CHECK PASSWORD)', 'error');
           } else {
             setStatus(msg, 'error');
@@ -579,11 +598,26 @@
         }
       })
       .catch(() => {
+        clearTimeout(slowTimer);
         isConnecting = false;
         // Server disconnected mid-request — usually means connect succeeded
         setStatus('CONNECTED — RETURNING TO HOME...', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
       });
+    }
+
+    function restartWifi() {
+      setStatus('RESTARTING WIFI — PLEASE WAIT...', '');
+      document.getElementById('btn-restart-wifi').style.display = 'none';
+      fetch('/api/wifi/restart', { method: 'POST' })
+        .then(() => {
+          connectAttempts = 0;
+          setTimeout(() => {
+            setStatus('WIFI RESTARTED — TAP SCAN TO FIND NETWORKS', 'info');
+            scanNetworks();
+          }, 4000);
+        })
+        .catch(() => setStatus('RESTART FAILED — TRY REBOOTING PI', 'error'));
     }
 
     function scanNetworks() {
@@ -609,7 +643,10 @@
         document.getElementById('btn-scan').disabled = false;
         container.innerHTML = '';
         if (!data.networks || !data.networks.length) {
-          container.innerHTML = '<div class="scan-msg">NO NETWORKS FOUND — TAP SCAN TO RETRY</div>';
+          const msg = data.error && data.error.toLowerCase().includes('rfkill')
+            ? 'WIFI BLOCKED — REBOOT PI TO FIX'
+            : 'NO NETWORKS FOUND — MOVE CLOSER TO ROUTER AND TAP ↺ SCAN';
+          container.innerHTML = `<div class="scan-msg">${msg}</div>`;
           return;
         }
         data.networks.forEach(net => {
