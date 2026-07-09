@@ -1404,12 +1404,21 @@ def wifi_scan():
 def wifi_current():
     try:
         if _use_nmcli():
+            # Check active connections directly — works with all nmcli connection methods
             result = subprocess.run(
-                ['nmcli', '-t', '-f', 'ACTIVE,SSID', 'dev', 'wifi'],
+                ['nmcli', '-t', '-f', 'NAME,TYPE,STATE', 'con', 'show', '--active'],
                 capture_output=True, text=True, timeout=5)
             for line in result.stdout.split('\n'):
-                if line.startswith('yes:'):
-                    return jsonify({'ssid': line.split(':', 1)[1].strip()})
+                parts = line.split(':')
+                if len(parts) >= 3 and '802-11-wireless' in parts[1] and 'activated' in parts[2]:
+                    con_name = parts[0]
+                    # Get the SSID from the connection profile
+                    ssid_result = subprocess.run(
+                        ['nmcli', '-t', '-f', '802-11-wireless.ssid', 'con', 'show', con_name],
+                        capture_output=True, text=True, timeout=5)
+                    for sline in ssid_result.stdout.split('\n'):
+                        if '802-11-wireless.ssid:' in sline:
+                            return jsonify({'ssid': sline.split(':', 1)[1].strip()})
             return jsonify({'ssid': ''})
         else:
             result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
