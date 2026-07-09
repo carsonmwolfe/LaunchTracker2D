@@ -1476,11 +1476,11 @@ def wifi_connect():
             con_name  = 'rangetrack-wifi'
 
             # Delete our named profile if it exists (clean slate every time)
-            subprocess.run(['nmcli', 'con', 'delete', con_name],
+            subprocess.run(['sudo', 'nmcli', 'con', 'delete', con_name],
                            capture_output=True, timeout=5)
 
             # Build explicit profile — same approach native nmtui uses
-            add_cmd = ['nmcli', 'con', 'add', 'type', 'wifi',
+            add_cmd = ['sudo', 'nmcli', 'con', 'add', 'type', 'wifi',
                        'con-name', con_name, 'ifname', '*', 'ssid', ssid]
             if not is_open:
                 add_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
@@ -1494,7 +1494,7 @@ def wifi_connect():
                 return jsonify({'ok': False, 'error': add_result.stderr.strip() or 'Could not create connection'})
 
             # Activate the profile
-            result = subprocess.run(['nmcli', 'con', 'up', con_name],
+            result = subprocess.run(['sudo', 'nmcli', 'con', 'up', con_name],
                                     capture_output=True, text=True, timeout=30)
 
             print(f'[{_ts()}] nmcli con up rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
