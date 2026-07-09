@@ -1503,8 +1503,26 @@ def wifi_connect():
                 _data_cache['fetched_at'] = 0
                 return jsonify({'ok': True})
             else:
-                err = result.stderr.strip() or result.stdout.strip()
-                return jsonify({'ok': False, 'error': err or 'Could not connect'})
+                # Get real reason from NetworkManager journal
+                try:
+                    journal = subprocess.run(
+                        ['journalctl', '-u', 'NetworkManager', '-n', '20',
+                         '--no-pager', '--output=cat'],
+                        capture_output=True, text=True, timeout=5)
+                    nm_log = journal.stdout
+                    print(f'[{_ts()}] NM journal:\n{nm_log}')
+                    # Extract the most useful error line
+                    reason = ''
+                    for line in reversed(nm_log.splitlines()):
+                        l = line.lower()
+                        if any(k in l for k in ['secret', 'password', 'psk', 'auth', 'wrong', 'failed', 'error', 'timeout', 'dhcp']):
+                            reason = line.strip()
+                            break
+                    if not reason:
+                        reason = result.stderr.strip() or result.stdout.strip()
+                except Exception:
+                    reason = result.stderr.strip() or result.stdout.strip()
+                return jsonify({'ok': False, 'error': reason or 'Could not connect'})
         else:
             result = subprocess.run(
                 ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],

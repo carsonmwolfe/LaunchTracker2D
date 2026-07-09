@@ -474,23 +474,27 @@
       if (r.includes('802.1x') || r.includes('enterprise') || r.includes('eap')) {
         return 'Enterprise WiFi not supported — needs IT setup';
       }
-      if (r.includes('psk') || r.includes('password') || r.includes('802-11') || r.includes('secrets')) {
+      if (r.includes('secret') || r.includes('psk') || r.includes('password') ||
+          r.includes('802-11') || r.includes('auth') || r.includes('wrong')) {
         return 'Wrong password — check carefully and retry';
       }
       if (r.includes('timeout') || r.includes('timed out')) {
         return 'Timed out — move closer to router and retry';
       }
-      if (r.includes('no network') || r.includes('not found') || r.includes('unknown')) {
-        return 'Network not found — tap ↺ SCAN first';
+      if (r.includes('no network') || r.includes('not found') || r.includes('ssid')) {
+        return 'Network not found — tap ↺ SCAN and try again';
       }
-      if (r.includes('dhcp') || r.includes('ip address') || r.includes('lease')) {
-        return 'No IP from router — reboot router and retry';
+      if (r.includes('dhcp') || r.includes('ip config') || r.includes('lease')) {
+        return 'Connected but no IP — reboot router and retry';
       }
       if (r.includes('deactivat') || r.includes('disconnect')) {
         return 'Disconnected immediately — wrong password?';
       }
       if (r.includes('blocked') || r.includes('rfkill')) {
-        return 'WiFi is blocked — reboot the Pi';
+        return 'WiFi blocked — reboot the Pi';
+      }
+      if (r.includes('activation failed')) {
+        return 'Could not connect — wrong password or network issue';
       }
       return 'Failed — check password and try again';
     }
