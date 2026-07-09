@@ -1508,6 +1508,9 @@ def wifi_connect():
             if add_result.returncode != 0:
                 return jsonify({'ok': False, 'error': add_result.stderr.strip() or 'Could not create connection'})
 
+            # Reload so NM picks up the modified profile before activating
+            subprocess.run(['sudo', 'nmcli', 'con', 'reload'], capture_output=True, timeout=5)
+
             # Activate the profile
             result = subprocess.run(['sudo', 'nmcli', 'con', 'up', con_name],
                                     capture_output=True, text=True, timeout=30)
