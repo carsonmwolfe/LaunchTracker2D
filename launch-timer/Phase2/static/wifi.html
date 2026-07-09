@@ -515,6 +515,14 @@
       const el = document.getElementById('status');
       el.textContent = msg;
       el.className = 'status-bar' + (type ? ' ' + type : '');
+      // Show errors as notification popup so they're always visible
+      if (type === 'error' && msg) {
+        fetch('/api/notify-push', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title: 'WIFI ERROR', msg})
+        }).catch(() => {});
+      }
     }
 
     function setConnecting(busy) {
