@@ -1209,12 +1209,13 @@ def api_panel():
         env.setdefault('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus')
         env.setdefault('XDG_RUNTIME_DIR', '/run/user/1000')
         if show:
-            subprocess.Popen(['nm-applet', '--indicator'], env=env,
+            subprocess.Popen(['wf-panel-pi'], env=env,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f'[{_ts()}] nm-applet started')
+            print(f'[{_ts()}] wf-panel-pi started')
         else:
-            subprocess.run(['pkill', '-f', 'nm-applet'], capture_output=True)
-            print(f'[{_ts()}] nm-applet stopped')
+            subprocess.run(['pkill', '-f', 'wf-panel-pi'], capture_output=True)
+            subprocess.run(['pkill', '-f', 'lwrespawn.*wf-panel'], capture_output=True)
+            print(f'[{_ts()}] wf-panel-pi stopped')
     except Exception as e:
         print(f'[{_ts()}] Panel toggle error: {e}')
     return jsonify({'ok': True, 'visible': show})
