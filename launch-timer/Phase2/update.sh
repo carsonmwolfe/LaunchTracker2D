@@ -178,9 +178,17 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Version watchdog in app.js detects the new version within 30s and reloads cleanly.
-# Do NOT kill Chromium here — it causes a blank white page on relaunch.
-echo "$LOG_PREFIX Server updated — version watchdog will reload Chromium within 30s"
+# Reload the browser — WebKit restarts cleanly, Chromium uses JS version watchdog
+if pgrep -f webkit_launch.py > /dev/null; then
+    pkill -f webkit_launch.py
+    sleep 2
+    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
+        nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
+        >> /home/pi/server.log 2>&1 &
+    echo "$LOG_PREFIX WebKit restarted"
+else
+    echo "$LOG_PREFIX Server updated — version watchdog will reload Chromium within 30s"
+fi
 
 # ── Log the update ─────────────────────────────────────────────────────────────
 
