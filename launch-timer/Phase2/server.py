@@ -1524,88 +1524,40 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM, GLib
-
-        client = NM.Client.new(None)
-        dev = _nm_wifi_device(client)
-        if not dev:
-            return jsonify({'ok': False, 'error': 'No WiFi device found'})
-
-        # Build connection object
-        conn = NM.SimpleConnection.new()
-
-        s_con = NM.SettingConnection.new()
-        s_con.set_property(NM.SETTING_CONNECTION_ID, 'rangetrack-wifi')
-        s_con.set_property(NM.SETTING_CONNECTION_TYPE, '802-11-wireless')
-        s_con.set_property(NM.SETTING_CONNECTION_AUTOCONNECT, True)
-        conn.add_setting(s_con)
-
-        s_wifi = NM.SettingWireless.new()
-        s_wifi.set_property(NM.SETTING_WIRELESS_SSID, GLib.Bytes.new(ssid.encode('utf-8')))
-        s_wifi.set_property(NM.SETTING_WIRELESS_MODE, 'infrastructure')
-        if is_hidden:
-            s_wifi.set_property(NM.SETTING_WIRELESS_HIDDEN, True)
-        conn.add_setting(s_wifi)
-
+        # Simple nmcli — exactly what works from the terminal, with sudo now NOPASSWD
+        cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
         if not is_open:
-            s_sec = NM.SettingWirelessSecurity.new()
-            s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_KEY_MGMT, 'wpa-psk')
-            s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_PSK, password)
-            conn.add_setting(s_sec)
+            cmd += ['password', password]
+        if is_hidden:
+            cmd += ['hidden', 'yes']
 
-        s_ip4 = NM.SettingIP4Config.new()
-        s_ip4.set_property(NM.SETTING_IP_CONFIG_METHOD, 'auto')
-        conn.add_setting(s_ip4)
+        print(f'[{_ts()}] Running: {" ".join(cmd[:6])} ...')
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        print(f'[{_ts()}] rc={result.returncode} stdout={result.stdout[:150]} stderr={result.stderr[:150]}')
 
-        s_ip6 = NM.SettingIP6Config.new()
-        s_ip6.set_property(NM.SETTING_IP_CONFIG_METHOD, 'auto')
-        conn.add_setting(s_ip6)
+        connected = result.returncode == 0 and 'successfully activated' in result.stdout
+        if connected:
+            _data_cache['fetched_at'] = 0
+            return jsonify({'ok': True})
 
-        # Activate with GLib mainloop
-        loop   = GLib.MainLoop()
-        result = {'active': None, 'error': None}
+        # Get real reason from NM journal
+        err = result.stderr.strip() or result.stdout.strip()
+        try:
+            journal = subprocess.run(
+                ['journalctl', '-u', 'NetworkManager', '-n', '10', '--no-pager', '--output=cat'],
+                capture_output=True, text=True, timeout=5)
+            for line in reversed(journal.stdout.splitlines()):
+                l = line.lower()
+                if any(k in l for k in ['secret', 'password', 'psk', 'auth', 'wrong', 'failed', 'dhcp', 'timeout']):
+                    err = line.strip()
+                    break
+        except Exception:
+            pass
 
-        def on_done(src, res, _):
-            try:
-                result['active'] = client.add_and_activate_connection2_finish(res)
-            except Exception as e:
-                result['error'] = str(e)
-            loop.quit()
+        return jsonify({'ok': False, 'error': err or 'Could not connect'})
 
-        client.add_and_activate_connection2(conn, dev, None, 0, None, None, on_done, None)
-        GLib.timeout_add_seconds(35, loop.quit)
-        loop.run()
-
-        if result['error']:
-            print(f'[{_ts()}] libnm error: {result["error"]}')
-            return jsonify({'ok': False, 'error': result['error']})
-
-        if not result['active']:
-            return jsonify({'ok': False, 'error': 'Connection timed out'})
-
-        # Poll for activation
-        for _ in range(30):
-            state = result['active'].get_state()
-            reason_val = result['active'].get_state_reason()
-            print(f'[{_ts()}] NM state={state} reason={reason_val}')
-            if state == NM.ActiveConnectionState.ACTIVATED:
-                _data_cache['fetched_at'] = 0
-                return jsonify({'ok': True})
-            if state == NM.ActiveConnectionState.DEACTIVATED:
-                reasons = {
-                    NM.ActiveConnectionStateReason.NO_SECRETS: 'Wrong password',
-                    NM.ActiveConnectionStateReason.AUTH_SUPPLICANT_FAILED: 'Authentication failed — wrong password?',
-                    NM.ActiveConnectionStateReason.IP_CONFIG_UNAVAILABLE: 'Connected but no IP — router issue',
-                    NM.ActiveConnectionStateReason.CONNECT_TIMEOUT: 'Connection timed out — move closer',
-                }
-                msg = reasons.get(reason_val, f'Connection failed (reason {reason_val})')
-                return jsonify({'ok': False, 'error': msg})
-            time.sleep(1)
-
-        return jsonify({'ok': False, 'error': 'Connection timed out'})
-
+    except subprocess.TimeoutExpired:
+        return jsonify({'ok': False, 'error': 'Connection timed out — check password and signal'})
     except Exception as e:
         print(f'[{_ts()}] WiFi connect error: {e}')
         return jsonify({'ok': False, 'error': str(e)})
