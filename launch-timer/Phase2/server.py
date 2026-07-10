@@ -1498,7 +1498,10 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        # Clear any stale profile for this SSID so NM connects fresh
+        # Restart NM to clear cached secrets, then delete any stale profile
+        subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
+                       capture_output=True, text=True, timeout=15)
+        time.sleep(3)
         subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
                        capture_output=True, text=True, timeout=5)
 
