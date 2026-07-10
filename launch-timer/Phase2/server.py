@@ -1198,6 +1198,27 @@ def set_brightness():
     return jsonify({'ok': True})
 
 
+@app.route('/api/panel')
+def api_panel():
+    """Show or hide nm-applet (native WiFi icon) — only on WiFi page."""
+    show = request.args.get('show', '1') == '1'
+    try:
+        env = os.environ.copy()
+        env['WAYLAND_DISPLAY'] = 'wayland-0'
+        env['DISPLAY'] = ':0'
+        env.setdefault('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus')
+        env.setdefault('XDG_RUNTIME_DIR', '/run/user/1000')
+        if show:
+            subprocess.Popen(['nm-applet', '--indicator'], env=env,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f'[{_ts()}] nm-applet started')
+        else:
+            subprocess.run(['pkill', '-f', 'nm-applet'], capture_output=True)
+            print(f'[{_ts()}] nm-applet stopped')
+    except Exception as e:
+        print(f'[{_ts()}] Panel toggle error: {e}')
+    return jsonify({'ok': True, 'visible': show})
+
 @app.route('/api/osk')
 def api_osk():
     """Show or hide squeekboard on-screen keyboard via D-Bus (Pi 2 / Wayland)."""

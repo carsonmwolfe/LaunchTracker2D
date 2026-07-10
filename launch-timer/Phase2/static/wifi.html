@@ -181,7 +181,7 @@
   <div class="scanlines"></div>
 
   <div class="topbar">
-    <button class="back-btn" id="btn-back" onclick="window.location='/settings'">← BACK</button>
+    <button class="back-btn" id="btn-back" onclick="fetch('/api/panel?show=0').finally(()=>window.location='/settings')">← BACK</button>
     <div class="top-sqs">
       <div class="top-sq" style="background:#00e87a;"></div>
       <div class="top-sq" style="background:#4a9ede;"></div>
@@ -743,6 +743,10 @@
         container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN TO RETRY</div>';
       });
     }
+
+    // Show native WiFi applet as fallback while on this page
+    fetch('/api/panel?show=1').catch(() => {});
+    window.addEventListener('beforeunload', () => { navigator.sendBeacon('/api/panel?show=0'); });
 
     // Suppress native OSK on load
     suppressNativeKeyboard();
