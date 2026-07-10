@@ -1498,7 +1498,10 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        # Simple nmcli — exactly what works from the terminal, with sudo now NOPASSWD
+        # Clear any stale profile for this SSID so NM connects fresh
+        subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
+                       capture_output=True, text=True, timeout=5)
+
         cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
         if not is_open:
             cmd += ['password', password]
