@@ -1355,6 +1355,31 @@ def force_update():
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
+def _nm_client():
+    """Return a libnm NM.Client instance, or None if unavailable."""
+    try:
+        import gi
+        gi.require_version('NM', '1.0')
+        from gi.repository import NM
+        return NM.Client.new(None)
+    except Exception:
+        return None
+
+def _nm_wifi_device(client=None):
+    """Return the first WiFi device from NM client."""
+    try:
+        import gi
+        gi.require_version('NM', '1.0')
+        from gi.repository import NM
+        c = client or _nm_client()
+        if not c: return None
+        for dev in c.get_devices():
+            if dev.get_device_type() == NM.DeviceType.WIFI:
+                return dev
+    except Exception:
+        pass
+    return None
+
 def _use_nmcli():
     """True if NetworkManager is managing wifi (Pi OS Trixie+)."""
     try:
@@ -1367,67 +1392,87 @@ def _use_nmcli():
 @app.route('/api/wifi/scan')
 def wifi_scan():
     try:
-        if _use_nmcli():
+        import gi
+        gi.require_version('NM', '1.0')
+        from gi.repository import NM
+        client = NM.Client.new(None)
+        dev = _nm_wifi_device(client)
+        if not dev:
+            return jsonify({'networks': [], 'error': 'No WiFi device'})
+        dev.request_scan(None)
+        time.sleep(4)
+        networks = []
+        seen = set()
+        for ap in sorted(dev.get_access_points(), key=lambda a: -a.get_strength()):
+            raw = ap.get_ssid()
+            if not raw: continue
+            try: ssid = raw.get_data().decode('utf-8', errors='replace').strip()
+            except: continue
+            if not ssid or ssid in seen: continue
+            seen.add(ssid)
+            freq = ap.get_frequency()
+            rsn  = ap.get_rsn_flags()
+            wpa  = ap.get_wpa_flags()
+            KEY_MGMT_8021X = 0x200  # NM_80211_AP_SEC_KEY_MGMT_802_1X
+            if (rsn & KEY_MGMT_8021X) or (wpa & KEY_MGMT_8021X):
+                sec = 'Enterprise'
+            elif rsn or wpa:
+                sec = 'WPA2'
+            else:
+                sec = 'Open'
+            networks.append({'ssid': ssid, 'band': '5GHz' if freq >= 5000 else '2.4GHz', 'security': sec})
+        return jsonify({'networks': networks})
+    except Exception as e:
+        # Fallback to nmcli
+        try:
             subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], capture_output=True, timeout=10)
-            result = subprocess.check_output(
-                ['nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list'],
-                text=True, timeout=15)
+            result = subprocess.check_output(['nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list'], text=True, timeout=15)
             networks = []
             seen = set()
             for line in result.strip().split('\n'):
                 parts = line.split(':')
-                if len(parts) < 1: continue
-                ssid = parts[0].strip()
-                freq = parts[1].strip() if len(parts) > 1 else ''
-                security = parts[2].strip() if len(parts) > 2 else ''
+                ssid = parts[0].strip() if parts else ''
                 if not ssid or ssid in seen: continue
                 seen.add(ssid)
-                band = '5GHz' if freq.startswith('5') else '2.4GHz'
-                networks.append({'ssid': ssid, 'band': band, 'security': security})
-        else:
-            subprocess.run(['sudo', 'ifconfig', 'wlan0', 'up'], check=False)
-            time.sleep(1)
-            result = subprocess.check_output(['sudo', 'iwlist', 'wlan0', 'scan'], text=True, timeout=15)
-            networks = []
-            seen = set()
-            for line in result.split('\n'):
-                if 'ESSID:' in line:
-                    ssid = line.split('ESSID:')[1].strip().strip('"')
-                    if ssid and ssid not in seen:
-                        seen.add(ssid)
-                        networks.append({'ssid': ssid, 'band': '', 'security': ''})
-        return jsonify({'networks': networks})
-    except Exception as e:
-        return jsonify({'networks': [], 'error': str(e)})
+                freq = parts[1].strip() if len(parts) > 1 else ''
+                sec  = parts[2].strip() if len(parts) > 2 else ''
+                networks.append({'ssid': ssid, 'band': '5GHz' if freq.startswith('5') else '2.4GHz', 'security': sec})
+            return jsonify({'networks': networks})
+        except Exception as e2:
+            return jsonify({'networks': [], 'error': str(e2)})
 
 @app.route('/api/wifi/current')
 def wifi_current():
     try:
-        if _use_nmcli():
-            # Check active connections directly — works with all nmcli connection methods
-            result = subprocess.run(
-                ['nmcli', '-t', '-f', 'NAME,TYPE,STATE', 'con', 'show', '--active'],
-                capture_output=True, text=True, timeout=5)
+        import gi
+        gi.require_version('NM', '1.0')
+        from gi.repository import NM
+        client = NM.Client.new(None)
+        active = client.get_primary_connection()
+        if active and active.get_connection_type() == '802-11-wireless':
+            dev = active.get_devices()
+            if dev:
+                wifi_dev = dev[0]
+                ap = wifi_dev.get_active_access_point()
+                if ap and ap.get_ssid():
+                    ssid = ap.get_ssid().get_data().decode('utf-8', errors='replace').strip()
+                    return jsonify({'ssid': ssid})
+        return jsonify({'ssid': ''})
+    except Exception:
+        # Fallback to nmcli
+        try:
+            result = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE,STATE', 'con', 'show', '--active'],
+                                    capture_output=True, text=True, timeout=5)
             for line in result.stdout.split('\n'):
                 parts = line.split(':')
                 if len(parts) >= 3 and '802-11-wireless' in parts[1] and 'activated' in parts[2]:
-                    con_name = parts[0]
-                    # Get the SSID from the connection profile
-                    ssid_result = subprocess.run(
-                        ['nmcli', '-t', '-f', '802-11-wireless.ssid', 'con', 'show', con_name],
-                        capture_output=True, text=True, timeout=5)
-                    for sline in ssid_result.stdout.split('\n'):
-                        if '802-11-wireless.ssid:' in sline:
-                            return jsonify({'ssid': sline.split(':', 1)[1].strip()})
-            return jsonify({'ssid': ''})
-        else:
-            result = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
-                                    capture_output=True, text=True, timeout=5)
-            for line in result.stdout.split('\n'):
-                if line.startswith('ssid='):
-                    return jsonify({'ssid': line.split('=', 1)[1].strip()})
-            return jsonify({'ssid': ''})
-    except Exception:
+                    info = subprocess.run(['nmcli', '-t', '-f', '802-11-wireless.ssid', 'con', 'show', parts[0]],
+                                          capture_output=True, text=True, timeout=5)
+                    for s in info.stdout.split('\n'):
+                        if '802-11-wireless.ssid:' in s:
+                            return jsonify({'ssid': s.split(':', 1)[1].strip()})
+        except Exception:
+            pass
         return jsonify({'ssid': ''})
 
 @app.route('/api/wifi/restart', methods=['POST'])
@@ -1444,11 +1489,12 @@ def wifi_restart():
 
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():
-    data        = request.get_json() or {}
-    ssid        = data.get('ssid', '')
-    password    = data.get('password', '')
-    is_open     = data.get('open', False)
-    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} open={is_open}')
+    data      = request.get_json() or {}
+    ssid      = data.get('ssid', '')
+    password  = data.get('password', '')
+    is_open   = data.get('open', False)
+    is_hidden = data.get('hidden', False)
+    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} open={is_open} hidden={is_hidden}')
 
     if not ssid:
         return jsonify({'ok': False, 'error': 'No network selected'})
@@ -1456,127 +1502,88 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        if _use_nmcli():
-            # Nuke ALL saved wifi connection profiles before connecting.
-            # This is the only reliable way to prevent stale profiles from
-            # causing "psk not given" errors regardless of profile names.
+        import gi
+        gi.require_version('NM', '1.0')
+        from gi.repository import NM, GLib
+
+        client = NM.Client.new(None)
+        dev = _nm_wifi_device(client)
+        if not dev:
+            return jsonify({'ok': False, 'error': 'No WiFi device found'})
+
+        # Build connection object
+        conn = NM.SimpleConnection.new()
+
+        s_con = NM.SettingConnection.new()
+        s_con.set_property(NM.SETTING_CONNECTION_ID, 'rangetrack-wifi')
+        s_con.set_property(NM.SETTING_CONNECTION_TYPE, '802-11-wireless')
+        s_con.set_property(NM.SETTING_CONNECTION_AUTOCONNECT, True)
+        conn.add_setting(s_con)
+
+        s_wifi = NM.SettingWireless.new()
+        s_wifi.set_property(NM.SETTING_WIRELESS_SSID, GLib.Bytes.new(ssid.encode('utf-8')))
+        s_wifi.set_property(NM.SETTING_WIRELESS_MODE, 'infrastructure')
+        if is_hidden:
+            s_wifi.set_property(NM.SETTING_WIRELESS_HIDDEN, True)
+        conn.add_setting(s_wifi)
+
+        if not is_open:
+            s_sec = NM.SettingWirelessSecurity.new()
+            s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_KEY_MGMT, 'wpa-psk')
+            s_sec.set_property(NM.SETTING_WIRELESS_SECURITY_PSK, password)
+            conn.add_setting(s_sec)
+
+        s_ip4 = NM.SettingIP4Config.new()
+        s_ip4.set_property(NM.SETTING_IP_CONFIG_METHOD, 'auto')
+        conn.add_setting(s_ip4)
+
+        s_ip6 = NM.SettingIP6Config.new()
+        s_ip6.set_property(NM.SETTING_IP_CONFIG_METHOD, 'auto')
+        conn.add_setting(s_ip6)
+
+        # Activate with GLib mainloop
+        loop   = GLib.MainLoop()
+        result = {'active': None, 'error': None}
+
+        def on_done(src, res, _):
             try:
-                con_list = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
-                                          capture_output=True, text=True, timeout=5)
-                for line in con_list.stdout.splitlines():
-                    parts = line.split(':')
-                    if len(parts) >= 2 and '802-11-wireless' in parts[1]:
-                        subprocess.run(['nmcli', 'con', 'delete', parts[0]],
-                                       capture_output=True, timeout=5)
-                        print(f'[{_ts()}] Deleted wifi profile: {parts[0]}')
+                result['active'] = client.add_and_activate_connection2_finish(res)
             except Exception as e:
-                print(f'[{_ts()}] Profile cleanup error: {e}')
+                result['error'] = str(e)
+            loop.quit()
 
-            is_hidden = data.get('hidden', False)
-            con_name  = 'rangetrack-wifi'
+        client.add_and_activate_connection2(conn, dev, None, 0, None, None, on_done, None)
+        GLib.timeout_add_seconds(35, loop.quit)
+        loop.run()
 
-            # Check if our profile already exists
-            existing = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'],
-                                      capture_output=True, text=True, timeout=5)
-            profile_exists = con_name in existing.stdout.splitlines()
+        if result['error']:
+            print(f'[{_ts()}] libnm error: {result["error"]}')
+            return jsonify({'ok': False, 'error': result['error']})
 
-            if profile_exists:
-                # Modify in place — never deletes active connection so WiFi stays up
-                mod_cmd = ['sudo', 'nmcli', 'con', 'modify', con_name,
-                           '802-11-wireless.ssid', ssid]
-                if not is_open:
-                    mod_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
-                else:
-                    mod_cmd += ['wifi-sec.key-mgmt', '', 'remove', 'wifi-security']
-                if is_hidden:
-                    mod_cmd += ['802-11-wireless.hidden', 'yes']
-                else:
-                    mod_cmd += ['802-11-wireless.hidden', 'no']
-                add_result = subprocess.run(mod_cmd, capture_output=True, text=True, timeout=10)
-            else:
-                # Create fresh profile
-                add_cmd = ['sudo', 'nmcli', 'con', 'add', 'type', 'wifi',
-                           'con-name', con_name, 'ifname', '*', 'ssid', ssid]
-                if not is_open:
-                    add_cmd += ['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password]
-                if is_hidden:
-                    add_cmd += ['802-11-wireless.hidden', 'yes']
-                add_result = subprocess.run(add_cmd, capture_output=True, text=True, timeout=10)
+        if not result['active']:
+            return jsonify({'ok': False, 'error': 'Connection timed out'})
 
-            print(f'[{_ts()}] nmcli profile {"modify" if profile_exists else "add"} rc={add_result.returncode} err={add_result.stderr[:100]}')
-
-            if add_result.returncode != 0:
-                return jsonify({'ok': False, 'error': add_result.stderr.strip() or 'Could not create connection'})
-
-            # Activate the profile
-            result = subprocess.run(['sudo', 'nmcli', 'con', 'up', con_name],
-                                    capture_output=True, text=True, timeout=30)
-
-            print(f'[{_ts()}] nmcli con up rc={result.returncode} stdout={result.stdout[:100]} stderr={result.stderr[:100]}')
-            connected = result.returncode == 0
-            if connected:
+        # Poll for activation
+        for _ in range(30):
+            state = result['active'].get_state()
+            reason_val = result['active'].get_state_reason()
+            print(f'[{_ts()}] NM state={state} reason={reason_val}')
+            if state == NM.ActiveConnectionState.ACTIVATED:
                 _data_cache['fetched_at'] = 0
                 return jsonify({'ok': True})
-            else:
-                # Get real reason from NetworkManager journal
-                try:
-                    journal = subprocess.run(
-                        ['journalctl', '-u', 'NetworkManager', '-n', '20',
-                         '--no-pager', '--output=cat'],
-                        capture_output=True, text=True, timeout=5)
-                    nm_log = journal.stdout
-                    print(f'[{_ts()}] NM journal:\n{nm_log}')
-                    # Extract the most useful error line
-                    reason = ''
-                    for line in reversed(nm_log.splitlines()):
-                        l = line.lower()
-                        if any(k in l for k in ['secret', 'password', 'psk', 'auth', 'wrong', 'failed', 'error', 'timeout', 'dhcp']):
-                            reason = line.strip()
-                            break
-                    if not reason:
-                        reason = result.stderr.strip() or result.stdout.strip()
-                except Exception:
-                    reason = result.stderr.strip() or result.stdout.strip()
-                return jsonify({'ok': False, 'error': reason or 'Could not connect'})
-        else:
-            result = subprocess.run(
-                ['sudo', 'wpa_cli', '-i', 'wlan0', 'add_network'],
-                capture_output=True, text=True, timeout=5)
-            net_id = result.stdout.strip()
-            if not net_id.isdigit():
-                return jsonify({'ok': False, 'error': 'Failed to create network profile'})
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'ssid', f'"{ssid}"'], check=True, timeout=5)
-            if password:
-                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'psk', f'"{password}"'], check=True, timeout=5)
-            else:
-                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'set_network', net_id, 'key_mgmt', 'NONE'], check=True, timeout=5)
-            subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'select_network', net_id], check=True, timeout=5)
-            time.sleep(8)
-            status    = subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'status'],
-                                       capture_output=True, text=True, timeout=5)
-            connected = (f'ssid={ssid}' in status.stdout and
-                         'wpa_state=COMPLETED' in status.stdout)
-            if connected:
-                if password:
-                    net_block = f'    ssid="{ssid}"\n    psk="{password}"\n    key_mgmt=WPA-PSK\n'
-                else:
-                    net_block = f'    ssid="{ssid}"\n    key_mgmt=NONE\n'
-                clean_config = (
-                    'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
-                    'update_config=1\ncountry=US\n\n'
-                    f'network={{\n{net_block}}}\n'
-                )
-                with open('/tmp/wpa_supplicant.conf', 'w') as f:
-                    f.write(clean_config)
-                subprocess.run(['sudo', 'bash', '-c',
-                                'cp /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf'],
-                               check=True, timeout=5)
-                _data_cache['fetched_at'] = 0
-                return jsonify({'ok': True})
-            else:
-                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'remove_network', net_id], timeout=5)
-                subprocess.run(['sudo', 'wpa_cli', '-i', 'wlan0', 'reconfigure'], timeout=5)
-                return jsonify({'ok': False, 'error': 'Could not connect — wrong password?'})
+            if state == NM.ActiveConnectionState.DEACTIVATED:
+                reasons = {
+                    NM.ActiveConnectionStateReason.NO_SECRETS: 'Wrong password',
+                    NM.ActiveConnectionStateReason.AUTH_SUPPLICANT_FAILED: 'Authentication failed — wrong password?',
+                    NM.ActiveConnectionStateReason.IP_CONFIG_UNAVAILABLE: 'Connected but no IP — router issue',
+                    NM.ActiveConnectionStateReason.CONNECT_TIMEOUT: 'Connection timed out — move closer',
+                }
+                msg = reasons.get(reason_val, f'Connection failed (reason {reason_val})')
+                return jsonify({'ok': False, 'error': msg})
+            time.sleep(1)
+
+        return jsonify({'ok': False, 'error': 'Connection timed out'})
+
     except Exception as e:
         print(f'[{_ts()}] WiFi connect error: {e}')
         return jsonify({'ok': False, 'error': str(e)})
