@@ -45,6 +45,12 @@
     .conn-dot { width: 8px; height: 8px; background: #00e87a; flex-shrink: 0; }
     .conn-lbl { font-size: 7px; color: rgba(0,232,122,0.7); }
     .conn-ssid { font-size: 9px; color: #00e87a; }
+    .conn-forget {
+      margin-left: auto; font-family: 'Press Start 2P', monospace; font-size: 6px;
+      background: #1a0808; border: 2px solid #ff4422; color: #ff4422;
+      padding: 5px 9px; cursor: pointer;
+    }
+    .conn-forget:hover { background: #2a0c0c; }
     #no-conn-bar {
       flex-shrink: 0; display: none;
       background: #1a0808; border-top: 2px solid #ff4422;
@@ -252,6 +258,7 @@
     <div class="conn-dot"></div>
     <div class="conn-lbl">CONNECTED TO</div>
     <div class="conn-ssid" id="conn-ssid">—</div>
+    <button class="conn-forget" id="btn-forget" onclick="forgetCurrent()">FORGET</button>
   </div>
   <div id="no-conn-bar">
     <div class="no-conn-dot"></div>
@@ -630,6 +637,30 @@
         // Server disconnected mid-request — usually means connect succeeded
         setStatus('CONNECTED — RETURNING TO HOME...', 'success');
         setTimeout(() => { window.location = '/'; }, 2500);
+      });
+    }
+
+    function forgetCurrent() {
+      if (!currentSsid) return;
+      const s = currentSsid;
+      setStatus('FORGETTING ' + s.toUpperCase() + '...', '');
+      fetch('/api/wifi/forget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid: s })
+      })
+      .then(r => r.json())
+      .then(() => {
+        connectAttempts = 0;
+        setTimeout(() => {
+          setStatus('FORGOT ' + s.toUpperCase() + ' — RECONNECT TO TEST', 'info');
+          scanNetworks();
+        }, 3000);
+      })
+      .catch(() => {
+        // Forgetting the active network drops WiFi — page is on localhost so it survives
+        setStatus('NETWORK FORGOTTEN — RESCANNING...', 'info');
+        setTimeout(scanNetworks, 4000);
       });
     }
 

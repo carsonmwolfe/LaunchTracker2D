@@ -1498,10 +1498,19 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        # Restart NM to clear cached secrets, then delete any stale profile
-        subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
-                       capture_output=True, text=True, timeout=15)
-        time.sleep(3)
+        # Restart NM to clear cached secrets (a failed prior attempt poisons them)
+        r = subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
+                           capture_output=True, text=True, timeout=15)
+        print(f'[{_ts()}] NM restart rc={r.returncode} {r.stderr.strip()[:80]}')
+
+        # Poll for NM to come back up instead of a fixed sleep (slow Pis vary)
+        for _ in range(20):  # up to ~10s
+            if subprocess.run(['nmcli', 'general', 'status'],
+                              capture_output=True, timeout=3).returncode == 0:
+                break
+            time.sleep(0.5)
+
+        # Delete any stale profile so NM connects fresh
         subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
                        capture_output=True, text=True, timeout=5)
 
@@ -1511,11 +1520,24 @@ def wifi_connect():
         if is_hidden:
             cmd += ['hidden', 'yes']
 
-        print(f'[{_ts()}] Running: {" ".join(cmd[:6])} ...')
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        print(f'[{_ts()}] rc={result.returncode} stdout={result.stdout[:150]} stderr={result.stderr[:150]}')
+        def _attempt():
+            print(f'[{_ts()}] Running: {" ".join(cmd[:6])} ...')
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            print(f'[{_ts()}] rc={res.returncode} stdout={res.stdout[:150]} stderr={res.stderr[:150]}')
+            return res, res.returncode == 0 and 'successfully activated' in res.stdout
 
-        connected = result.returncode == 0 and 'successfully activated' in result.stdout
+        result, connected = _attempt()
+
+        # One automatic retry — association can be flaky on the first try
+        if not connected:
+            print(f'[{_ts()}] First attempt failed — rescan + retry once')
+            subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
+                           capture_output=True, timeout=10)
+            time.sleep(2)
+            subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
+                           capture_output=True, text=True, timeout=5)
+            result, connected = _attempt()
+
         if connected:
             _data_cache['fetched_at'] = 0
             return jsonify({'ok': True})
@@ -1534,12 +1556,32 @@ def wifi_connect():
         except Exception:
             pass
 
+        print(f'[{_ts()}] WiFi connect failed: {err[:160]}')
         return jsonify({'ok': False, 'error': err or 'Could not connect'})
 
     except subprocess.TimeoutExpired:
+        print(f'[{_ts()}] WiFi connect timed out')
         return jsonify({'ok': False, 'error': 'Connection timed out — check password and signal'})
     except Exception as e:
         print(f'[{_ts()}] WiFi connect error: {e}')
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/api/wifi/forget', methods=['POST'])
+def wifi_forget():
+    """Delete a saved network profile so it can be re-added fresh (test/retry)."""
+    data = request.get_json() or {}
+    ssid = data.get('ssid', '')
+    if not ssid:
+        return jsonify({'ok': False, 'error': 'No network specified'})
+    try:
+        result = subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
+                                capture_output=True, text=True, timeout=10)
+        ok = result.returncode == 0
+        print(f'[{_ts()}] WiFi forget: ssid="{ssid}" ok={ok} {result.stderr.strip()[:80]}')
+        return jsonify({'ok': ok, 'error': '' if ok else 'Network was not saved'})
+    except Exception as e:
+        print(f'[{_ts()}] WiFi forget error: {e}')
         return jsonify({'ok': False, 'error': str(e)})
 
 
