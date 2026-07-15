@@ -5,7 +5,13 @@
 APP_DIR="/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2"
 SERVER_LOG="/home/pi/server.log"
 APP_URL="http://localhost:5001/"
-WEBKIT="python3 $APP_DIR/webkit_launch.py"
+
+# Use WebKit2GTK if available (Pi 3 A+ / low-RAM), otherwise fall back to Chromium
+if python3 -c "import gi; gi.require_version('WebKit2','4.1')" 2>/dev/null; then
+    WEBKIT="python3 $APP_DIR/webkit_launch.py"
+else
+    WEBKIT="chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --no-first-run --check-for-update-interval=31536000"
+fi
 
 # ── Ensure Wayland display is set ────────────────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
