@@ -14,7 +14,18 @@ win.set_decorated(False)
 win.fullscreen()
 win.connect('destroy', Gtk.main_quit)
 
+settings = WebKit2.Settings()
+settings.set_enable_accelerated_2d_canvas(True)
+settings.set_enable_webgl(True)
+settings.set_enable_smooth_scrolling(False)
+settings.set_enable_write_console_messages_to_stdout(False)
+try:
+    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.ALWAYS)
+except AttributeError:
+    pass  # older WebKit2GTK versions don't have this
+
 wv = WebKit2.WebView()
+wv.set_settings(settings)
 wv.load_uri(url)
 
 win.add(wv)
