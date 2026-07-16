@@ -6,11 +6,10 @@ APP_DIR="/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2"
 SERVER_LOG="/home/pi/server.log"
 APP_URL="http://localhost:5001/"
 
-# Browser selection: Chromium on high-RAM Pis (>800MB), WebKit2GTK on low-RAM (Pi 3 A+).
-# WebKit2GTK uses ~200MB less RAM but is much slower for canvas-heavy JS.
-TOTAL_RAM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+# Browser selection: prefer Chromium (faster V8 JS engine for canvas rendering).
+# Fall back to WebKit2GTK only if Chromium is not installed.
 CHROMIUM_CMD="chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --no-first-run --check-for-update-interval=31536000"
-if [ "$TOTAL_RAM_MB" -gt 800 ] && command -v chromium &>/dev/null; then
+if command -v chromium &>/dev/null; then
     WEBKIT="$CHROMIUM_CMD"
 elif python3 -c "import gi; gi.require_version('WebKit2','4.1')" 2>/dev/null; then
     WEBKIT="python3 $APP_DIR/webkit_launch.py"
