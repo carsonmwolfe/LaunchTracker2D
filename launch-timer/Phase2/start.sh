@@ -5,6 +5,16 @@ APP_URL="http://localhost:5001/"
 
 export DISPLAY=${DISPLAY:-:0}
 export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+
+# Only one instance of start.sh should ever run
+PIDFILE="/tmp/rangetrack_start.pid"
+if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    echo "[$(date '+%H:%M:%S')] start.sh already running (PID $(cat "$PIDFILE")) — exiting" >> "$SERVER_LOG"
+    exit 0
+fi
+echo $$ > "$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
 
 # Kill anything left from a previous run
 pkill -f webkit_launch 2>/dev/null
