@@ -159,7 +159,7 @@ pkill -f "python3 server.py" 2>/dev/null
 fuser -k 5001/tcp 2>/dev/null || true
 sleep 2
 cd "$REPO_DIR/launch-timer/Phase2" || exit 1
-nohup python3 server.py >> /home/pi/server.log 2>&1 &
+nohup nice -n -10 python3 server.py >> /home/pi/server.log 2>&1 &
 SERVER_PID=$!
 
 # Wait for server to actually respond before reloading Chromium (max 20s)
