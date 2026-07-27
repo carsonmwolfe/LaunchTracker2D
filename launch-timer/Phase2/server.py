@@ -1519,9 +1519,34 @@ def wifi_connect():
                 break
             time.sleep(0.5)
 
-        # Delete any stale profile so NM connects fresh
-        subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
-                       capture_output=True, text=True, timeout=5)
+        # Delete ALL saved profiles whose SSID field matches — not just by profile name.
+        # NM sometimes creates "SSID 1" duplicates; deleting only by name leaves stale
+        # profiles with cached wrong secrets that cause false "wrong password" errors.
+        try:
+            con_list = subprocess.run(
+                ['sudo', 'nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
+                capture_output=True, text=True, timeout=5
+            )
+            for line in con_list.stdout.splitlines():
+                parts = line.split(':')
+                if len(parts) < 2 or parts[1] != '802-11-wireless':
+                    continue
+                profile_name = parts[0]
+                ssid_r = subprocess.run(
+                    ['sudo', 'nmcli', '-g', '802-11-wireless.ssid', 'con', 'show', profile_name],
+                    capture_output=True, text=True, timeout=5
+                )
+                if ssid_r.stdout.strip() == ssid:
+                    subprocess.run(['sudo', 'nmcli', 'con', 'delete', profile_name],
+                                   capture_output=True, text=True, timeout=5)
+                    print(f'[{_ts()}] Deleted stale profile: "{profile_name}"')
+        except Exception as del_err:
+            print(f'[{_ts()}] Profile cleanup error (non-fatal): {del_err}')
+
+        # Rescan so NM has a fresh view of the AP before connecting
+        subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
+                       capture_output=True, timeout=8)
+        time.sleep(1)
 
         cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
         if not is_open:
