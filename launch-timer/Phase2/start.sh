@@ -40,7 +40,7 @@ BROWSER_PID=$!
 while true; do
     sleep 15
 
-    if ! curl -s -o /dev/null "$APP_URL" --max-time 3 2>/dev/null; then
+    if ! curl -s -o /dev/null "$APP_URL" --max-time 8 2>/dev/null; then
         if [ -e "/tmp/rangetrack_update.lock" ]; then
             echo "[$(date '+%H:%M:%S')] Server down — update in progress, waiting" >> "$SERVER_LOG"
         else
