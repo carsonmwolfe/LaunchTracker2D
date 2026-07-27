@@ -3010,12 +3010,13 @@ function restoreState() {
   spawnBirds();
   spawnCars();
   restoreState();
-  await fetchData();
   initWeatherParticles();
+  // Start rendering immediately with localStorage-cached data — no blank canvas on boot
+  requestAnimationFrame(render);
+  // Fetch live data in background; canvas populates when it arrives
+  fetchData();
   startPolling();
-  // Persist state every 5 seconds
   setInterval(saveState, 5000);
-  // Auto-dim handled globally by notify.js (applies to document.body on all pages)
   // Server watchdog — redirect to boot page if server goes down
   let _wdFails = 0;
   setInterval(async () => {
@@ -3028,17 +3029,5 @@ function restoreState() {
       window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
     }
   }, 10000);
-  // Version watchdog — reload page when server updates (new git commit)
-  let _appVersion = null;
-  setInterval(async () => {
-    try {
-      const r = await fetch('/api/version', { cache: 'no-store' });
-      if (!r.ok) return;
-      const { version } = await r.json();
-      if (_appVersion === null) { _appVersion = version; return; }
-      if (version !== _appVersion) window.location.reload(true);
-    } catch(e) {}
-  }, 30000);
-  requestAnimationFrame(render);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
 })();
