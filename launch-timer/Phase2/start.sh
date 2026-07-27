@@ -104,14 +104,4 @@ while true; do
         $WEBKIT "$APP_URL" &
         BROWSER_PID=$!
     fi
-
-    # Memory watchdog — restart WebKit before OOM freezes the whole Pi
-    MEM_FREE=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
-    if [ "$MEM_FREE" -lt 60 ]; then
-        echo "[$(date '+%H:%M:%S')] Low memory (${MEM_FREE}MB) — restarting WebKit to prevent freeze" >> "$SERVER_LOG"
-        kill $BROWSER_PID 2>/dev/null
-        sleep 2
-        $WEBKIT "$APP_URL" &
-        BROWSER_PID=$!
-    fi
 done
