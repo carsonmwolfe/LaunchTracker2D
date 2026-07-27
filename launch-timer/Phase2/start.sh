@@ -36,12 +36,16 @@ fi
 cd "$APP_DIR" || exit 1
 nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
 
+# Wait for server (up to 60s)
+for i in $(seq 1 60); do
+    curl -s -o /dev/null "$APP_URL" --max-time 1 2>/dev/null && break
+    sleep 1
+done
+
 BROWSER_PIDFILE="/tmp/rangetrack_browser.pid"
 
-# Launch browser immediately — boot.html polls server and redirects when ready
-# This lets the user see the boot screen instead of the desktop during server startup
-BOOT_URL="file://${APP_DIR}/static/boot.html"
-python3 "$APP_DIR/webkit_launch.py" "$BOOT_URL" &
+# Launch browser
+python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
 BROWSER_PID=$!
 echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
 
