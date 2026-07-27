@@ -32,9 +32,9 @@ if [ ! -s "$APP_DIR/server.py" ]; then
     fi
 fi
 
-# Start server
+# Start server with elevated priority so WebKit canvas load can't starve Flask
 cd "$APP_DIR" || exit 1
-nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
+nohup nice -n -10 python3 server.py >> "$SERVER_LOG" 2>&1 &
 
 # Wait for server (up to 60s)
 for i in $(seq 1 60); do
@@ -53,13 +53,13 @@ echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
 while true; do
     sleep 15
 
-    if ! curl -s -o /dev/null "$APP_URL" --max-time 8 2>/dev/null; then
+    if ! curl -s -o /dev/null "$APP_URL" --max-time 20 2>/dev/null; then
         if [ -e "/tmp/rangetrack_update.lock" ]; then
             echo "[$(date '+%H:%M:%S')] Server down — update in progress, waiting" >> "$SERVER_LOG"
         else
             echo "[$(date '+%H:%M:%S')] Server down — restarting" >> "$SERVER_LOG"
             fuser -k 5001/tcp 2>/dev/null || true
-            nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
+            nohup nice -n -10 python3 server.py >> "$SERVER_LOG" 2>&1 &
             sleep 5
         fi
     fi
