@@ -42,9 +42,12 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
+BROWSER_PIDFILE="/tmp/rangetrack_browser.pid"
+
 # Launch browser
 python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
 BROWSER_PID=$!
+echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
 
 # Supervisor: restart server or browser if either crashes
 while true; do
@@ -61,8 +64,13 @@ while true; do
         fi
     fi
 
-    if ! kill -0 $BROWSER_PID 2>/dev/null; then
+    # Check PID file first — update.sh may have already restarted WebKit
+    FILE_PID=$(cat "$BROWSER_PIDFILE" 2>/dev/null)
+    if [ -n "$FILE_PID" ] && kill -0 "$FILE_PID" 2>/dev/null; then
+        BROWSER_PID="$FILE_PID"
+    elif ! kill -0 "$BROWSER_PID" 2>/dev/null; then
         python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
         BROWSER_PID=$!
+        echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
     fi
 done
