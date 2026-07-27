@@ -2579,7 +2579,7 @@ function drawMilestoneTimeline() {
 //  MAIN RENDER LOOP
 // ─────────────────────────────────────────────────────────────────────────────
 let lastFrame = 0;
-const TARGET_FPS = 20;
+const TARGET_FPS = 10;
 const FRAME_MS   = 1000 / TARGET_FPS;
 
 // ── Fast settings poll — picks up display_mode changes within 5s ─────────────

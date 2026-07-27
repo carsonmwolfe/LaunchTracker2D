@@ -143,10 +143,6 @@ done
 
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
-# Wipe Chromium cache so all pages get fresh files (not just current tab)
-rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null
-echo "$LOG_PREFIX Chromium cache cleared"
-
 # Rotate server log — keep last 500 lines to prevent SD card fill
 if [ -f /home/pi/server.log ]; then
     tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
@@ -178,17 +174,13 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Reload the browser — WebKit restarts cleanly, Chromium uses JS version watchdog
-if pgrep -f webkit_launch.py > /dev/null; then
-    pkill -f webkit_launch.py
-    sleep 2
-    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
-        nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
-        >> /home/pi/server.log 2>&1 &
-    echo "$LOG_PREFIX WebKit restarted"
-else
-    echo "$LOG_PREFIX Server updated — version watchdog will reload Chromium within 30s"
-fi
+# Restart WebKit with proper Wayland env so canvas renders correctly after update
+pkill -f webkit_launch.py 2>/dev/null
+sleep 2
+XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
+    nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
+    >> /home/pi/server.log 2>&1 &
+echo "$LOG_PREFIX WebKit restarted"
 
 # ── Log the update ─────────────────────────────────────────────────────────────
 

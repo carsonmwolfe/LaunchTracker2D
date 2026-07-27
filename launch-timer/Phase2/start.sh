@@ -6,19 +6,7 @@ APP_DIR="/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2"
 SERVER_LOG="/home/pi/server.log"
 APP_URL="http://localhost:5001/"
 
-# Browser selection:
-#   >800MB RAM → Chromium (V8 is faster for canvas-heavy JS, enough headroom)
-#   ≤800MB RAM → WebKit2GTK (Chromium warns/struggles on 512MB Pi 3 A+)
-#   Fallback: Chromium if neither condition can be satisfied
-TOTAL_RAM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
-CHROMIUM_CMD="chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --no-first-run --check-for-update-interval=31536000 --password-store=basic"
-if [ "$TOTAL_RAM_MB" -gt 800 ] && command -v chromium &>/dev/null; then
-    WEBKIT="$CHROMIUM_CMD"
-elif python3 -c "import gi; gi.require_version('WebKit2','4.1')" 2>/dev/null; then
-    WEBKIT="python3 $APP_DIR/webkit_launch.py"
-else
-    WEBKIT="$CHROMIUM_CMD"
-fi
+WEBKIT="python3 $APP_DIR/webkit_launch.py"
 
 # ── Ensure Wayland display is set ────────────────────────────────────────────
 export DISPLAY=${DISPLAY:-:0}
@@ -26,7 +14,6 @@ export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
 
 # ── Kill stale browser + server ───────────────────────────────────────────────
 pkill -f webkit_launch 2>/dev/null
-pkill -f chromium 2>/dev/null
 sleep 2
 
 # ── Kill anything on port 5001 ────────────────────────────────────────────────
@@ -80,18 +67,6 @@ for i in $(seq 1 40); do
     fi
     sleep 1.5
 done
-
-# ── Mark Chromium last session as clean (prevents session-restore dialog on dirty shutdown) ──
-python3 -c "
-import json,os
-p=os.path.expanduser('~/.config/chromium/Default/Preferences')
-os.makedirs(os.path.dirname(p),exist_ok=True)
-try: d=json.load(open(p))
-except: d={}
-d.setdefault('profile',{})['exit_type']='Normal'
-d['profile']['exited_cleanly']=True
-json.dump(d,open(p,'w'))
-" 2>/dev/null || true
 
 # ── Launch WebKit browser ─────────────────────────────────────────────────────
 $WEBKIT "$APP_URL" &
