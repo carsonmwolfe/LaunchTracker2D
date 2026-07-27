@@ -1498,10 +1498,19 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        # Restart NM to clear cached secrets (a failed prior attempt poisons them)
+        # Restart NM to clear cached secrets (a failed prior attempt poisons them).
+        # Prefer systemctl restart (cleanest), fall back to nmcli networking off/on
+        # if sudoers doesn't allow systemctl (older Pi images missing that entry).
         r = subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
                            capture_output=True, text=True, timeout=15)
         print(f'[{_ts()}] NM restart rc={r.returncode} {r.stderr.strip()[:80]}')
+        if r.returncode != 0:
+            print(f'[{_ts()}] NM restart not permitted — falling back to nmcli networking off/on')
+            subprocess.run(['sudo', 'nmcli', 'networking', 'off'],
+                           capture_output=True, text=True, timeout=10)
+            time.sleep(1)
+            subprocess.run(['sudo', 'nmcli', 'networking', 'on'],
+                           capture_output=True, text=True, timeout=10)
 
         # Poll for NM to come back up instead of a fixed sleep (slow Pis vary)
         for _ in range(20):  # up to ~10s
