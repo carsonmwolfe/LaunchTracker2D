@@ -41,10 +41,14 @@ while true; do
     sleep 15
 
     if ! curl -s -o /dev/null "$APP_URL" --max-time 3 2>/dev/null; then
-        echo "[$(date '+%H:%M:%S')] Server down — restarting" >> "$SERVER_LOG"
-        fuser -k 5001/tcp 2>/dev/null || true
-        nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
-        sleep 5
+        if [ -e "/tmp/rangetrack_update.lock" ]; then
+            echo "[$(date '+%H:%M:%S')] Server down — update in progress, waiting" >> "$SERVER_LOG"
+        else
+            echo "[$(date '+%H:%M:%S')] Server down — restarting" >> "$SERVER_LOG"
+            fuser -k 5001/tcp 2>/dev/null || true
+            nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
+            sleep 5
+        fi
     fi
 
     if ! kill -0 $BROWSER_PID 2>/dev/null; then
