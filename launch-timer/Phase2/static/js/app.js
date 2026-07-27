@@ -3016,16 +3016,24 @@ function restoreState() {
   fetchData();
   startPolling();
   setInterval(saveState, 5000);
-  // Server watchdog — redirect to boot page if server goes down
+  // Server watchdog — show reconnect overlay if server is unreachable, reload when it returns
   let _wdFails = 0;
+  let _wdOverlay = null;
   setInterval(async () => {
     try {
       const r = await fetch('/api/data?_wd=1', { cache: 'no-store' });
-      if (r.ok) { _wdFails = 0; return; }
+      if (r.ok) {
+        _wdFails = 0;
+        if (_wdOverlay) { window.location.reload(); }
+        return;
+      }
     } catch(e) {}
     _wdFails++;
-    if (_wdFails >= 3) {
-      window.location = 'file:///home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/static/boot.html';
+    if (_wdFails >= 3 && !_wdOverlay) {
+      _wdOverlay = document.createElement('div');
+      _wdOverlay.style.cssText = 'position:fixed;inset:0;background:#0a0e14;display:flex;align-items:center;justify-content:center;z-index:9999;font-family:"Press Start 2P",monospace;font-size:10px;color:#4a9ede;letter-spacing:2px;';
+      _wdOverlay.textContent = 'RECONNECTING...';
+      document.body.appendChild(_wdOverlay);
     }
   }, 10000);
   console.log(`[${ts()}] Launch Countdown Phase 2 ready`);
