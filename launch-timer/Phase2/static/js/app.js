@@ -1224,6 +1224,10 @@ const FLAME_PALETTE = [
   '#cc2200', // 6 — dark red
   '#661100', // 7 — near-black tip
 ];
+// Pre-computed RGB tuples for FLAME_PALETTE — avoids hex parsing per frame
+const FLAME_PALETTE_RGB = FLAME_PALETTE.map(h => [
+  parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)
+]);
 
 function spawnFlameParticles(flameX, flameY, intensity) {
   if (state.flameParticles.length >= MAX_FLAME_PARTICLES) return;
@@ -1297,68 +1301,60 @@ function spawnFlameParticles(flameX, flameY, intensity) {
 // Called BEFORE pad/tower — trench smoke appears behind structures
 function drawTrenchParticles() {
   state.trenchParticles = state.trenchParticles.filter(p => p.age < p.life);
+  ctx.globalAlpha = 1;
 
-  // snap helper — align to 2px pixel grid for crisp retro look
   const snap = v => Math.round(v / 2) * 2;
-
   state.trenchParticles.forEach(p => {
     const t = p.age / p.life;
     p.vx *= 0.97; p.vy *= 0.97;
-    // Turbulence — breaks straight-line trajectories into billowing shapes
     p.vx += (Math.random() - 0.5) * 0.4;
     p.vy += (Math.random() - 0.5) * 0.3;
     p.x += p.vx; p.y += p.vy;
-    // Blocks grow slightly as cloud billows outward
-    const bsz = p.sz + Math.floor(t * 6);
-    const gray = p.dark
-      ? Math.floor(170 + t * 30)   // light grey: 170→200
-      : Math.floor(220 + t * 30);  // almost white: 220→250
-    ctx.globalAlpha = t < 0.15 ? t / 0.15 * 0.85   // fade in fast
-                    : (1 - t) * 0.85;               // fade out slowly
-    ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+    const bsz  = p.sz + Math.floor(t * 6);
+    const gray = p.dark ? Math.floor(170 + t * 30) : Math.floor(220 + t * 30);
+    const a    = (t < 0.15 ? t / 0.15 * 0.85 : (1 - t) * 0.85).toFixed(2);
+    ctx.fillStyle = `rgba(${gray},${gray},${gray},${a})`;
     ctx.fillRect(snap(p.x) - bsz / 2, snap(p.y) - bsz / 2, bsz, bsz);
     p.age++;
   });
-  ctx.globalAlpha = 1;
 }
 
 // Called AFTER pad/tower — jet and pad smoke appear in front
 function drawFlameParticles() {
   state.flameParticles = state.flameParticles.filter(p => p.age < p.life);
-
-  state.flameParticles.filter(p => p.type === 'smoke').forEach(p => {
-    const t = p.age / p.life;
-    const sz = Math.round((p.sz * (1 + t * 1.4)) / 2) * 2;
-    const gray = Math.floor(160 + t * 70);
-    ctx.globalAlpha = (1 - t) * 0.55;
-    ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
-    ctx.fillRect(Math.round(p.x - sz/2), Math.round(p.y - sz/4), sz, Math.round(sz * 0.55));
-    p.age++; p.x += p.vx; p.y += p.vy; p.vx *= 0.96;
-  });
   ctx.globalAlpha = 1;
 
-  state.flameParticles.filter(p => p.type === 'outer').forEach(p => {
+  state.flameParticles.forEach(p => {
     const t = p.age / p.life;
-    const ci = Math.min(3 + Math.floor(t * 5), FLAME_PALETTE.length - 1);
-    const halfW = Math.max(2, Math.round((p.sz * (1.2 - t * 0.5)) / 2));
-    const blockH = Math.max(2, Math.round(p.sz * (1 - t * 0.3)));
-    ctx.globalAlpha = (1 - t * 0.7);
-    ctx.fillStyle = FLAME_PALETTE[ci];
-    ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
-    p.age++; p.x += p.vx; p.y += p.vy;
-  });
+    p.age++;
 
-  state.flameParticles.filter(p => p.type === 'core').forEach(p => {
-    const t = p.age / p.life;
-    const ci = Math.min(Math.floor(t * 5), FLAME_PALETTE.length - 1);
-    const halfW = Math.max(2, Math.round(p.sz * (1 - t * 0.35)));
-    const blockH = Math.max(2, p.sz);
-    ctx.globalAlpha = t < 0.15 ? 1 : (1 - t * 0.5);
-    ctx.fillStyle = FLAME_PALETTE[ci];
-    ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
-    p.age++; p.x += p.vx; p.y += p.vy;
+    if (p.type === 'smoke') {
+      const sz   = Math.round((p.sz * (1 + t * 1.4)) / 2) * 2;
+      const gray = Math.floor(160 + t * 70);
+      const a    = ((1 - t) * 0.55).toFixed(2);
+      ctx.fillStyle = `rgba(${gray},${gray},${gray},${a})`;
+      ctx.fillRect(Math.round(p.x - sz/2), Math.round(p.y - sz/4), sz, Math.round(sz * 0.55));
+      p.x += p.vx; p.y += p.vy; p.vx *= 0.96;
+    } else if (p.type === 'outer') {
+      const ci    = Math.min(3 + Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
+      const [r,g,b] = FLAME_PALETTE_RGB[ci];
+      const halfW = Math.max(2, Math.round((p.sz * (1.2 - t * 0.5)) / 2));
+      const blockH = Math.max(2, Math.round(p.sz * (1 - t * 0.3)));
+      const a     = (1 - t * 0.7).toFixed(2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+      ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
+      p.x += p.vx; p.y += p.vy;
+    } else {
+      const ci    = Math.min(Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
+      const [r,g,b] = FLAME_PALETTE_RGB[ci];
+      const halfW = Math.max(2, Math.round(p.sz * (1 - t * 0.35)));
+      const blockH = Math.max(2, p.sz);
+      const a     = (t < 0.15 ? 1 : (1 - t * 0.5)).toFixed(2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+      ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
+      p.x += p.vx; p.y += p.vy;
+    }
   });
-  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
