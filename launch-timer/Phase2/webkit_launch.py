@@ -26,12 +26,9 @@ except AttributeError:
 
 wv = WebKit2.WebView()
 wv.set_settings(settings)
-# Set background to app dark color so there's no white flash before CSS loads
+# Dark background before CSS loads — eliminates white flash on slow Pi boot
 wv.set_background_color(Gdk.RGBA(10/255, 14/255, 20/255, 1.0))
 wv.load_uri(url)
-
-# Set window background too so GTK doesn't flash white before WebView paints
-win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(10/255, 14/255, 20/255, 1.0))
 
 win.add(wv)
 win.show_all()
