@@ -16,22 +16,16 @@ win.connect('destroy', Gtk.main_quit)
 
 settings = WebKit2.Settings()
 settings.set_enable_accelerated_2d_canvas(True)
-settings.set_enable_webgl(False)
+settings.set_enable_webgl(True)
 settings.set_enable_smooth_scrolling(False)
 settings.set_enable_write_console_messages_to_stdout(True)
 try:
-    # GL init fails on this Pi — NEVER avoids the repeated retry overhead
-    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.NEVER)
+    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.ALWAYS)
 except AttributeError:
     pass
 
 wv = WebKit2.WebView()
 wv.set_settings(settings)
-
-# Disable disk cache — SD card hard-link failures were causing repeated I/O errors
-ctx = wv.get_context()
-ctx.set_cache_model(WebKit2.CacheModel.DOCUMENT_VIEWER)
-# Dark background before CSS loads — eliminates white flash on slow Pi boot
 wv.set_background_color(Gdk.RGBA(10/255, 14/255, 20/255, 1.0))
 wv.load_uri(url)
 
