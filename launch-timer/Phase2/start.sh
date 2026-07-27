@@ -78,6 +78,18 @@ for i in $(seq 1 40); do
     sleep 1.5
 done
 
+# ── Mark Chromium last session as clean (prevents session-restore dialog on dirty shutdown) ──
+python3 -c "
+import json,os
+p=os.path.expanduser('~/.config/chromium/Default/Preferences')
+os.makedirs(os.path.dirname(p),exist_ok=True)
+try: d=json.load(open(p))
+except: d={}
+d.setdefault('profile',{})['exit_type']='Normal'
+d['profile']['exited_cleanly']=True
+json.dump(d,open(p,'w'))
+" 2>/dev/null || true
+
 # ── Launch WebKit browser ─────────────────────────────────────────────────────
 $WEBKIT "$APP_URL" &
 BROWSER_PID=$!
