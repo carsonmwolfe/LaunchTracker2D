@@ -2128,7 +2128,10 @@ const _dataUrl  = _testSecs ? `/api/test-launch?secs=${_testSecs}` : '/api/data'
 
 async function fetchData(afterLaunch=false) {
   try {
-    const res  = await fetch(_dataUrl);
+    const _ac = new AbortController();
+    const _t  = setTimeout(() => _ac.abort(), 8000);
+    const res  = await fetch(_dataUrl, { signal: _ac.signal });
+    clearTimeout(_t);
     const data = await res.json();
 
     const newLaunches = data.launches || [];
