@@ -185,14 +185,26 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
-# Restart WebKit — write PID file so start.sh supervisor doesn't launch a second instance
+# Restart browser — same logic as start.sh: Chromium for >700MB RAM, WebKit2GTK otherwise
 pkill -f webkit_launch.py 2>/dev/null
+pkill -f chromium 2>/dev/null
 sleep 2
-XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
-    nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
-    >> /home/pi/server.log 2>&1 &
-echo $! > /tmp/rangetrack_browser.pid
-echo "$LOG_PREFIX WebKit restarted (PID $!)"
+MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
+if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
+    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
+        nohup "$CHROMIUM_BIN" --kiosk --noerrdialogs --disable-infobars --no-first-run \
+        --disable-session-crashed-bubble --disable-features=Translate \
+        --app="http://localhost:5001/" >> /home/pi/server.log 2>&1 &
+    echo $! > /tmp/rangetrack_browser.pid
+    echo "$LOG_PREFIX Chromium restarted (PID $!)"
+else
+    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
+        nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
+        >> /home/pi/server.log 2>&1 &
+    echo $! > /tmp/rangetrack_browser.pid
+    echo "$LOG_PREFIX WebKit restarted (PID $!)"
+fi
 
 # ── Log the update ─────────────────────────────────────────────────────────────
 

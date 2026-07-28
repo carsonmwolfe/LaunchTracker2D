@@ -18,6 +18,7 @@ trap 'rm -f "$PIDFILE"' EXIT
 
 # Kill anything left from a previous run
 pkill -f webkit_launch 2>/dev/null
+pkill -f chromium 2>/dev/null
 fuser -k 5001/tcp 2>/dev/null || true
 
 # Corruption guard: if server.py is empty restore from backup, else bail
@@ -32,7 +33,7 @@ if [ ! -s "$APP_DIR/server.py" ]; then
     fi
 fi
 
-# Start server with elevated priority so WebKit canvas load can't starve Flask
+# Start server with elevated priority so canvas rendering can't starve Flask
 cd "$APP_DIR" || exit 1
 nohup nice -n -10 python3 server.py >> "$SERVER_LOG" 2>&1 &
 
@@ -44,10 +45,30 @@ done
 
 BROWSER_PIDFILE="/tmp/rangetrack_browser.pid"
 
-# Launch browser
-python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
-BROWSER_PID=$!
-echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
+# Choose browser: Chromium for Pis with enough RAM, WebKit2GTK for 512MB Pis
+MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
+
+launch_browser() {
+    if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
+        echo "[$(date '+%H:%M:%S')] Using Chromium (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
+        "$CHROMIUM_BIN" \
+            --kiosk \
+            --noerrdialogs \
+            --disable-infobars \
+            --no-first-run \
+            --disable-session-crashed-bubble \
+            --disable-features=Translate \
+            --app="$APP_URL" &
+    else
+        echo "[$(date '+%H:%M:%S')] Using WebKit2GTK (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
+        python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
+    fi
+    echo $! > "$BROWSER_PIDFILE"
+    echo $!
+}
+
+BROWSER_PID=$(launch_browser)
 
 # Supervisor: restart server or browser if either crashes
 while true; do
@@ -64,13 +85,12 @@ while true; do
         fi
     fi
 
-    # Check PID file first — update.sh may have already restarted WebKit
+    # Check PID file first — update.sh may have already restarted the browser
     FILE_PID=$(cat "$BROWSER_PIDFILE" 2>/dev/null)
     if [ -n "$FILE_PID" ] && kill -0 "$FILE_PID" 2>/dev/null; then
         BROWSER_PID="$FILE_PID"
     elif ! kill -0 "$BROWSER_PID" 2>/dev/null; then
-        python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
-        BROWSER_PID=$!
-        echo "$BROWSER_PID" > "$BROWSER_PIDFILE"
+        BROWSER_PID=$(launch_browser)
+        echo "[$(date '+%H:%M:%S')] Browser restarted (PID $BROWSER_PID)" >> "$SERVER_LOG"
     fi
 done
