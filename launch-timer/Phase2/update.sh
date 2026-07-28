@@ -118,16 +118,27 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 PHASE2="$REPO_DIR/launch-timer/Phase2"
 
-# Ensure health cron job is installed
+# Ensure health cron job and nightly WebKit restart are installed
 CRON_TMP=$(mktemp)
-crontab -l 2>/dev/null | grep -v "health.py" > "$CRON_TMP"
+crontab -l 2>/dev/null | grep -v "health.py" | grep -v "webkit_launch" > "$CRON_TMP"
 echo "*/5 * * * * python3 $PHASE2/health.py >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
+echo "0 3 * * * pkill -f webkit_launch.py; sleep 3; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 nohup python3 $PHASE2/webkit_launch.py http://localhost:5001/ >> /home/pi/server.log 2>&1 & echo \$! > /tmp/rangetrack_browser.pid" >> "$CRON_TMP"
 crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
 # Ensure sudoers has all required NOPASSWD entries
 printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 echo "$LOG_PREFIX sudoers updated"
+
+# Ensure Tailscale restarts after failure and waits for NetworkManager
+# (tailscaled starts before WiFi is connected at boot and fails silently)
+TAILSCALE_OVERRIDE="/etc/systemd/system/tailscaled.service.d/rangetrack.conf"
+if [ ! -f "$TAILSCALE_OVERRIDE" ] || ! grep -q "network-online" "$TAILSCALE_OVERRIDE" 2>/dev/null; then
+    sudo mkdir -p "$(dirname "$TAILSCALE_OVERRIDE")"
+    printf '[Unit]\nAfter=NetworkManager-wait-online.service\nWants=NetworkManager-wait-online.service\n\n[Service]\nRestart=on-failure\nRestartSec=10s\n' | sudo tee "$TAILSCALE_OVERRIDE" > /dev/null
+    sudo systemctl daemon-reload
+    echo "$LOG_PREFIX Tailscale systemd override installed"
+fi
 
 # Ensure gnome-keyring is permanently disabled
 CHANGED_KR=0

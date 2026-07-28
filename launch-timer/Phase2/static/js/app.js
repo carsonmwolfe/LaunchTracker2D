@@ -2806,7 +2806,7 @@ function startPolling() {
       const text = m.msg ? `${m.title}: ${m.msg}` : m.title;
       showNotification(text);
     } catch(e) {}
-  }, 5000);
+  }, 30000);
 
   // Update HTML info bar every second
   setInterval(updateInfoBar, 1000);
