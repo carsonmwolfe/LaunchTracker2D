@@ -15,14 +15,14 @@ win.fullscreen()
 win.connect('destroy', Gtk.main_quit)
 
 settings = WebKit2.Settings()
-settings.set_enable_accelerated_2d_canvas(True)
+settings.set_enable_accelerated_2d_canvas(False)
 settings.set_enable_webgl(False)
 settings.set_enable_smooth_scrolling(False)
 settings.set_enable_write_console_messages_to_stdout(True)
 settings.set_allow_file_access_from_file_urls(True)
 settings.set_allow_universal_access_from_file_urls(True)
 try:
-    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.ALWAYS)
+    settings.set_hardware_acceleration_policy(WebKit2.HardwareAccelerationPolicy.NEVER)
 except AttributeError:
     pass
 

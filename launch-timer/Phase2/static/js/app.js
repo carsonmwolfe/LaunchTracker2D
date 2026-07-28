@@ -1301,9 +1301,10 @@ function spawnFlameParticles(flameX, flameY, intensity) {
 // Called BEFORE pad/tower — trench smoke appears behind structures
 function drawTrenchParticles() {
   state.trenchParticles = state.trenchParticles.filter(p => p.age < p.life);
-  ctx.globalAlpha = 1;
 
+  // Batch by quantized gray so fillStyle changes ~8x instead of 900x per frame
   const snap = v => Math.round(v / 2) * 2;
+  const buckets = new Map();
   state.trenchParticles.forEach(p => {
     const t = p.age / p.life;
     p.vx *= 0.97; p.vy *= 0.97;
@@ -1311,50 +1312,62 @@ function drawTrenchParticles() {
     p.vy += (Math.random() - 0.5) * 0.3;
     p.x += p.vx; p.y += p.vy;
     const bsz  = p.sz + Math.floor(t * 6);
-    const gray = p.dark ? Math.floor(170 + t * 30) : Math.floor(220 + t * 30);
-    const a    = (t < 0.15 ? t / 0.15 * 0.85 : (1 - t) * 0.85).toFixed(2);
-    ctx.fillStyle = `rgba(${gray},${gray},${gray},${a})`;
-    ctx.fillRect(snap(p.x) - bsz / 2, snap(p.y) - bsz / 2, bsz, bsz);
+    const gray = Math.floor((p.dark ? 170 + t * 30 : 220 + t * 30) / 10) * 10;
+    const a    = t < 0.15 ? t / 0.15 * 0.85 : (1 - t) * 0.85;
+    const key  = `rgb(${gray},${gray},${gray})`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push({ x: snap(p.x) - bsz / 2, y: snap(p.y) - bsz / 2, s: bsz, a });
     p.age++;
   });
+  for (const [style, rects] of buckets) {
+    ctx.fillStyle = style;
+    for (const { x, y, s, a } of rects) { ctx.globalAlpha = a; ctx.fillRect(x, y, s, s); }
+  }
+  ctx.globalAlpha = 1;
 }
 
 // Called AFTER pad/tower — jet and pad smoke appear in front
 function drawFlameParticles() {
   state.flameParticles = state.flameParticles.filter(p => p.age < p.life);
-  ctx.globalAlpha = 1;
 
+  // Batch by palette color so fillStyle changes ~10x instead of 280x per frame
+  const buckets = new Map();
   state.flameParticles.forEach(p => {
     const t = p.age / p.life;
     p.age++;
-
+    let key, x, y, w, h, a;
     if (p.type === 'smoke') {
-      const sz   = Math.round((p.sz * (1 + t * 1.4)) / 2) * 2;
-      const gray = Math.floor(160 + t * 70);
-      const a    = ((1 - t) * 0.55).toFixed(2);
-      ctx.fillStyle = `rgba(${gray},${gray},${gray},${a})`;
-      ctx.fillRect(Math.round(p.x - sz/2), Math.round(p.y - sz/4), sz, Math.round(sz * 0.55));
+      const sz = Math.round((p.sz * (1 + t * 1.4)) / 2) * 2;
+      const gray = Math.floor((160 + t * 70) / 10) * 10;
+      key = `rgb(${gray},${gray},${gray})`;
+      x = Math.round(p.x - sz/2); y = Math.round(p.y - sz/4); w = sz; h = Math.round(sz * 0.55);
+      a = (1 - t) * 0.55;
       p.x += p.vx; p.y += p.vy; p.vx *= 0.96;
     } else if (p.type === 'outer') {
-      const ci    = Math.min(3 + Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
+      const ci = Math.min(3 + Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
       const [r,g,b] = FLAME_PALETTE_RGB[ci];
       const halfW = Math.max(2, Math.round((p.sz * (1.2 - t * 0.5)) / 2));
-      const blockH = Math.max(2, Math.round(p.sz * (1 - t * 0.3)));
-      const a     = (1 - t * 0.7).toFixed(2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-      ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
+      key = `rgb(${r},${g},${b})`;
+      x = Math.round(p.x) - halfW; y = Math.round(p.y); w = halfW * 2; h = Math.max(2, Math.round(p.sz * (1 - t * 0.3)));
+      a = 1 - t * 0.7;
       p.x += p.vx; p.y += p.vy;
     } else {
-      const ci    = Math.min(Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
+      const ci = Math.min(Math.floor(t * 5), FLAME_PALETTE_RGB.length - 1);
       const [r,g,b] = FLAME_PALETTE_RGB[ci];
       const halfW = Math.max(2, Math.round(p.sz * (1 - t * 0.35)));
-      const blockH = Math.max(2, p.sz);
-      const a     = (t < 0.15 ? 1 : (1 - t * 0.5)).toFixed(2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-      ctx.fillRect(Math.round(p.x) - halfW, Math.round(p.y), halfW * 2, blockH);
+      key = `rgb(${r},${g},${b})`;
+      x = Math.round(p.x) - halfW; y = Math.round(p.y); w = halfW * 2; h = Math.max(2, p.sz);
+      a = t < 0.15 ? 1 : (1 - t * 0.5);
       p.x += p.vx; p.y += p.vy;
     }
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push({ x, y, w, h, a });
   });
+  for (const [style, rects] of buckets) {
+    ctx.fillStyle = style;
+    for (const { x, y, w, h, a } of rects) { ctx.globalAlpha = a; ctx.fillRect(x, y, w, h); }
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
