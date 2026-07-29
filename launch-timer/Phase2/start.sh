@@ -49,17 +49,23 @@ BROWSER_PIDFILE="/tmp/rangetrack_browser.pid"
 MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
 CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
 
+# Proven GPU-accelerated Chromium flags — this is the exact config that ran
+# smoothly on the 3B+ for months. --use-angle=gles + --ozone-platform=wayland
+# are what enable GPU rendering; without them Chromium falls back to software.
+CHROMIUM_FLAGS="--kiosk --no-memcheck --noerrdialogs --disable-infobars \
+  --disable-features=ChromeWhatsNew,Translate --no-default-browser-check \
+  --disable-background-networking --disable-session-crashed-bubble \
+  --window-size=800,480 --disable-notifications --disable-popup-blocking \
+  --no-first-run --use-angle=gles --ozone-platform=wayland \
+  --password-store=basic --disable-renderer-accessibility \
+  --disable-extensions --disable-sync --disable-component-update \
+  --renderer-process-limit=1"
+
 launch_browser() {
     if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
-        echo "[$(date '+%H:%M:%S')] Using Chromium (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
-        "$CHROMIUM_BIN" \
-            --kiosk \
-            --noerrdialogs \
-            --disable-infobars \
-            --no-first-run \
-            --disable-session-crashed-bubble \
-            --disable-features=Translate \
-            --app="$APP_URL" &
+        echo "[$(date '+%H:%M:%S')] Using Chromium GPU (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
+        rm -f /home/pi/.config/chromium/Singleton* 2>/dev/null
+        "$CHROMIUM_BIN" $CHROMIUM_FLAGS --app="$APP_URL" &
     else
         echo "[$(date '+%H:%M:%S')] Using WebKit2GTK (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
         python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &

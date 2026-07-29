@@ -192,10 +192,17 @@ sleep 2
 MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
 CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
 if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
+    rm -f /home/pi/.config/chromium/Singleton* 2>/dev/null
     XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
-        nohup "$CHROMIUM_BIN" --kiosk --noerrdialogs --disable-infobars --no-first-run \
-        --disable-session-crashed-bubble --disable-features=Translate \
-        --app="http://localhost:5001/" >> /home/pi/server.log 2>&1 &
+        nohup "$CHROMIUM_BIN" --kiosk --no-memcheck --noerrdialogs --disable-infobars \
+        --disable-features=ChromeWhatsNew,Translate --no-default-browser-check \
+        --disable-background-networking --disable-session-crashed-bubble \
+        --window-size=800,480 --disable-notifications --disable-popup-blocking \
+        --no-first-run --use-angle=gles --ozone-platform=wayland \
+        --password-store=basic --disable-renderer-accessibility \
+        --disable-extensions --disable-sync --disable-component-update \
+        --renderer-process-limit=1 --app="http://localhost:5001/" \
+        >> /home/pi/server.log 2>&1 &
     echo $! > /tmp/rangetrack_browser.pid
     echo "$LOG_PREFIX Chromium restarted (PID $!)"
 else
