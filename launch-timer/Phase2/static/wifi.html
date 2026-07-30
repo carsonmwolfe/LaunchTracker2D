@@ -476,34 +476,33 @@
     }
 
     function friendlyError(raw) {
-      if (!raw) return 'Failed — check password and try again';
+      if (!raw) return "Couldn't connect — check the password and signal, then retry";
       const r = raw.toLowerCase();
       if (r.includes('802.1x') || r.includes('enterprise') || r.includes('eap')) {
         return 'Enterprise WiFi not supported — needs IT setup';
       }
-      if (r.includes('secret') || r.includes('psk') || r.includes('password') ||
-          r.includes('802-11') || r.includes('auth') || r.includes('wrong')) {
+      // Only call it a password problem on genuine auth failures — not on the
+      // generic "802-11" string that appears in nearly every NM WiFi error.
+      if (r.includes('secret') || r.includes('psk') || r.includes('pre-shared') ||
+          r.includes('4-way') || r.includes('handshake') ||
+          r.includes('wrong password') || r.includes('invalid password') ||
+          r.includes('authentication fail')) {
         return 'Wrong password — check carefully and retry';
       }
       if (r.includes('timeout') || r.includes('timed out')) {
-        return 'Timed out — move closer to router and retry';
+        return 'Timed out — move closer to the router and retry';
       }
-      if (r.includes('no network') || r.includes('not found') || r.includes('ssid')) {
+      if (r.includes('no network') || r.includes('not found') || r.includes('could not be found')) {
         return 'Network not found — tap ↺ SCAN and try again';
       }
       if (r.includes('dhcp') || r.includes('ip config') || r.includes('lease')) {
-        return 'Connected but no IP — reboot router and retry';
-      }
-      if (r.includes('deactivat') || r.includes('disconnect')) {
-        return 'Disconnected immediately — wrong password?';
+        return 'Connected but no IP — reboot the router and retry';
       }
       if (r.includes('blocked') || r.includes('rfkill')) {
         return 'WiFi blocked — reboot the Pi';
       }
-      if (r.includes('activation failed')) {
-        return 'Could not connect — wrong password or network issue';
-      }
-      return 'Failed — check password and try again';
+      // Association / activation failures are ambiguous — don't blame the password
+      return "Couldn't connect — check the password and signal, then retry";
     }
 
     function selectNetwork(ssid, isCurrent) {

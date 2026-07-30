@@ -127,8 +127,20 @@ crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
 # Ensure sudoers has all required NOPASSWD entries
-printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
+printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\npi ALL=(ALL) NOPASSWD: /usr/bin/raspi-config\npi ALL=(ALL) NOPASSWD: /usr/sbin/iw\npi ALL=(ALL) NOPASSWD: /usr/sbin/rfkill\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 echo "$LOG_PREFIX sudoers updated"
+
+# Ensure WiFi country is set — REQUIRED for 5GHz to work on Raspberry Pi.
+# Without a regulatory country the radio refuses ALL 5GHz channels, so any
+# 5GHz network fails to connect (and often mis-reports as a wrong password).
+WIFI_COUNTRY="US"
+CUR_REG=$(iw reg get 2>/dev/null | grep -m1 '^country' | awk '{print $2}' | tr -d ':')
+if [ "$CUR_REG" != "$WIFI_COUNTRY" ]; then
+    command -v raspi-config >/dev/null 2>&1 && sudo raspi-config nonint do_wifi_country "$WIFI_COUNTRY" 2>/dev/null
+    sudo iw reg set "$WIFI_COUNTRY" 2>/dev/null || true
+    sudo rfkill unblock wifi 2>/dev/null || true
+    echo "$LOG_PREFIX WiFi country set to $WIFI_COUNTRY (enables 5GHz)"
+fi
 
 # Ensure Tailscale restarts after failure and waits for NetworkManager
 # (tailscaled starts before WiFi is connected at boot and fails silently)
