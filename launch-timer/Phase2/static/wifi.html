@@ -710,20 +710,16 @@
         data.networks.forEach(net => {
           // Support both string SSIDs (old) and object {ssid, band, security} (new)
           const ssid     = typeof net === 'string' ? net : net.ssid;
-          const band     = typeof net === 'object' ? net.band : '';
           const security = typeof net === 'object' ? net.security : '';
           const isCurrent = ssid === currentSsid;
-          const is5ghz   = band === '5GHz';
           const isEnterprise = security && security.toLowerCase().includes('enterprise');
 
           const div = document.createElement('div');
-          div.className = 'network' + (isCurrent ? ' current-net' : '') + (is5ghz ? ' disabled-net' : '');
-          if (is5ghz) div.style.opacity = '0.5';
+          div.className = 'network' + (isCurrent ? ' current-net' : '');
 
           const sig = document.createElement('span');
           sig.className = 'network-signal';
-          sig.textContent = is5ghz ? '5G' : '|||';
-          if (is5ghz) sig.style.color = '#ff9933';
+          sig.textContent = '|||';
 
           const name = document.createElement('span');
           name.className = 'network-name';
@@ -738,13 +734,6 @@
             badge.className = 'network-badge';
             badge.textContent = '✓ CONNECTED';
             div.appendChild(badge);
-          } else if (is5ghz) {
-            const badge = document.createElement('span');
-            badge.className = 'network-badge';
-            badge.textContent = '5GHz';
-            badge.style.borderColor = '#ff9933';
-            badge.style.color = '#ff9933';
-            div.appendChild(badge);
           } else if (isEnterprise) {
             const badge = document.createElement('span');
             badge.className = 'network-badge';
@@ -755,10 +744,6 @@
           }
 
           div.addEventListener('click', () => {
-            if (is5ghz) {
-              setStatus('5GHz NOT SUPPORTED ON THIS PI — USE 2.4GHz NETWORK', 'error');
-              return;
-            }
             if (isEnterprise) {
               setStatus('ENTERPRISE WIFI — NEEDS USERNAME+PASSWORD — NOT SUPPORTED', 'error');
               return;
