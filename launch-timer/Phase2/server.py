@@ -1461,6 +1461,35 @@ def wifi_current():
             pass
         return jsonify({'ssid': ''})
 
+@app.route('/api/wifi/diag')
+def wifi_diag():
+    """WiFi diagnostics — regulatory country + active band. Confirms 5GHz works
+    remotely (you can't associate on 5GHz unless the country code is set)."""
+    import re
+    out = {}
+    try:
+        r = subprocess.run(['iw', 'reg', 'get'], capture_output=True, text=True, timeout=5)
+        m = re.search(r'country (\w+)', r.stdout)
+        out['country'] = m.group(1) if m else 'UNSET'
+    except Exception as e:
+        out['country'] = f'err:{e}'
+    try:
+        r = subprocess.run(['nmcli', '-t', '-f', 'ACTIVE,SSID,FREQ,SIGNAL', 'dev', 'wifi'],
+                           capture_output=True, text=True, timeout=8)
+        for line in r.stdout.splitlines():
+            p = line.split(':')
+            if p and p[0] == 'yes':
+                out['ssid'] = p[1] if len(p) > 1 else ''
+                freq_str   = (p[2] if len(p) > 2 else '').strip()
+                out['freq'] = freq_str
+                digits = re.sub(r'\D', '', freq_str.split()[0]) if freq_str else '0'
+                out['band'] = '5GHz' if int(digits or '0') >= 5000 else '2.4GHz'
+                out['signal'] = p[3] if len(p) > 3 else ''
+                break
+    except Exception as e:
+        out['active'] = f'err:{e}'
+    return jsonify(out)
+
 @app.route('/api/wifi/restart', methods=['POST'])
 def wifi_restart():
     """Restart NetworkManager — clears stuck state without full reboot."""
