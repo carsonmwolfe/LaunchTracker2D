@@ -191,19 +191,13 @@ _weather_cache = {'data': None, 'fetched': 0}
 WEATHER_TTL = 900  # 15 min
 
 def _fetch_weather():
-    """Fetch weather — relay first (shared across all Pis), direct open-meteo fallback."""
-    # Try relay — all Pis share the same weather this way
-    try:
-        r = requests.get(f'{RELAY_URL}/api/weather', timeout=8)
-        if r.status_code == 200:
-            wx = r.json()
-            if wx and wx.get('temp_f') is not None:
-                print(f'[{_ts()}] Weather (relay): {wx.get("label")}, {wx.get("temp_f")}°F')
-                return wx
-    except Exception as e:
-        print(f'[{_ts()}] Relay weather unavailable ({e}) — falling back to open-meteo')
-    # Fallback: fetch directly from open-meteo using local pad coords
-    lat, lon = _get_location()
+    """Fetch current weather for THIS unit's site — not the launch pad.
+    Uses the site setting (cape/vandenberg) so a Cape unit always shows Cape
+    weather, regardless of where the next launch happens to be. The relay's
+    shared weather is pad-based (e.g. a China launch), which is wrong for the
+    ambient display — pad conditions belong in the liftoff forecast instead."""
+    site = _load_settings().get('site', 'cape')
+    lat, lon = SITE_COORDS.get(site, SITE_COORDS['cape'])
     url = (
         f'https://api.open-meteo.com/v1/forecast'
         f'?latitude={lat}&longitude={lon}'
