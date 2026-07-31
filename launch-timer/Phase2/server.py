@@ -187,6 +187,13 @@ try:
 except Exception:
     VERSION = 'v2.0.0'
 
+try:
+    BRANCH = subprocess.check_output(
+        ['git', '-C', BASE_DIR, 'rev-parse', '--abbrev-ref', 'HEAD'],
+        text=True, stderr=subprocess.DEVNULL).strip()
+except Exception:
+    BRANCH = 'unknown'
+
 _weather_cache = {'data': None, 'fetched': 0}
 WEATHER_TTL = 900  # 15 min
 
@@ -808,6 +815,7 @@ def _ping_relay():
             requests.post(f'{RELAY_URL}/api/unit/ping', json={
                 'unit_id':      unit_id,
                 'version':      VERSION,
+                'branch':       BRANCH,
                 'site':         settings.get('site', 'cape'),
                 'condition':    wx.get('condition', ''),
                 'temp_f':       wx.get('temp_f', 0),
