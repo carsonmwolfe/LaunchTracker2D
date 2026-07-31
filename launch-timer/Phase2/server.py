@@ -888,6 +888,14 @@ def _execute_command(cmd):
                 s.update(mapped)
                 _save_settings(s)
                 print(f'[{_ts()}] Display mode set to {mode} via relay')
+        elif cmd.startswith('set_branch:'):
+            # Assign this unit to an update channel/branch (e.g. beta for test units).
+            # Applies on the next update. Lets us keep V4 on a branch only test units pull.
+            branch = cmd.split(':', 1)[1].strip()
+            if branch and all(c.isalnum() or c in '-_./' for c in branch):
+                with open('/home/pi/.rangetrack_branch', 'w') as f:
+                    f.write(branch + '\n')
+                print(f'[{_ts()}] Update branch set to "{branch}" — applies on next update')
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
