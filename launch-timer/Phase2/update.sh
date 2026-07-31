@@ -39,11 +39,14 @@ if ! git status --short > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check we are on the right branch (or switch to it)
+# Check we are on the right branch (or switch to it). Force the switch, discarding
+# local changes to tracked files (e.g. settings.json the app writes) — we hard-reset
+# to origin below anyway, so a dirty tree must not block a channel switch.
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
     echo "$LOG_PREFIX WARNING: on branch '$CURRENT_BRANCH', switching to '$BRANCH'"
-    git checkout "$BRANCH" --quiet || { echo "$LOG_PREFIX ERROR: cannot checkout $BRANCH"; exit 1; }
+    git fetch origin "$BRANCH" --quiet 2>/dev/null
+    git checkout -f -B "$BRANCH" "origin/$BRANCH" --quiet || { echo "$LOG_PREFIX ERROR: cannot checkout $BRANCH"; exit 1; }
 fi
 
 # ── Fetch ──────────────────────────────────────────────────────────────────────
