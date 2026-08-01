@@ -2721,10 +2721,12 @@ function render(now) {
   if (_btnWake)   _btnWake.style.display    = 'none';
 
   // Pause the canvas while a sub-page (settings/launches/mission) is open — no
-  // point drawing behind it, and it frees CPU/RAM for the sub-page. The rAF loop
+  // point drawing behind it, and it frees CPU/RAM for the sub-page. Only pause
+  // when the frame is actually shown (showPage sets display:block); its default
+  // state is '' (hidden via CSS), which must NOT count as open. The rAF loop
   // keeps running, so rendering resumes the moment the sub-page closes.
   const _openFrame = document.getElementById('page-frame');
-  if (_openFrame && _openFrame.style.display !== 'none') return;
+  if (_openFrame && _openFrame.style.display === 'block') return;
 
   // ── Updates ──
   updateClouds();
