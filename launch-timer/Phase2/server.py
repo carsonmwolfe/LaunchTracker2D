@@ -1504,6 +1504,15 @@ def wifi_diag():
                 break
     except Exception as e:
         out['active'] = f'err:{e}'
+    try:
+        devs = re.findall(r'Interface (\S+)', subprocess.run(
+            ['iw', 'dev'], capture_output=True, text=True, timeout=5).stdout)
+        if devs:
+            ps = subprocess.run(['iw', 'dev', devs[0], 'get', 'power_save'],
+                                capture_output=True, text=True, timeout=5).stdout
+            out['power_save'] = 'on' if 'on' in ps.lower() else 'off'
+    except Exception as e:
+        out['power_save'] = f'err:{e}'
     return jsonify(out)
 
 @app.route('/api/wifi/restart', methods=['POST'])

@@ -145,6 +145,21 @@ if [ "$CUR_REG" != "$WIFI_COUNTRY" ]; then
     echo "$LOG_PREFIX WiFi country set to $WIFI_COUNTRY (enables 5GHz)"
 fi
 
+# WiFi reliability: (1) disable power-save — the Pi radio sleeps and drops the
+# link by default, the #1 cause of units falling off; (2) never give up
+# reconnecting — NM's default is 4 tries then it stays offline until reboot.
+# Both are config defaults; power-save is also applied live below (non-disruptive).
+NM_WIFI_CONF="/etc/NetworkManager/conf.d/rangetrack-wifi.conf"
+if [ ! -f "$NM_WIFI_CONF" ] || ! grep -q "autoconnect-retries" "$NM_WIFI_CONF" 2>/dev/null; then
+    printf '[connection]\nwifi.powersave = 2\nconnection.autoconnect-retries = 0\n' | sudo tee "$NM_WIFI_CONF" > /dev/null
+    sudo nmcli connection reload 2>/dev/null || true
+    echo "$LOG_PREFIX NM wifi reliability config installed (powersave off, infinite retries)"
+fi
+# Apply power-save off to the live interface immediately (does not drop the link)
+for WDEV in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do
+    sudo iw dev "$WDEV" set power_save off 2>/dev/null || true
+done
+
 # Ensure Tailscale restarts after failure and waits for NetworkManager
 # (tailscaled starts before WiFi is connected at boot and fails silently)
 TAILSCALE_OVERRIDE="/etc/systemd/system/tailscaled.service.d/rangetrack.conf"
