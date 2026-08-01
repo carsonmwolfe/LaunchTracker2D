@@ -145,20 +145,24 @@ if [ "$CUR_REG" != "$WIFI_COUNTRY" ]; then
     echo "$LOG_PREFIX WiFi country set to $WIFI_COUNTRY (enables 5GHz)"
 fi
 
-# WiFi reliability: (1) disable power-save — the Pi radio sleeps and drops the
-# link by default, the #1 cause of units falling off; (2) never give up
-# reconnecting — NM's default is 4 tries then it stays offline until reboot.
-# Both are config defaults; power-save is also applied live below (non-disruptive).
-NM_WIFI_CONF="/etc/NetworkManager/conf.d/rangetrack-wifi.conf"
-if [ ! -f "$NM_WIFI_CONF" ] || ! grep -q "autoconnect-retries" "$NM_WIFI_CONF" 2>/dev/null; then
-    printf '[connection]\nwifi.powersave = 2\nconnection.autoconnect-retries = 0\n' | sudo tee "$NM_WIFI_CONF" > /dev/null
+# WiFi reliability: disable power-save (Pi radio sleeps & drops the link — #1
+# cause of units falling off) and never give up reconnecting (NM default is 4
+# tries then it stays offline until reboot). Runs once — guarded on the marker.
+if ! grep -q 'powersave = 2' /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf 2>/dev/null; then
+    # Overwrite the RPi-OS file that turns power-save ON, plus our retry default
+    printf '[connection]\nwifi.powersave = 2\n' | sudo tee /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf > /dev/null
+    printf '[connection]\nconnection.autoconnect-retries = 0\n' | sudo tee /etc/NetworkManager/conf.d/rangetrack-wifi.conf > /dev/null
+    # Set both directly on every saved wifi profile (highest precedence)
+    nmcli -t -f NAME,TYPE con show 2>/dev/null | awk -F: '$2=="802-11-wireless"{print $1}' | while read -r P; do
+        sudo nmcli connection modify "$P" 802-11-wireless.powersave 2 connection.autoconnect-retries 0 2>/dev/null || true
+    done
+    # Apply live without a reboot
     sudo nmcli connection reload 2>/dev/null || true
-    echo "$LOG_PREFIX NM wifi reliability config installed (powersave off, infinite retries)"
+    for WDEV in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do
+        sudo nmcli device reapply "$WDEV" 2>/dev/null || true
+    done
+    echo "$LOG_PREFIX NM wifi reliability applied (powersave off, infinite retries)"
 fi
-# Apply power-save off to the live interface immediately (does not drop the link)
-for WDEV in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do
-    sudo iw dev "$WDEV" set power_save off 2>/dev/null || true
-done
 
 # Ensure Tailscale restarts after failure and waits for NetworkManager
 # (tailscaled starts before WiFi is connected at boot and fails silently)
