@@ -2720,6 +2720,12 @@ function render(now) {
   if (_btnLaunch) _btnLaunch.style.display  = '';
   if (_btnWake)   _btnWake.style.display    = 'none';
 
+  // Pause the canvas while a sub-page (settings/launches/mission) is open — no
+  // point drawing behind it, and it frees CPU/RAM for the sub-page. The rAF loop
+  // keeps running, so rendering resumes the moment the sub-page closes.
+  const _openFrame = document.getElementById('page-frame');
+  if (_openFrame && _openFrame.style.display !== 'none') return;
+
   // ── Updates ──
   updateClouds();
   updateBirds();
@@ -2923,14 +2929,15 @@ canvas.addEventListener('click', function(e) {
 
   // Settings button tap zone — expanded hit area around gear icon (visual: W-94 to W-6, y 5-27)
   if (x > W - 116 && x < W && y > 0 && y < 40) {
-    window.location = '/settings';
+    window.showPage ? window.showPage('/settings') : (window.location = '/settings');
   }
 
   // Mission name tap zone (bottom info bar)
   if (x > 0 && x < 400 && y > BAR_Y && y < BAR_Y + 35) {
     const launch = currentLaunch();
     if (launch) {
-      window.location = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
+      const _url = `/mission?id=${launch.id}&name=${encodeURIComponent(launch.name)}`;
+      window.showPage ? window.showPage(_url) : (window.location = _url);
     }
   }
 
