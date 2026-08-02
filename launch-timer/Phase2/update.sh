@@ -74,6 +74,11 @@ echo "$LOG_PREFIX Update available: $LOCAL → $REMOTE"
 
 # ── Apply update ───────────────────────────────────────────────────────────────
 
+# Preserve user settings across the hard reset. settings.json is now untracked
+# (git won't touch it), but this also covers the one-time transition update where
+# it's still tracked and would otherwise be wiped back to repo defaults.
+cp "$REPO_DIR/launch-timer/Phase2/settings.json" /tmp/rangetrack_settings.bak 2>/dev/null
+
 # Hard reset — always matches remote exactly, no conflicts possible
 git reset --hard "origin/$BRANCH"
 RESET_EXIT=$?
@@ -81,6 +86,12 @@ RESET_EXIT=$?
 if [ $RESET_EXIT -ne 0 ]; then
     echo "$LOG_PREFIX ERROR: git reset --hard failed (exit $RESET_EXIT) — aborting"
     exit 1
+fi
+
+# Restore user settings if the reset removed them (transition update)
+if [ ! -f "$REPO_DIR/launch-timer/Phase2/settings.json" ] && [ -f /tmp/rangetrack_settings.bak ]; then
+    cp /tmp/rangetrack_settings.bak "$REPO_DIR/launch-timer/Phase2/settings.json"
+    echo "$LOG_PREFIX Restored user settings after reset"
 fi
 
 # Back up server.py BEFORE the reset so corruption recovery has a fallback
