@@ -222,11 +222,6 @@ if [ -f /home/pi/server.log ]; then
     tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
 fi
 
-# Rotate health log — keep last 1000 lines
-if [ -f /home/pi/health.log ]; then
-    tail -1000 /home/pi/health.log > /tmp/health.log.tmp && mv /tmp/health.log.tmp /home/pi/health.log
-fi
-
 # Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
 pkill -f "python3 server.py" 2>/dev/null

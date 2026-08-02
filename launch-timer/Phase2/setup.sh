@@ -203,15 +203,16 @@ fi
 
 # ── 8. Cron jobs ─────────────────────────────────────────────────────────────
 log "Setting up cron jobs..."
-( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py"; \
+( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py" | grep -v "nightly reboot"; \
   echo "0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"; \
-  echo "*/5 * * * * python3 $SERVER_DIR/health.py >> /home/pi/health.log 2>&1" \
+  echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" \
 ) | crontab -
-log "Cron installed — updater hourly, health check every 5min"
+log "Cron installed — updater hourly, nightly 4am reboot (Flask supervised by systemd)"
 
 # ── 9. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."
-printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
+echo 'pi ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
+sudo chmod 440 /etc/sudoers.d/rangetrack
 log "Done"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
