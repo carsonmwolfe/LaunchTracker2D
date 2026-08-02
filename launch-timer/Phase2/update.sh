@@ -121,11 +121,14 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 PHASE2="$REPO_DIR/launch-timer/Phase2"
 
-# Ensure health cron job and nightly WebKit restart are installed
+# Ensure health cron job and the nightly 4am reboot are installed.
+# The 4am reboot is the single self-heal: it clears ANY wedged state overnight
+# (memory creep, stuck wifi radio, stale browser) — replaces the old nightly
+# WebKit-restart with something simpler and more comprehensive.
 CRON_TMP=$(mktemp)
-crontab -l 2>/dev/null | grep -v "health.py" | grep -v "webkit_launch" > "$CRON_TMP"
+crontab -l 2>/dev/null | grep -v "health.py" | grep -v "webkit_launch" | grep -v "rangetrack nightly reboot" > "$CRON_TMP"
 echo "*/5 * * * * python3 $PHASE2/health.py >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
-echo "0 3 * * * pkill -f webkit_launch.py; sleep 3; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 nohup python3 $PHASE2/webkit_launch.py http://localhost:5001/ >> /home/pi/server.log 2>&1 & echo \$! > /tmp/rangetrack_browser.pid" >> "$CRON_TMP"
+echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" >> "$CRON_TMP"
 crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
