@@ -22,7 +22,7 @@ log(){ echo "[recipe] $*"; }
 log "Installing packages..."
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-    labwc chromium \
+    labwc \
     python3-flask python3-requests python3-gi gir1.2-webkit2-4.1 gir1.2-nm-1.0 \
     network-manager watchdog iw git curl
 

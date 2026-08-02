@@ -1542,30 +1542,11 @@ def wifi_connect():
         return jsonify({'ok': False, 'error': 'No password provided'})
 
     try:
-        # Restart NM to clear cached secrets (a failed prior attempt poisons them).
-        # Prefer systemctl restart (cleanest), fall back to nmcli networking off/on
-        # if sudoers doesn't allow systemctl (older Pi images missing that entry).
-        r = subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
-                           capture_output=True, text=True, timeout=15)
-        print(f'[{_ts()}] NM restart rc={r.returncode} {r.stderr.strip()[:80]}')
-        if r.returncode != 0:
-            print(f'[{_ts()}] NM restart not permitted — falling back to nmcli networking off/on')
-            subprocess.run(['sudo', 'nmcli', 'networking', 'off'],
-                           capture_output=True, text=True, timeout=10)
-            time.sleep(1)
-            subprocess.run(['sudo', 'nmcli', 'networking', 'on'],
-                           capture_output=True, text=True, timeout=10)
-
-        # Poll for NM to come back up instead of a fixed sleep (slow Pis vary)
-        for _ in range(20):  # up to ~10s
-            if subprocess.run(['nmcli', 'general', 'status'],
-                              capture_output=True, timeout=3).returncode == 0:
-                break
-            time.sleep(0.5)
-
-        # Delete ALL saved profiles whose SSID field matches — not just by profile name.
-        # NM sometimes creates "SSID 1" duplicates; deleting only by name leaves stale
-        # profiles with cached wrong secrets that cause false "wrong password" errors.
+        # Delete any saved profile(s) for this SSID first — a previous failed attempt's
+        # cached wrong password would otherwise poison this one. Match by the SSID field,
+        # not the profile name (NM makes "SSID 1" duplicates). No NetworkManager restart:
+        # deleting the stale profile is what clears the secret; restarting NM on every tap
+        # was heavy-handed and caused the flaky connects.
         try:
             con_list = subprocess.run(
                 ['sudo', 'nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],

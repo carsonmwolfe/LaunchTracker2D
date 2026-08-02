@@ -31,30 +31,11 @@ done
 
 BROWSER_PIDFILE="/tmp/rangetrack_browser.pid"
 
-# Choose browser: Chromium for Pis with enough RAM, WebKit2GTK for 512MB Pis
-MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
-CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
-
-# Proven GPU-accelerated Chromium flags — --use-angle=gles + --ozone-platform=wayland
-# enable GPU rendering; without them Chromium falls back to software.
-CHROMIUM_FLAGS="--kiosk --no-memcheck --noerrdialogs --disable-infobars \
-  --disable-features=ChromeWhatsNew,Translate --no-default-browser-check \
-  --disable-background-networking --disable-session-crashed-bubble \
-  --window-size=800,480 --disable-notifications --disable-popup-blocking \
-  --no-first-run --use-angle=gles --ozone-platform=wayland \
-  --password-store=basic --disable-renderer-accessibility \
-  --disable-extensions --disable-sync --disable-component-update \
-  --renderer-process-limit=1"
-
+# One browser everywhere: WebKit. It fits 512MB (works on every unit, unlike
+# Chromium), and we own its launcher (webkit_launch.py). No RAM-based selection.
 launch_browser() {
-    if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
-        echo "[$(date '+%H:%M:%S')] Using Chromium GPU (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
-        rm -f /home/pi/.config/chromium/Singleton* 2>/dev/null
-        "$CHROMIUM_BIN" $CHROMIUM_FLAGS --app="$APP_URL" &
-    else
-        echo "[$(date '+%H:%M:%S')] Using WebKit2GTK (${MEM_MB}MB RAM)" >> "$SERVER_LOG"
-        python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
-    fi
+    echo "[$(date '+%H:%M:%S')] Launching WebKit kiosk" >> "$SERVER_LOG"
+    python3 "$APP_DIR/webkit_launch.py" "$APP_URL" &
     echo $! > "$BROWSER_PIDFILE"
     echo $!
 }
