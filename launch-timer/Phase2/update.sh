@@ -121,20 +121,55 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 PHASE2="$REPO_DIR/launch-timer/Phase2"
 
-# Ensure health cron job and the nightly 4am reboot are installed.
-# The 4am reboot is the single self-heal: it clears ANY wedged state overnight
-# (memory creep, stuck wifi radio, stale browser) — replaces the old nightly
-# WebKit-restart with something simpler and more comprehensive.
+# Ensure the nightly 4am reboot is installed (single self-heal — clears any
+# wedged state overnight). health.py is intentionally NOT re-added: Flask is now
+# supervised by systemd (rangetrack-server.service), and health.py would fight it.
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "health.py" | grep -v "webkit_launch" | grep -v "rangetrack nightly reboot" > "$CRON_TMP"
-echo "*/5 * * * * python3 $PHASE2/health.py >> /home/pi/health.log 2>&1" >> "$CRON_TMP"
 echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" >> "$CRON_TMP"
 crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
-# Ensure sudoers has all required NOPASSWD entries
-printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\npi ALL=(ALL) NOPASSWD: /usr/bin/raspi-config\npi ALL=(ALL) NOPASSWD: /usr/sbin/iw\npi ALL=(ALL) NOPASSWD: /usr/sbin/rfkill\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
-echo "$LOG_PREFIX sudoers updated"
+# Passwordless sudo for pi — this is an appliance, and provisioning (installing
+# packages, writing /etc, managing systemd) must work non-interactively. Written
+# to a temp file and validated with visudo before install so a bad line can never
+# lock out sudo.
+echo 'pi ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/rangetrack.tmp > /dev/null
+if sudo visudo -c -f /etc/sudoers.d/rangetrack.tmp >/dev/null 2>&1; then
+    sudo mv /etc/sudoers.d/rangetrack.tmp /etc/sudoers.d/rangetrack
+    sudo chmod 440 /etc/sudoers.d/rangetrack
+    echo "$LOG_PREFIX sudoers updated (passwordless)"
+else
+    sudo rm -f /etc/sudoers.d/rangetrack.tmp
+fi
+
+# Flask runs under systemd (Restart=always) — install/refresh the unit + enable it.
+sudo tee /etc/systemd/system/rangetrack-server.service >/dev/null <<UNIT
+[Unit]
+Description=RangeTrack countdown server
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=$PHASE2
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=3
+Nice=-10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable rangetrack-server >/dev/null 2>&1
+echo "$LOG_PREFIX rangetrack-server.service provisioned"
+
+# Persist WiFi power-save OFF via a NM dispatcher script (runs as root on connect)
+sudo tee /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off >/dev/null <<'PS'
+#!/bin/sh
+case "$1" in wlan*) [ "$2" = "up" ] && /usr/sbin/iw dev "$1" set power_save off ;; esac
+PS
+sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off
 
 # Ensure WiFi country is set — REQUIRED for 5GHz to work on Raspberry Pi.
 # Without a regulatory country the radio refuses ALL 5GHz channels, so any
