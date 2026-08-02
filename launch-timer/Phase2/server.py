@@ -1548,6 +1548,11 @@ def wifi_connect():
         # deleting the stale profile is what clears the secret; restarting NM on every tap
         # was heavy-handed and caused the flaky connects.
         try:
+            # NEVER delete the profile we're currently connected THROUGH — a failed
+            # switch must not strand the unit with no network to fall back to.
+            active = subprocess.run(
+                ['nmcli', '-t', '-f', 'NAME', 'con', 'show', '--active'],
+                capture_output=True, text=True, timeout=5).stdout.splitlines()
             con_list = subprocess.run(
                 ['sudo', 'nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
                 capture_output=True, text=True, timeout=5
@@ -1557,6 +1562,8 @@ def wifi_connect():
                 if len(parts) < 2 or parts[1] != '802-11-wireless':
                     continue
                 profile_name = parts[0]
+                if profile_name in active:
+                    continue  # don't touch the live connection
                 ssid_r = subprocess.run(
                     ['sudo', 'nmcli', '-g', '802-11-wireless.ssid', 'con', 'show', profile_name],
                     capture_output=True, text=True, timeout=5
@@ -1587,15 +1594,20 @@ def wifi_connect():
 
         result, connected = _attempt()
 
-        # One automatic retry — association can be flaky on the first try
+        # Fail fast on a wrong password — retrying an auth failure just doubles the
+        # wait (that was the 30-60s hang). Only retry a NON-auth failure (flaky assoc).
         if not connected:
-            print(f'[{_ts()}] First attempt failed — rescan + retry once')
-            subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
-                           capture_output=True, timeout=10)
-            time.sleep(2)
-            subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
-                           capture_output=True, text=True, timeout=5)
-            result, connected = _attempt()
+            err_txt = (result.stderr + result.stdout).lower()
+            wrong_pw = any(k in err_txt for k in
+                           ('secret', 'psk', '(7)', 'pre-shared', 'invalid password'))
+            if wrong_pw:
+                print(f'[{_ts()}] Auth failure (wrong password) — not retrying')
+            else:
+                print(f'[{_ts()}] Association failure — rescan + retry once')
+                subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
+                               capture_output=True, timeout=10)
+                time.sleep(2)
+                result, connected = _attempt()
 
         if connected:
             _data_cache['fetched_at'] = 0
