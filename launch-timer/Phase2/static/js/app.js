@@ -1842,26 +1842,20 @@ function updateInfoBar() {
     verEl.textContent = `⚠ NO SIGNAL · ${sh > 0 ? sh+'h ' : ''}${sm}m ago`;
     verEl.className = 'wx-stale';
   } else {
-    // Use liftoff forecast if available, otherwise fall back to current weather
-    const wx = state.liftoffWx || state.weather || {};
-    const wind = wx.wind_speed || 0;
-    const cloud = wx.cloud_cover || 0;
-    const cond = wx.condition || 'clear';
-    let wxClass, wxLabel;
-    if (cond === 'thunderstorm' || wind > 30 || cloud > 75 || cond === 'rain') {
-      wxClass = 'wx-nogo';     wxLabel = 'NO-GO';
-    } else if (wind > 20 || cloud > 50 || cond === 'light_rain' || cond === 'fog') {
-      wxClass = 'wx-marginal'; wxLabel = 'MARGINAL';
-    } else {
-      wxClass = 'wx-go';       wxLabel = 'GO';
-    }
-    // Add probability if available
+    // Derive from the mission's official status so this AGREES with the GO badge
+    // instead of running an independent weather calc that can contradict it.
     const launch = currentLaunch();
+    const sl = (launch?.status || '').toLowerCase();
+    let wxClass, wxLabel;
+    if (sl.includes('go'))                                { wxClass = 'wx-go';       wxLabel = 'GO'; }
+    else if (sl.includes('hold'))                         { wxClass = 'wx-marginal'; wxLabel = 'HOLD'; }
+    else if (sl.includes('scrub') || sl.includes('fail')) { wxClass = 'wx-nogo';     wxLabel = 'NO-GO'; }
+    else                                                  { wxClass = 'wx-marginal'; wxLabel = (launch?.status || 'TBD').toUpperCase(); }
+    // Add launch probability if available
     const prob = launch?.probability;
     if (prob != null && prob >= 0) wxLabel += `  ${prob}%`;
     verEl.textContent = wxLabel;
     verEl.className = wxClass;
-    // Label always says AT LIFTOFF — that's what the badge represents
     const wxLabelEl = document.getElementById('ib-wx-label');
     if (wxLabelEl) wxLabelEl.textContent = 'AT LIFTOFF';
   }
