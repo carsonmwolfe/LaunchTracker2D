@@ -1,222 +1,105 @@
 #!/bin/bash
-# RangeTrack OS — Fresh Pi Setup Script
-# Run once on a fresh Raspberry Pi OS installation.
-# Usage: bash setup.sh
+# ─────────────────────────────────────────────────────────────────────────────
+# RangeTrack — THE RECIPE.
+# Turns a FRESH "Raspberry Pi OS Lite (64-bit)" flash into a finished unit.
+# Run ONCE on a fresh card. Everything a unit needs is here — nothing is ever
+# hand-configured on a unit. To change a unit, change this recipe and re-image.
 #
-# What this does:
-#   1. Installs dependencies (python3, flask, requests, chromium)
-#   2. Clones the repo (or updates if already present)
-#   3. Prompts for timezone
-#   4. Sets up autostart (server + chromium kiosk)
-#   5. Sets up wallpaper and hides taskbar
-#   6. Removes boot splash
-#   7. Sets up hourly auto-updater cron
-#   8. Configures passwordless sudo for reboot
-#   9. Installs unclutter (hides cursor)
-
-set -e
+#   Usage:  bash setup.sh
+#
+# Packages/deps below were taken from a real working unit, not guessed.
+# ─────────────────────────────────────────────────────────────────────────────
+set -euo pipefail
 
 REPO_URL="https://github.com/carsonmwolfe/LaunchTracker2D.git"
-REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
-BRANCH="Phase3"
-SERVER_DIR="$REPO_DIR/launch-timer/Phase2"
-LOG_FILE="/home/pi/setup.log"
+BRANCH="release"
+APP_DIR="/home/pi/Desktop/LaunchTracker2D"
+PHASE2="$APP_DIR/launch-timer/Phase2"
+WIFI_COUNTRY="US"
+log(){ echo "[recipe] $*"; }
 
-log() { echo "[$(date '+%H:%M:%S')] $1" | tee -a "$LOG_FILE"; }
+# 1. PACKAGES — the minimal set the app actually uses (verified from a live unit)
+log "Installing packages..."
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+    labwc chromium \
+    python3-flask python3-requests python3-gi gir1.2-webkit2-4.1 gir1.2-nm-1.0 \
+    network-manager watchdog iw git curl
 
-log "=== RangeTrack OS Setup ==="
-
-# ── 1. Dependencies ────────────────────────────────────────────────────────────
-log "Installing dependencies..."
-sudo apt-get update -qq
-sudo apt-get install -y python3 python3-pip chromium xdotool git psmisc gir1.2-webkit2-4.1 python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-nm-1.0 -qq
-sudo apt-get install -y unclutter -qq 2>/dev/null || true
-pip3 install flask requests --quiet --break-system-packages 2>/dev/null || pip3 install flask requests --quiet
-log "Dependencies installed"
-
-# ── 2. Clone or update repo ────────────────────────────────────────────────────
-if [ -d "$REPO_DIR/.git" ]; then
-    log "Repo already exists — pulling latest..."
-    cd "$REPO_DIR"
-    git fetch origin "$BRANCH" --quiet
-    git reset --hard "origin/$BRANCH"
-else
-    log "Cloning repo..."
-    mkdir -p /home/pi/Desktop
-    git clone --branch "$BRANCH" "$REPO_URL" "$REPO_DIR"
+# 2. APP — clone once; it auto-updates itself over WiFi after this
+log "Installing the app..."
+if [ ! -d "$APP_DIR/.git" ]; then
+    sudo -u pi git clone "$REPO_URL" "$APP_DIR"
 fi
+sudo -u pi git -C "$APP_DIR" checkout "$BRANCH"
 
-chmod +x "$SERVER_DIR/update.sh"
-chmod +x "$SERVER_DIR/start.sh"
-log "Repo ready at $REPO_DIR"
+# 3. PASSWORDLESS SUDO — appliance; provisioning + self-management must be
+#    non-interactive. Validated before install so a typo can't lock out sudo.
+echo 'pi ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/rangetrack.tmp >/dev/null
+sudo visudo -c -f /etc/sudoers.d/rangetrack.tmp >/dev/null \
+    && sudo mv /etc/sudoers.d/rangetrack.tmp /etc/sudoers.d/rangetrack \
+    && sudo chmod 440 /etc/sudoers.d/rangetrack
 
-# ── 3. Timezone ────────────────────────────────────────────────────────────────
-echo ""
-echo "Select timezone:"
-echo "  1) America/New_York      (Eastern)"
-echo "  2) America/Chicago       (Central)"
-echo "  3) America/Denver        (Mountain)"
-echo "  4) America/Los_Angeles   (Pacific)"
-echo "  5) America/Phoenix       (Arizona)"
-echo "  6) Enter manually"
-echo ""
-read -rp "Choose [1-6]: " TZ_CHOICE </dev/tty
-case "$TZ_CHOICE" in
-    1) TZ_SET="America/New_York" ;;
-    2) TZ_SET="America/Chicago" ;;
-    3) TZ_SET="America/Denver" ;;
-    4) TZ_SET="America/Los_Angeles" ;;
-    5) TZ_SET="America/Phoenix" ;;
-    6) read -rp "Enter timezone (e.g. Europe/London): " TZ_SET </dev/tty ;;
-    *) TZ_SET="America/New_York" ;;
-esac
-sudo timedatectl set-timezone "$TZ_SET"
-log "Timezone set to $TZ_SET"
+# 4. FLASK SERVER — systemd service, restarts forever if it ever dies
+sudo tee /etc/systemd/system/rangetrack-server.service >/dev/null <<UNIT
+[Unit]
+Description=RangeTrack countdown server
+After=network.target
+[Service]
+User=pi
+WorkingDirectory=$PHASE2
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=3
+Nice=-10
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl enable rangetrack-server
 
-# ── 4. Autostart ──────────────────────────────────────────────────────────────
-log "Setting up autostart..."
+# 5. KIOSK BROWSER — labwc autostart launches start.sh (waits for the server,
+#    then the fullscreen browser). Boot straight to the app, no desktop chrome.
+mkdir -p /home/pi/.config/labwc
+cat > /home/pi/.config/labwc/autostart <<EOF
+bash $PHASE2/start.sh &
+(sleep 3 && pkill -f 'wf-panel-pi') &
+EOF
 
-# labwc (Wayland — newer Pi OS Bookworm/Trixie)
-if [ -d "/home/pi/.config/labwc" ] || command -v labwc &>/dev/null; then
-    mkdir -p /home/pi/.config/labwc
-    cat > /home/pi/.config/labwc/autostart << LABWCEOF
-bash $SERVER_DIR/start.sh &
-(sleep 3 && pkill -f 'lwrespawn.*wf-panel' && pkill -f 'wf-panel-pi') &
-(sleep 1 && pkill -f 'gnome-keyring-daemon') &
-LABWCEOF
-    log "labwc autostart configured"
-fi
+# 6. AUTOLOGIN to the desktop session so the kiosk starts on boot, no login
+sudo raspi-config nonint do_boot_behaviour B4
 
-# lxsession (X11 — older Pi OS)
-for SESSION in LXDE-pi rpd-x; do
-    mkdir -p "/home/pi/.config/lxsession/$SESSION"
-    echo "@bash $SERVER_DIR/start.sh" > "/home/pi/.config/lxsession/$SESSION/autostart"
-done
-log "lxsession autostart configured"
+# 7. HARDWARE WATCHDOG — if the whole system ever freezes, it auto-reboots
+sudo sed -i 's/^#*RuntimeWatchdogSec=.*/RuntimeWatchdogSec=15/' /etc/systemd/system.conf
+grep -q '^dtparam=watchdog=on' /boot/firmware/config.txt \
+    || echo 'dtparam=watchdog=on' | sudo tee -a /boot/firmware/config.txt >/dev/null
 
-# ── 5. Wallpaper ──────────────────────────────────────────────────────────────
-log "Setting wallpaper..."
+# 8. WIFI — country enables 5GHz; power-save off (persisted) stops random drops
+sudo raspi-config nonint do_wifi_country "$WIFI_COUNTRY"
+sudo tee /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off >/dev/null <<'PS'
+#!/bin/sh
+case "$1" in wlan*) [ "$2" = "up" ] && /usr/sbin/iw dev "$1" set power_save off ;; esac
+PS
+sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off
 
-# 'default' is the profile pcmanfm reads on Pi OS Trixie (Wayland/labwc)
-mkdir -p /home/pi/.config/pcmanfm/default
-cat > /home/pi/.config/pcmanfm/default/desktop-items-0.conf << PCEOF
-[*]
-wallpaper_mode=4
-wallpaper=$SERVER_DIR/static/assets/BootLOGO.png
-wallpaper_common=1
-desktop_bg=#060a10
-desktop_fg=#060a10
-desktop_shadow=#060a10
-show_documents=0
-show_trash=0
-show_mounts=0
-show_desktop=0
-PCEOF
+# 9. FEWER SD WRITES (top cause of corruption): no swap; logs + tmp in RAM
+sudo systemctl disable --now dphys-swapfile 2>/dev/null || true
+grep -q ' /tmp ' /etc/fstab     || echo 'tmpfs /tmp     tmpfs defaults,noatime,size=64M 0 0' | sudo tee -a /etc/fstab >/dev/null
+grep -q ' /var/log ' /etc/fstab || echo 'tmpfs /var/log tmpfs defaults,noatime,size=32M 0 0' | sudo tee -a /etc/fstab >/dev/null
 
-# rpd-labwc and LXDE-pi profiles as fallback
-for SESSION in rpd-labwc LXDE-pi; do
-    mkdir -p "/home/pi/.config/pcmanfm/$SESSION"
-    cat > "/home/pi/.config/pcmanfm/$SESSION/desktop-items-0.conf" << PCEOF
-[*]
-wallpaper_mode=4
-wallpaper=$SERVER_DIR/static/assets/BootLOGO.png
-wallpaper_common=1
-desktop_bg=#060a10
-desktop_fg=#060a10
-desktop_shadow=#060a10
-show_documents=0
-show_trash=0
-show_mounts=0
-show_desktop=0
-PCEOF
-done
-log "Wallpaper configured"
+# 10. SELF-MAINTENANCE — hourly update check + nightly 4am reboot (clears any
+#     wedged state). Flask is watched by systemd, so no health.py cron needed.
+( crontab -u pi -l 2>/dev/null | grep -v update.sh | grep -v 'nightly reboot'; \
+  echo "0 * * * * bash $PHASE2/update.sh >> /home/pi/update.log 2>&1"; \
+  echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" ) | sudo crontab -u pi -
 
-# Hide desktop icons (repo folder etc)
-echo "LaunchTracker2D" > /home/pi/Desktop/.hidden
+# 11. QUIET BOOT — no rainbow, penguin, cursor, or scrolling text (idempotent)
+grep -q 'logo.nologo' /boot/firmware/cmdline.txt || sudo sed -i \
+    's/console=tty1/console=tty3/; s/$/ quiet loglevel=0 logo.nologo vt.global_cursor_default=0/' \
+    /boot/firmware/cmdline.txt
+grep -q 'disable_splash=1' /boot/firmware/config.txt \
+    || echo 'disable_splash=1' | sudo tee -a /boot/firmware/config.txt >/dev/null
 
-# ── Disable gnome-keyring (prevents "choose password" dialog on first boot) ───
-log "Disabling gnome-keyring..."
-mkdir -p /home/pi/.config/autostart
-for KR in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11 gnome-keyring-gpg; do
-    cat > /home/pi/.config/autostart/${KR}.desktop << KREOF
-[Desktop Entry]
-Type=Application
-Hidden=true
-KREOF
-done
-log "gnome-keyring disabled"
-
-# ── 6. Hide taskbar (lxsession only — labwc taskbar killed via autostart) ──────
-mkdir -p /home/pi/.config/lxpanel/LXDE-pi/panels
-if [ ! -f /home/pi/.config/lxpanel/LXDE-pi/panels/panel ]; then
-    cat > /home/pi/.config/lxpanel/LXDE-pi/panels/panel << PEOF
-Global {
-  edge=bottom
-  autohide=1
-  heightwhenhidden=0
-  height=28
-}
-PEOF
-fi
-log "Taskbar set to auto-hide"
-
-# ── 7. Remove boot splash ──────────────────────────────────────────────────────
-log "Removing boot splash..."
-if [ -f /boot/firmware/cmdline.txt ]; then
-    sudo sed -i 's/ splash//g; s/splash //g' /boot/firmware/cmdline.txt
-    log "Splash removed from /boot/firmware/cmdline.txt"
-elif [ -f /boot/cmdline.txt ]; then
-    sudo sed -i 's/ splash//g; s/splash //g' /boot/cmdline.txt
-    log "Splash removed from /boot/cmdline.txt"
-fi
-
-# ── 7b. Suppress Chromium low-RAM warning dialog (Pi 3 A+ / 512MB) ────────────
-# The Pi OS chromium wrapper shows a zenity dialog if RAM < 1GB before launch.
-# On a kiosk with no keyboard this blocks startup permanently — patch it out.
-if [ -f /usr/bin/chromium ]; then
-    if grep -qi 'memory\|zenity\|1024\|512' /usr/bin/chromium 2>/dev/null; then
-        sudo sed -i '/zenity/d; /low.mem\|less.than.*[Mm][Bb]\|insufficient/Id' /usr/bin/chromium 2>/dev/null && \
-            log "Chromium low-RAM dialog patched out" || log "Chromium patch skipped (already clean)"
-    fi
-fi
-
-# ── 7c. Low-RAM optimisations (safe on all Pi models, beneficial on 512MB) ────
-log "Applying low-RAM optimisations..."
-
-# Reduce GPU memory reservation to 16MB (we run headless-ish, don't need much)
-CONFIG_FILE="/boot/firmware/config.txt"
-[ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
-if ! grep -q "^gpu_mem=16" "$CONFIG_FILE" 2>/dev/null; then
-    sudo sed -i '/^gpu_mem=/d' "$CONFIG_FILE"
-    echo "gpu_mem=16" | sudo tee -a "$CONFIG_FILE" > /dev/null
-    log "GPU memory set to 16MB"
-fi
-
-# Increase swap to 512MB (default is 100MB — not enough with Chromium on 512MB RAM)
-if [ -f /etc/dphys-swapfile ]; then
-    sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
-    sudo dphys-swapfile setup > /dev/null 2>&1
-    sudo dphys-swapfile swapon > /dev/null 2>&1
-    log "Swap set to 512MB"
-fi
-
-# ── 8. Cron jobs ─────────────────────────────────────────────────────────────
-log "Setting up cron jobs..."
-( crontab -l 2>/dev/null | grep -v "update.sh" | grep -v "health.py" | grep -v "nightly reboot"; \
-  echo "0 * * * * bash $SERVER_DIR/update.sh >> /home/pi/update.log 2>&1"; \
-  echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" \
-) | crontab -
-log "Cron installed — updater hourly, nightly 4am reboot (Flask supervised by systemd)"
-
-# ── 9. Passwordless sudo for reboot ───────────────────────────────────────────
-log "Configuring passwordless reboot..."
-echo 'pi ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
-sudo chmod 440 /etc/sudoers.d/rangetrack
-log "Done"
-
-# ── Done ──────────────────────────────────────────────────────────────────────
-log ""
-log "=== Setup complete — reboot to launch ==="
-echo ""
-echo "All done. Run: sudo reboot"
+log "Done. Reboot to finish:  sudo reboot"
+# NOTE (v2 hardening, not yet enabled): read-only overlay for full power-cut
+# immunity. It must coexist with auto-updates (needs a small persistent area for
+# wifi/settings), so it's added and tested after this base is proven.
