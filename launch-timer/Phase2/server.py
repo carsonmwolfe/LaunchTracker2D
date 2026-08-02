@@ -1366,82 +1366,41 @@ def force_update():
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
-def _nm_client():
-    """Return a libnm NM.Client instance, or None if unavailable."""
-    try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        return NM.Client.new(None)
-    except Exception:
-        return None
-
-def _nm_wifi_device(client=None):
-    """Return the first WiFi device from NM client."""
-    try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        c = client or _nm_client()
-        if not c: return None
-        for dev in c.get_devices():
-            if dev.get_device_type() == NM.DeviceType.WIFI:
-                return dev
-    except Exception:
-        pass
-    return None
-
 @app.route('/api/wifi/scan')
 def wifi_scan():
+    # nmcli with --rescan yes forces a fresh scan and returns ALL nearby networks.
+    # (The old libnm request_scan path only returned the currently-connected AP.)
     try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        client = NM.Client.new(None)
-        dev = _nm_wifi_device(client)
-        if not dev:
-            return jsonify({'networks': [], 'error': 'No WiFi device'})
-        dev.request_scan(None)
-        time.sleep(4)
+        result = subprocess.run(
+            ['sudo', 'nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list', '--rescan', 'yes'],
+            capture_output=True, text=True, timeout=20)
         networks = []
         seen = set()
-        for ap in sorted(dev.get_access_points(), key=lambda a: -a.get_strength()):
-            raw = ap.get_ssid()
-            if not raw: continue
-            try: ssid = raw.get_data().decode('utf-8', errors='replace').strip()
-            except: continue
-            if not ssid or ssid in seen: continue
+        for line in result.stdout.splitlines():
+            if not line.strip():
+                continue
+            # -t output is SSID:FREQ:SECURITY. FREQ/SECURITY never contain ':', so
+            # split those two off the right; whatever's left is the SSID.
+            parts = line.rsplit(':', 2)
+            if len(parts) != 3:
+                continue
+            ssid = parts[0].replace('\\:', ':').strip()
+            if not ssid or ssid in seen:
+                continue
             seen.add(ssid)
-            freq = ap.get_frequency()
-            rsn  = ap.get_rsn_flags()
-            wpa  = ap.get_wpa_flags()
-            KEY_MGMT_8021X = 0x200  # NM_80211_AP_SEC_KEY_MGMT_802_1X
-            if (rsn & KEY_MGMT_8021X) or (wpa & KEY_MGMT_8021X):
+            freq_digits = ''.join(ch for ch in parts[1] if ch.isdigit())
+            band = '5GHz' if int(freq_digits or 0) >= 5000 else '2.4GHz'
+            sec_raw = parts[2].strip()
+            if '802.1X' in sec_raw or 'EAP' in sec_raw:
                 sec = 'Enterprise'
-            elif rsn or wpa:
+            elif sec_raw:
                 sec = 'WPA2'
             else:
                 sec = 'Open'
-            networks.append({'ssid': ssid, 'band': '5GHz' if freq >= 5000 else '2.4GHz', 'security': sec})
+            networks.append({'ssid': ssid, 'band': band, 'security': sec})
         return jsonify({'networks': networks})
     except Exception as e:
-        # Fallback to nmcli
-        try:
-            subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], capture_output=True, timeout=10)
-            result = subprocess.check_output(['nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list'], text=True, timeout=15)
-            networks = []
-            seen = set()
-            for line in result.strip().split('\n'):
-                parts = line.split(':')
-                ssid = parts[0].strip() if parts else ''
-                if not ssid or ssid in seen: continue
-                seen.add(ssid)
-                freq = parts[1].strip() if len(parts) > 1 else ''
-                sec  = parts[2].strip() if len(parts) > 2 else ''
-                networks.append({'ssid': ssid, 'band': '5GHz' if freq.startswith('5') else '2.4GHz', 'security': sec})
-            return jsonify({'networks': networks})
-        except Exception as e2:
-            return jsonify({'networks': [], 'error': str(e2)})
+        return jsonify({'networks': [], 'error': str(e)})
 
 @app.route('/api/wifi/current')
 def wifi_current():
