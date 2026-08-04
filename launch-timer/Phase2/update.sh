@@ -167,6 +167,8 @@ ExecStart=/usr/bin/python3 server.py
 Restart=always
 RestartSec=3
 Nice=-10
+StandardOutput=append:/home/pi/server.log
+StandardError=append:/home/pi/server.log
 
 [Install]
 WantedBy=multi-user.target
