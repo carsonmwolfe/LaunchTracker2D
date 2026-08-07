@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>WiFi Setup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+    body {
+      background: #0a0e14; color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px; height: 480px;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+    .topbar {
+      height: 32px; flex-shrink: 0;
+      background: #0d1620; border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center; padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 0 12px; cursor: pointer;
+      align-self: stretch; display: flex; align-items: center;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+
+    /* CONNECTION STATUS */
+    #conn-bar {
+      flex-shrink: 0; display: none;
+      background: #061a0e; border-top: 2px solid #00e87a;
+      padding: 5px 14px; align-items: center; gap: 10px;
+    }
+    #conn-bar.visible { display: flex; }
+    .conn-dot { width: 8px; height: 8px; background: #00e87a; flex-shrink: 0; }
+    .conn-lbl { font-size: 7px; color: rgba(0,232,122,0.7); }
+    .conn-ssid { font-size: 9px; color: #00e87a; }
+    .conn-forget {
+      margin-left: auto; font-family: 'Press Start 2P', monospace; font-size: 6px;
+      background: #1a0808; border: 2px solid #ff4422; color: #ff4422;
+      padding: 5px 9px; cursor: pointer;
+    }
+    .conn-forget:hover { background: #2a0c0c; }
+    #no-conn-bar {
+      flex-shrink: 0; display: none;
+      background: #1a0808; border-top: 2px solid #ff4422;
+      padding: 5px 14px; align-items: center; gap: 10px;
+    }
+    #no-conn-bar.visible { display: flex; }
+    .no-conn-dot { width: 8px; height: 8px; background: #ff4422; flex-shrink: 0; }
+    .no-conn-lbl { font-size: 7px; color: #ff4422; }
+
+    .top-panel {
+      display: flex; flex-direction: row;
+      flex: 1; overflow: hidden;
+    }
+
+    /* NETWORK LIST */
+    .left-col {
+      width: 340px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-right: 3px solid #2a3a50; background: #0e1520;
+    }
+    .phdr {
+      font-size: 7px; color: #00e87a;
+      background: #141e2e; padding: 7px 10px;
+      border-bottom: 2px solid #2a3a50;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .phdr-left { display: flex; align-items: center; gap: 6px; }
+    .phdr-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .btn-scan-sm {
+      font-family: 'Press Start 2P', monospace; font-size: 6px;
+      background: #141e2e; border: 2px solid #6ab4f8;
+      color: #6ab4f8; padding: 4px 8px; cursor: pointer;
+    }
+    .btn-scan-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+    .networks-list {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 5px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .network {
+      background: #1a2535; border: 2px solid #344558;
+      padding: 10px 12px; cursor: pointer;
+      font-size: 9px; color: #ffffff;
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .network:hover { background: #1f2e42; border-color: rgba(0,232,122,0.6); }
+    .network.selected { background: #0a1f10; border-color: #00e87a; color: #00e87a; }
+    .network.current-net { border-color: #00e87a; background: #061a0e; }
+    .network-signal { font-size: 8px; flex-shrink: 0; color: #6ab4f8; }
+    .network-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .network-badge { font-size: 6px; color: #00e87a; flex-shrink: 0; background: rgba(0,232,122,0.1); border: 1px solid #00e87a; padding: 3px 6px; }
+    .scan-msg { font-size: 7px; color: rgba(255,255,255,0.5); text-align: center; padding: 20px 8px; }
+
+    /* CONNECT PANEL */
+    .right-col {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+      padding: 12px 14px; background: #0c1018; gap: 10px; overflow: hidden;
+    }
+    .connect-hdr { font-size: 8px; color: #4a9ede; letter-spacing: 2px; flex-shrink: 0; }
+    .ssid-display {
+      background: #141e2e; border: 2px solid #2a3a50;
+      padding: 12px 14px; flex: 1;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .ssid-display.has-selection { border-color: #00e87a; }
+    .ssid-display-label { font-size: 7px; color: #4a9ede; letter-spacing: 2px; margin-bottom: 10px; }
+    .ssid-display-val { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssid-display-val.placeholder { color: rgba(255,255,255,0.3); font-size: 10px; }
+
+    .pw-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pw-label { font-size: 8px; color: #4a9ede; letter-spacing: 1px; flex-shrink: 0; }
+    .pw-input-wrap { flex: 1; position: relative; }
+    input.pw-field {
+      width: 100%; background: #1a2535; border: 2px solid #344558;
+      padding: 14px 44px 14px 12px; color: #ffffff;
+      font-family: 'Press Start 2P', monospace; font-size: 10px;
+      outline: none; caret-color: #00e87a;
+      /* No readonly — WebKit2GTK bug: readonly inputs don't return JS-modified .value correctly */
+    }
+    input.pw-field:focus { border-color: #00e87a; background: #0a1f12; }
+    .pw-field.has-value { border-color: rgba(0,232,122,0.5); }
+    .show-toggle {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      font-family: 'Press Start 2P', monospace; font-size: 6px;
+      color: rgba(255,255,255,0.5); cursor: pointer;
+      user-select: none; background: none; border: none; padding: 4px;
+    }
+    .show-toggle:hover { color: #ffd93d; }
+    .pw-hint { font-size: 6px; color: rgba(255,255,255,0.3); flex-shrink: 0; }
+
+    .connect-btn {
+      width: 100%; padding: 10px;
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      cursor: pointer; border: none;
+      background: #00e87a; color: #050a07;
+      flex-shrink: 0;
+    }
+    .connect-btn:disabled { background: rgba(0,232,122,0.2); color: rgba(0,50,20,0.5); cursor: not-allowed; }
+
+    .status-bar {
+      flex-shrink: 0; font-size: 7px; color: #ffd93d;
+      letter-spacing: 1px; min-height: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .status-bar.success { color: #00e87a; }
+    .status-bar.error   { color: #ff4422; }
+    .status-bar.info    { color: #4a9ede; }
+
+    /* KEYBOARD */
+    .kb-section {
+      flex: 0 0 210px; background: #080c12;
+      padding: 5px 6px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .kb-row { display: flex; gap: 4px; flex: 1; }
+    .kb-key {
+      flex: 1;
+      background: #1a2535; border: 1px solid #2a3a50;
+      color: #d0d8e8; font-family: 'Press Start 2P', monospace;
+      font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; -webkit-user-select: none;
+    }
+    .kb-key:active { background: #00e87a; color: #050a07; border-color: #00e87a; }
+    .kb-key.special { background: #141e2e; color: #4a9ede; border-color: #2a3a50; font-size: 10px; }
+    .kb-key.backspace { background: #1f0e0e; color: #ff4422; border-color: #3a1a1a; flex: 1.6; }
+    .kb-key.shift { background: #141e2e; color: #ffd93d; border-color: #2a3a50; flex: 1.4; }
+    .kb-key.shift.active { background: #1a1800; border-color: #ffd93d; }
+    .kb-key.space { flex: 4; }
+    .kb-key.sym-toggle { flex: 1.3; font-size: 9px; }
+    .kb-key.clear-key { background: #1a1020; color: #ff9933; border-color: #3a1a30; flex: 1.5; font-size: 8px; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" id="btn-back" onclick="window.location='/settings'">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="top-title-wrap">
+      <div class="top-title">WIFI SETUP</div>
+      <div class="top-sub">// NETWORK CONFIGURATION //</div>
+    </div>
+  </div>
+
+  <div class="top-panel">
+    <div class="left-col">
+      <div class="phdr">
+        <div class="phdr-left">
+          <div class="phdr-dot" style="background:#4a9ede;"></div>
+          <span>AVAILABLE NETWORKS</span>
+        </div>
+        <button class="btn-scan-sm" id="btn-scan" onclick="scanNetworks()">↺ SCAN</button>
+      </div>
+      <div class="networks-list" id="networks">
+        <div class="scan-msg">SCANNING...</div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="connect-hdr">> CONNECT TO NETWORK</div>
+
+      <div class="ssid-display" id="ssid-display">
+        <div class="ssid-display-label">SELECTED NETWORK</div>
+        <div class="ssid-display-val placeholder" id="ssid-val">— TAP A NETWORK —</div>
+      </div>
+
+      <div class="pw-row">
+        <div class="pw-label">PASSWORD</div>
+        <div class="pw-input-wrap">
+          <input type="text" class="pw-field" id="password"
+                 placeholder="tap keys below"
+                 autocomplete="off" autocorrect="off"
+                 autocapitalize="off" spellcheck="false"
+                 onfocus="suppressNativeKeyboard();switchKeyboardTarget('password')"
+                 onclick="suppressNativeKeyboard();switchKeyboardTarget('password')"
+                 oninput="onPasswordInput()"
+                 style="-webkit-text-security: disc;">
+          <button class="show-toggle" id="show-toggle" onclick="toggleShow()">SHOW</button>
+        </div>
+        <div class="pw-hint" id="pw-hint"></div>
+      </div>
+
+      <button class="connect-btn" id="btn-connect" onclick="connect()" disabled>CONNECT</button>
+      <div style="display:flex;gap:8px;flex-shrink:0;width:100%;">
+        <button id="btn-open" onclick="toggleOpenNetwork()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:6px;background:#141e2e;border:2px solid #344558;color:rgba(255,255,255,0.4);cursor:pointer;flex:1;">NO PASSWORD (OPEN)</button>
+        <button id="btn-manual" onclick="toggleManualSsid()" style="font-family:'Press Start 2P',monospace;font-size:6px;padding:6px;background:#141e2e;border:2px solid #344558;color:rgba(74,158,222,0.6);cursor:pointer;flex:1;">HIDDEN NETWORK</button>
+      </div>
+      <div id="manual-ssid-row" style="display:none;gap:8px;align-items:center;flex-shrink:0;">
+        <div style="font-size:7px;color:#4a9ede;flex-shrink:0;">SSID</div>
+        <input type="text" id="manual-ssid" placeholder="enter network name"
+               style="flex:1;background:#1a2535;border:2px solid #344558;padding:8px;color:#fff;font-family:'Press Start 2P',monospace;font-size:8px;outline:none;"
+               onfocus="suppressNativeKeyboard();switchKeyboardTarget('manual-ssid')"
+               onclick="suppressNativeKeyboard();switchKeyboardTarget('manual-ssid')">
+      </div>
+      <div class="status-bar" id="status"></div>
+      <button id="btn-restart-wifi" onclick="restartWifi()" style="display:none;font-family:'Press Start 2P',monospace;font-size:7px;padding:8px;background:#1a0808;border:2px solid #ff4422;color:#ff4422;cursor:pointer;width:100%;flex-shrink:0;">⟳ RESTART WIFI</button>
+    </div>
+  </div>
+
+  <div id="conn-bar">
+    <div class="conn-dot"></div>
+    <div class="conn-lbl">CONNECTED TO</div>
+    <div class="conn-ssid" id="conn-ssid">—</div>
+    <button class="conn-forget" id="btn-forget" onclick="forgetCurrent()">FORGET</button>
+  </div>
+  <div id="no-conn-bar">
+    <div class="no-conn-dot"></div>
+    <div class="no-conn-lbl">NOT CONNECTED TO ANY NETWORK</div>
+  </div>
+
+  <div class="kb-section" id="kb">
+    <div class="kb-row" id="kb-row0"></div>
+    <div class="kb-row" id="kb-row1"></div>
+    <div class="kb-row" id="kb-row2"></div>
+    <div class="kb-row" id="kb-row3"></div>
+    <div class="kb-row" id="kb-row4"></div>
+  </div>
+
+  <!-- WiFi error popup -->
+  <div id="wifi-error-popup" onclick="dismissWifiError()" style="
+    display:none; position:fixed; inset:0; z-index:999;
+    background:rgba(0,0,0,0.75); align-items:center; justify-content:center;">
+    <div style="
+      background:#1a0808; border:3px solid #ff4422;
+      padding:20px 24px; max-width:420px; text-align:center;">
+      <div style="font-size:8px; color:#ff4422; margin-bottom:12px; letter-spacing:0.1em;">⚠ WIFI ERROR</div>
+      <div id="wifi-error-msg" style="font-size:9px; color:#fff; line-height:2; margin-bottom:16px;"></div>
+      <div style="font-size:7px; color:rgba(255,255,255,0.4);">TAP ANYWHERE TO DISMISS</div>
+    </div>
+  </div>
+
+  <script>
+    let selectedSsid = '';
+    let showPassword = false;
+    let shiftOn = false;
+    let symMode = false;
+    let currentSsid = '';
+    let connectAttempts = 0;
+    let isOpenNetwork = false;
+    let isConnecting = false;
+    let keyboardTarget = 'password'; // which input keyboard types into
+
+    const ROWS_ALPHA = [
+      ['1','2','3','4','5','6','7','8','9','0','⌫'],
+      ['q','w','e','r','t','y','u','i','o','p'],
+      ['a','s','d','f','g','h','j','k','l'],
+      ['⇧','z','x','c','v','b','n','m','-'],
+      ['SYM','@','_','.','SPACE','CLR','✓'],
+    ];
+    const ROWS_SYM = [
+      ['1','2','3','4','5','6','7','8','9','0','⌫'],
+      ['!','@','#','$','%','^','&','*','(',')'],
+      ['-','_','=','+','[',']','{','}','|'],
+      ['⇧',';',':','\'','"',',','.','?','⌫'],
+      ['ABC','~','`','\\','SPACE','CLR','✓'],
+    ];
+
+    function suppressNativeKeyboard() {
+      fetch('/api/osk?show=0').catch(() => {});
+    }
+
+    function buildKeyboard() {
+      const rows = symMode ? ROWS_SYM : ROWS_ALPHA;
+      rows.forEach((row, ri) => {
+        const rowEl = document.getElementById('kb-row' + ri);
+        rowEl.innerHTML = '';
+        row.forEach(key => {
+          const btn = document.createElement('button');
+          btn.className = 'kb-key';
+          let label = key;
+
+          if (key === '⌫')  { btn.classList.add('backspace'); }
+          else if (key === '⇧') { btn.classList.add('shift'); if (shiftOn) btn.classList.add('active'); }
+          else if (key === 'SPACE') { btn.classList.add('space'); btn.textContent = 'SPACE'; }
+          else if (key === '✓') { btn.classList.add('special'); label = '✓ DONE'; }
+          else if (key === 'CLR') { btn.classList.add('clear-key'); label = 'CLR'; }
+          else if (key === 'SYM' || key === 'ABC') { btn.classList.add('special', 'sym-toggle'); }
+          else if (!symMode && shiftOn && key.match(/[a-z]/)) { label = key.toUpperCase(); }
+
+          if (key !== 'SPACE') btn.textContent = label;
+          btn.addEventListener('click', (e) => { e.preventDefault(); handleKey(key); });
+          rowEl.appendChild(btn);
+        });
+      });
+    }
+
+    function switchKeyboardTarget(id) {
+      keyboardTarget = id;
+    }
+
+    function toggleOpenNetwork() {
+      isOpenNetwork = !isOpenNetwork;
+      const btn = document.getElementById('btn-open');
+      const pwRow = document.querySelector('.pw-row');
+      if (isOpenNetwork) {
+        btn.style.borderColor = '#00e87a';
+        btn.style.color = '#00e87a';
+        pwRow.style.opacity = '0.3';
+        pwRow.style.pointerEvents = 'none';
+        document.getElementById('password').value = '';
+        document.getElementById('pw-hint').textContent = '';
+        setStatus('OPEN NETWORK — NO PASSWORD REQUIRED', 'info');
+      } else {
+        btn.style.borderColor = '#344558';
+        btn.style.color = 'rgba(255,255,255,0.4)';
+        pwRow.style.opacity = '1';
+        pwRow.style.pointerEvents = '';
+        setStatus('', '');
+      }
+    }
+
+    let isHiddenNetwork = false;
+
+    function toggleManualSsid() {
+      const row = document.getElementById('manual-ssid-row');
+      const btn = document.getElementById('btn-manual');
+      const visible = row.style.display !== 'none';
+      isHiddenNetwork = !visible;
+      row.style.display = visible ? 'none' : 'flex';
+      btn.style.borderColor = visible ? '#344558' : '#4a9ede';
+      btn.style.color = visible ? 'rgba(74,158,222,0.6)' : '#4a9ede';
+      if (!visible) {
+        // Switch keyboard to SSID field, clear any selected network
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TYPE NETWORK NAME —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('ssid-display').classList.remove('has-selection');
+        document.getElementById('btn-connect').disabled = true;
+        switchKeyboardTarget('manual-ssid');
+        setStatus('STEP 1: TYPE HIDDEN NETWORK NAME  STEP 2: TAP PASSWORD FIELD', 'info');
+        // SSID updates handled by handleKey → updateHiddenSsid()
+      } else {
+        isHiddenNetwork = false;
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TAP A NETWORK —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('manual-ssid').value = '';
+        switchKeyboardTarget('password');
+        setStatus('', '');
+      }
+    }
+
+    function updateHiddenSsid() {
+      const val = (document.getElementById('manual-ssid').value || '').trim();
+      if (val) {
+        selectedSsid = val;
+        document.getElementById('ssid-val').textContent = val;
+        document.getElementById('ssid-val').classList.remove('placeholder');
+        document.getElementById('ssid-display').classList.add('has-selection');
+        document.getElementById('btn-connect').disabled = false;
+        setStatus('NETWORK: ' + val + ' — TAP PASSWORD FIELD THEN TYPE PASSWORD', 'info');
+      } else {
+        selectedSsid = '';
+        document.getElementById('ssid-val').textContent = '— TYPE NETWORK NAME —';
+        document.getElementById('ssid-val').classList.add('placeholder');
+        document.getElementById('ssid-display').classList.remove('has-selection');
+        document.getElementById('btn-connect').disabled = true;
+      }
+    }
+
+    function handleKey(key) {
+      const input = document.getElementById(keyboardTarget) || document.getElementById('password');
+      if (key === '⌫') {
+        input.value = input.value.slice(0, -1);
+      } else if (key === 'CLR') {
+        input.value = '';
+      } else if (key === '⇧') {
+        shiftOn = !shiftOn;
+        buildKeyboard();
+        return;
+      } else if (key === 'SYM') {
+        symMode = true; shiftOn = false; buildKeyboard(); return;
+      } else if (key === 'ABC') {
+        symMode = false; shiftOn = false; buildKeyboard(); return;
+      } else if (key === 'SPACE') {
+        input.value += ' ';
+      } else if (key === '✓') {
+        if (selectedSsid) connect();
+        return;
+      } else {
+        const ch = (!symMode && shiftOn) ? key.toUpperCase() : key;
+        input.value += ch;
+        if (shiftOn && !symMode) { shiftOn = false; buildKeyboard(); }
+      }
+      // Update SSID selection if typing into hidden network field
+      if (keyboardTarget === 'manual-ssid') {
+        updateHiddenSsid();
+      } else {
+        onPasswordInput();
+      }
+    }
+
+    function onPasswordInput() {
+      const pw = document.getElementById('password').value;
+      const hint = document.getElementById('pw-hint');
+      const field = document.getElementById('password');
+
+      // Visual feedback on password field
+      field.classList.toggle('has-value', pw.length > 0);
+
+      // Helpful hints
+      if (pw.length === 0) {
+        hint.textContent = '';
+      } else if (pw.length < 8) {
+        hint.textContent = pw.length + ' chars — min 8';
+        hint.style.color = '#ff9933';
+      } else {
+        hint.textContent = pw.length + ' chars';
+        hint.style.color = 'rgba(0,232,122,0.6)';
+      }
+    }
+
+    function toggleShow() {
+      showPassword = !showPassword;
+      const input = document.getElementById('password');
+      // Toggle -webkit-text-security instead of type (avoids WebKit input reset)
+      input.style.webkitTextSecurity = showPassword ? 'none' : 'disc';
+      document.getElementById('show-toggle').textContent = showPassword ? 'HIDE' : 'SHOW';
+    }
+
+    function friendlyError(raw) {
+      if (!raw) return "Couldn't connect — check the password and signal, then retry";
+      const r = raw.toLowerCase();
+      if (r.includes('802.1x') || r.includes('enterprise') || r.includes('eap')) {
+        return 'Enterprise WiFi not supported — needs IT setup';
+      }
+      // Only call it a password problem on genuine auth failures — not on the
+      // generic "802-11" string that appears in nearly every NM WiFi error.
+      if (r.includes('secret') || r.includes('psk') || r.includes('pre-shared') ||
+          r.includes('4-way') || r.includes('handshake') ||
+          r.includes('wrong password') || r.includes('invalid password') ||
+          r.includes('authentication fail')) {
+        return 'Wrong password — check carefully and retry';
+      }
+      if (r.includes('timeout') || r.includes('timed out')) {
+        return 'Timed out — move closer to the router and retry';
+      }
+      if (r.includes('no network') || r.includes('not found') || r.includes('could not be found')) {
+        return 'Network not found — tap ↺ SCAN and try again';
+      }
+      if (r.includes('dhcp') || r.includes('ip config') || r.includes('lease')) {
+        return 'Connected but no IP — reboot the router and retry';
+      }
+      if (r.includes('blocked') || r.includes('rfkill')) {
+        return 'WiFi blocked — reboot the Pi';
+      }
+      // Association / activation failures are ambiguous — don't blame the password
+      return "Couldn't connect — check the password and signal, then retry";
+    }
+
+    function selectNetwork(ssid, isCurrent) {
+      const wasAlreadySelected = selectedSsid === ssid;
+      selectedSsid = ssid;
+      const valEl = document.getElementById('ssid-val');
+      valEl.textContent = ssid;
+      valEl.classList.remove('placeholder');
+      document.getElementById('ssid-display').classList.add('has-selection');
+      document.getElementById('btn-connect').disabled = false;
+      connectAttempts = 0;
+
+      // Only clear password if selecting a DIFFERENT network
+      if (!wasAlreadySelected) {
+        document.getElementById('password').value = '';
+        document.getElementById('pw-hint').textContent = '';
+        document.getElementById('password').classList.remove('has-value');
+      }
+
+      if (isCurrent) {
+        setStatus('ALREADY CONNECTED TO THIS NETWORK', 'info');
+        document.getElementById('btn-connect').textContent = 'RECONNECT';
+      } else if (currentSsid && currentSsid !== ssid) {
+        setStatus('⚠ WILL DISCONNECT FROM ' + currentSsid.toUpperCase() + ' TO CONNECT HERE', 'warn');
+        document.getElementById('btn-connect').textContent = 'CONNECT';
+      } else {
+        setStatus('SELECTED: ' + ssid.toUpperCase(), 'info');
+        document.getElementById('btn-connect').textContent = 'CONNECT';
+      }
+    }
+
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status-bar' + (type ? ' ' + type : '');
+      if (type === 'error' && msg) showWifiError(msg);
+    }
+
+    function showWifiError(msg) {
+      document.getElementById('wifi-error-msg').textContent = msg;
+      document.getElementById('wifi-error-popup').style.display = 'flex';
+    }
+
+    function dismissWifiError() {
+      document.getElementById('wifi-error-popup').style.display = 'none';
+    }
+
+    function setConnecting(busy) {
+      document.getElementById('btn-connect').disabled = busy;
+      document.getElementById('btn-scan').disabled = busy;
+      document.getElementById('btn-back').disabled = busy;
+    }
+
+    function connect() {
+      if (isConnecting) return; // prevent double-tap
+      if (!selectedSsid) { setStatus('SELECT A NETWORK FIRST', 'error'); return; }
+
+      const password = isOpenNetwork ? '' : document.getElementById('password').value;
+
+      // Client-side validation
+      if (!isOpenNetwork) {
+        if (password.length === 0) {
+          setStatus('ENTER PASSWORD FIRST', 'error');
+          document.getElementById('password').style.borderColor = '#ff4422';
+          return;
+        }
+        if (password.length < 8) {
+          setStatus('PASSWORD TOO SHORT — WPA2 REQUIRES AT LEAST 8 CHARACTERS', 'error');
+          document.getElementById('password').style.borderColor = '#ff9933';
+          return;
+        }
+        if (password.length > 63) {
+          setStatus('PASSWORD TOO LONG — MAX 63 CHARACTERS FOR WPA2', 'error');
+          return;
+        }
+      }
+
+      document.getElementById('password').style.borderColor = '';
+      isConnecting = true;
+      connectAttempts++;
+      setConnecting(true);
+
+      const shortSsid = selectedSsid.length > 16 ? selectedSsid.slice(0,14)+'…' : selectedSsid;
+      setStatus('CONNECTING TO ' + shortSsid.toUpperCase() + '...', '');
+
+      // Show "still trying" after 15s — slow DHCP routers can take 45-60s
+      const slowTimer = setTimeout(() => {
+        if (isConnecting) setStatus('STILL CONNECTING — SLOW ROUTER? PLEASE WAIT...', '');
+      }, 15000);
+
+      fetch('/api/wifi/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid: selectedSsid, password, open: isOpenNetwork, hidden: isHiddenNetwork })
+      })
+      .then(r => r.json())
+      .then(data => {
+        clearTimeout(slowTimer);
+        isConnecting = false;
+        if (data.ok) {
+          // Verify internet actually works (not just connected to AP)
+          setStatus('CONNECTED — VERIFYING INTERNET...', 'success');
+          setTimeout(() => {
+            fetch('/api/health', { cache: 'no-store' })
+              .then(() => {
+                setStatus('CONNECTED + INTERNET VERIFIED!', 'success');
+                setTimeout(() => { window.location = '/'; }, 1500);
+              })
+              .catch(() => {
+                // Connected to AP but no internet — could be captive portal
+                setStatus('CONNECTED TO WIFI — NO INTERNET YET (CAPTIVE PORTAL?)', 'warn');
+                setTimeout(() => { window.location = '/'; }, 3000);
+              });
+          }, 3000);
+        } else {
+          const msg = friendlyError(data.error);
+          if (connectAttempts >= 3) {
+            setStatus(msg + ' — ' + connectAttempts + ' FAILURES — TRY RESTARTING WIFI', 'error');
+            document.getElementById('btn-restart-wifi').style.display = 'block';
+          } else if (connectAttempts >= 2) {
+            setStatus(msg + ' (' + connectAttempts + ' ATTEMPTS — CHECK PASSWORD)', 'error');
+          } else {
+            setStatus(msg, 'error');
+          }
+          setConnecting(false);
+        }
+      })
+      .catch(() => {
+        clearTimeout(slowTimer);
+        isConnecting = false;
+        // Server disconnected mid-request — usually means connect succeeded
+        setStatus('CONNECTED — RETURNING TO HOME...', 'success');
+        setTimeout(() => { window.location = '/'; }, 2500);
+      });
+    }
+
+    function forgetCurrent() {
+      if (!currentSsid) return;
+      const s = currentSsid;
+      setStatus('FORGETTING ' + s.toUpperCase() + '...', '');
+      fetch('/api/wifi/forget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid: s })
+      })
+      .then(r => r.json())
+      .then(() => {
+        connectAttempts = 0;
+        setTimeout(() => {
+          setStatus('FORGOT ' + s.toUpperCase() + ' — RECONNECT TO TEST', 'info');
+          scanNetworks();
+        }, 3000);
+      })
+      .catch(() => {
+        // Forgetting the active network drops WiFi — page is on localhost so it survives
+        setStatus('NETWORK FORGOTTEN — RESCANNING...', 'info');
+        setTimeout(scanNetworks, 4000);
+      });
+    }
+
+    function restartWifi() {
+      setStatus('RESTARTING WIFI — PLEASE WAIT...', '');
+      document.getElementById('btn-restart-wifi').style.display = 'none';
+      fetch('/api/wifi/restart', { method: 'POST' })
+        .then(() => {
+          connectAttempts = 0;
+          setTimeout(() => {
+            setStatus('WIFI RESTARTED — TAP SCAN TO FIND NETWORKS', 'info');
+            scanNetworks();
+          }, 4000);
+        })
+        .catch(() => setStatus('RESTART FAILED — TRY REBOOTING PI', 'error'));
+    }
+
+    function scanNetworks() {
+      const container = document.getElementById('networks');
+      container.innerHTML = '<div class="scan-msg">SCANNING...</div>';
+      document.getElementById('btn-scan').disabled = true;
+
+      fetch('/api/wifi/current').then(r => r.json()).then(d => {
+        currentSsid = (d.ssid || '').trim();
+        if (currentSsid) {
+          document.getElementById('conn-ssid').textContent = currentSsid;
+          document.getElementById('conn-bar').classList.add('visible');
+          document.getElementById('no-conn-bar').classList.remove('visible');
+        } else {
+          document.getElementById('conn-bar').classList.remove('visible');
+          document.getElementById('no-conn-bar').classList.add('visible');
+        }
+      }).catch(() => {
+        document.getElementById('no-conn-bar').classList.add('visible');
+      });
+
+      fetch('/api/wifi/scan').then(r => r.json()).then(data => {
+        document.getElementById('btn-scan').disabled = false;
+        container.innerHTML = '';
+        if (!data.networks || !data.networks.length) {
+          const msg = data.error && data.error.toLowerCase().includes('rfkill')
+            ? 'WIFI BLOCKED — REBOOT PI TO FIX'
+            : 'NO NETWORKS FOUND — MOVE CLOSER TO ROUTER AND TAP ↺ SCAN';
+          container.innerHTML = `<div class="scan-msg">${msg}</div>`;
+          return;
+        }
+        data.networks.forEach(net => {
+          // Support both string SSIDs (old) and object {ssid, band, security} (new)
+          const ssid     = typeof net === 'string' ? net : net.ssid;
+          const security = typeof net === 'object' ? net.security : '';
+          const isCurrent = ssid === currentSsid;
+          const isEnterprise = security && security.toLowerCase().includes('enterprise');
+
+          const div = document.createElement('div');
+          div.className = 'network' + (isCurrent ? ' current-net' : '');
+
+          const sig = document.createElement('span');
+          sig.className = 'network-signal';
+          sig.textContent = '|||';
+
+          const name = document.createElement('span');
+          name.className = 'network-name';
+          name.textContent = ssid;
+          if (isEnterprise) name.style.color = '#ff9933';
+
+          div.appendChild(sig);
+          div.appendChild(name);
+
+          if (isCurrent) {
+            const badge = document.createElement('span');
+            badge.className = 'network-badge';
+            badge.textContent = '✓ CONNECTED';
+            div.appendChild(badge);
+          } else if (isEnterprise) {
+            const badge = document.createElement('span');
+            badge.className = 'network-badge';
+            badge.textContent = 'ENTERPRISE';
+            badge.style.borderColor = '#ff9933';
+            badge.style.color = '#ff9933';
+            div.appendChild(badge);
+          }
+
+          div.addEventListener('click', () => {
+            if (isEnterprise) {
+              setStatus('ENTERPRISE WIFI — NEEDS USERNAME+PASSWORD — NOT SUPPORTED', 'error');
+              return;
+            }
+            document.querySelectorAll('.network').forEach(n => n.classList.remove('selected'));
+            div.classList.add('selected');
+            selectNetwork(ssid, isCurrent);
+          });
+          container.appendChild(div);
+        });
+      }).catch(() => {
+        document.getElementById('btn-scan').disabled = false;
+        container.innerHTML = '<div class="scan-msg">SCAN FAILED — TAP SCAN TO RETRY</div>';
+      });
+    }
+
+    // Suppress native OSK on load
+    suppressNativeKeyboard();
+    buildKeyboard();
+    scanNetworks();
+  </script>
+</body>
+</html>

@@ -7,6 +7,11 @@ import requests
 from datetime import datetime, timezone
 
 
+def _ts():
+    """Return a compact timestamp string for log lines."""
+    return datetime.now().strftime("%H:%M:%S")
+
+
 def fetch_launches(num_launches=5):
     """Fetch the next upcoming rocket launches.
     
@@ -21,10 +26,9 @@ def fetch_launches(num_launches=5):
         data = response.json()
         launches = data.get('result', [])
         
-        print(f"\n=== API returned {len(launches)} launches ===")
-        
         # Filter to only upcoming launches (not already completed)
         filtered_launches = []
+        skipped = []
         
         for launch in launches:
             name = launch.get('name', 'Unknown')
@@ -37,33 +41,35 @@ def fetch_launches(num_launches=5):
             # Get result (1=success, 2=failure, 3=partial, null=not launched, -1=scrubbed/TBD)
             result = launch.get('result')
             
-            # Get launch time
-            launch_time_str = launch.get('t0') or launch.get('win_open')
-            
-            print(f"\n{name}")
-            print(f"  Status: {status_name} (id={status_id})")
-            print(f"  Result: {result}")
-            print(f"  T0: {launch_time_str}")
-            
             # Skip if launch has a POSITIVE result (1, 2, 3 = already completed)
             if result is not None and result > 0:
-                print(f"  -> SKIPPING (already completed with result={result})")
+                skipped.append(f"{name} (completed)")
                 continue
             
-            # Skip if status is "Launch Successful" 
+            # Skip if status is "Launch Successful"
             if status_id == 3:
-                print(f"  -> SKIPPING (status indicates completed)")
+                skipped.append(f"{name} (status=completed)")
                 continue
             
-            # This is an upcoming launch
-            print(f"  -> KEEPING (upcoming)")
             filtered_launches.append(launch)
         
-        print(f"\n=== Filtered to {len(filtered_launches)} upcoming launches ===\n")
+        # Single condensed summary line
+        print(f"[{_ts()}] Launches fetched: {len(filtered_launches)} upcoming"
+              + (f", {len(skipped)} skipped" if skipped else ""))
+        
+        # Print upcoming launches in a compact table
+        for i, launch in enumerate(filtered_launches):
+            t0 = launch.get('t0') or launch.get('win_open') or 'TBD'
+            vehicle = launch.get('vehicle', {}).get('name', 'Unknown')
+            status_name = launch.get('status', {}).get('name', '?')
+            marker = ">>>" if i == 0 else "   "
+            print(f"  {marker} [{i+1}] {launch.get('name', 'Unknown')}")
+            print(f"         Vehicle: {vehicle} | Status: {status_name} | T0: {t0}")
+        
         return filtered_launches
         
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {e}")
+        print(f"[{_ts()}] ERROR fetching launch data: {e}")
         return []
 
 

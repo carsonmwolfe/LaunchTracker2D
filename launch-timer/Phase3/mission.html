@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>Mission Details</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080810;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      width: 800px;
+      height: 510px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      height: 38px;
+      border-bottom: 1px solid rgba(0,232,122,0.2);
+      background: rgba(8,8,18,0.97);
+      flex-shrink: 0;
+    }
+    .back-btn {
+      background: rgba(0,232,122,0.1);
+      border: 1px solid rgba(0,232,122,0.3);
+      border-radius: 4px;
+      color: #00e87a;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+    }
+    .back-btn:hover { background: rgba(0,232,122,0.18); }
+    .title { font-size: 12px; font-weight: bold; color: #fff; letter-spacing: 0.06em; }
+    .status-badge { font-size: 9px; padding: 3px 8px; border-radius: 3px; letter-spacing: 0.05em; font-weight: bold; white-space: nowrap; }
+    .badge-go      { background: rgba(0,232,122,0.15);  border: 1px solid rgba(0,232,122,0.4);  color: #00e87a; }
+    .badge-tbd     { background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.4); color: #ffd93d; }
+    .badge-hold    { background: rgba(255,68,34,0.15);  border: 1px solid rgba(255,68,34,0.4);  color: #ff4422; }
+    .badge-success { background: rgba(74,158,222,0.15); border: 1px solid rgba(74,158,222,0.4); color: #4a9ede; }
+    .body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .middle { display: flex; flex: 1; overflow: hidden; }
+    .left { width: 300px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; }
+    .earth-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: #05050f; overflow: hidden; }
+    .orbit-label { position: absolute; top: 8px; left: 10px; font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; }
+    .orbit-pill { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 9px; padding: 3px 12px; border-radius: 10px; background: rgba(74,158,222,0.12); border: 1px solid rgba(74,158,222,0.3); color: #4a9ede; letter-spacing: 0.08em; white-space: nowrap; }
+    .window-wrap { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .win-label { font-size: 8px; color: rgba(255,255,255,0.22); letter-spacing: 0.12em; margin-bottom: 5px; }
+    .win-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; margin: 7px 0 5px; }
+    .win-fill { position: absolute; inset: 0; background: rgba(0,232,122,0.2); border-radius: 2px; }
+    .win-dot { position: absolute; top: -4px; width: 11px; height: 11px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #05050f; }
+    .win-times { display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.22); }
+    .win-t0 { text-align: center; font-size: 9px; color: #00e87a; margin-top: 3px; }
+    .win-t0.tbd { color: #ffd93d; }
+    .right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .info-scroll { flex: 1; overflow-y: auto; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .info-key { font-size: 9px; color: rgba(255,255,255,0.28); letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; }
+    .info-val { font-size: 11px; color: #fff; text-align: right; }
+    .info-val.blue   { color: #4a9ede; }
+    .info-val.green  { color: #00e87a; }
+    .info-val.yellow { color: #ffd93d; }
+    .info-val.muted  { color: rgba(255,255,255,0.35); }
+    .wx-wrap { padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .wx-row { display: flex; gap: 0; margin-bottom: 6px; }
+    .wx-item { flex: 1; text-align: center; }
+    .wx-val { font-size: 13px; font-weight: bold; color: #fff; line-height: 1; }
+    .wx-lbl { font-size: 8px; color: rgba(255,255,255,0.22); margin-top: 3px; letter-spacing: 0.06em; }
+    .go-row { display: flex; align-items: center; gap: 8px; }
+    .go-pill { font-size: 9px; padding: 2px 8px; border-radius: 3px; font-weight: bold; }
+    .go-green  { background: rgba(0,232,122,0.15);  border: 1px solid rgba(0,232,122,0.3);  color: #00e87a; }
+    .go-yellow { background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.3); color: #ffd93d; }
+    .go-text { font-size: 9px; color: rgba(255,255,255,0.22); }
+    .rocket-strip { height: 108px; flex-shrink: 0; display: flex; align-items: stretch; border-top: 1px solid rgba(255,255,255,0.07); background: #05050f; position: relative; overflow: hidden; }
+    .rocket-canvas-wrap { width: 80px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+    .rocket-info { padding: 10px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px; z-index: 1; flex: 1; }
+    .rocket-name { font-size: 14px; font-weight: bold; color: #fff; }
+    .rocket-sub { font-size: 10px; color: rgba(255,255,255,0.3); }
+    .rocket-tags { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .rocket-tag { font-size: 8px; padding: 2px 7px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
+    .stats-group { display: flex; gap: 0; border-left: 1px solid rgba(255,255,255,0.06); }
+    .stat-box { padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.06); min-width: 78px; }
+    .stat-box:last-child { border-right: none; }
+    .stat-num { font-size: 18px; font-weight: bold; color: #ffd93d; line-height: 1; }
+    .stat-lbl { font-size: 7px; color: rgba(255,255,255,0.22); margin-top: 4px; letter-spacing: 0.06em; text-align: center; line-height: 1.4; }
+    .loading { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.12em; }
+    .info-scroll::-webkit-scrollbar { width: 3px; }
+    .info-scroll::-webkit-scrollbar-track { background: transparent; }
+    .info-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-btn" onclick="window.location='http://localhost:5001'">← BACK</button>
+    <div class="title" id="page-title">MISSION DETAILS</div>
+    <div class="status-badge badge-tbd" id="status-badge">—</div>
+  </div>
+  <div class="body">
+    <div class="middle">
+      <div class="left">
+        <div class="earth-wrap">
+          <div class="orbit-label">EST. ORBIT</div>
+          <canvas id="earthCanvas" width="260" height="260"></canvas>
+          <div class="orbit-pill" id="orbit-pill">ORBIT TBD</div>
+        </div>
+        <div class="window-wrap">
+          <div class="win-label">LAUNCH WINDOW</div>
+          <div class="win-bar">
+            <div class="win-fill"></div>
+            <div class="win-dot" id="dot-open"  style="left:0%;background:#ffd93d;"></div>
+            <div class="win-dot" id="dot-t0"    style="left:33%;background:#00e87a;"></div>
+            <div class="win-dot" id="dot-close" style="left:100%;background:#ffd93d;"></div>
+          </div>
+          <div class="win-times"><span id="win-open-str">— OPEN</span><span id="win-close-str">CLOSE —</span></div>
+          <div class="win-t0" id="win-t0-str">T-0 · —</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="info-scroll" id="info-scroll">
+          <div class="loading">FETCHING MISSION DATA...</div>
+        </div>
+        <div class="wx-wrap" id="wx-wrap" style="display:none;">
+          <div class="wx-row">
+            <div class="wx-item"><div class="wx-val" id="wx-temp">—</div><div class="wx-lbl">TEMP</div></div>
+            <div class="wx-item"><div class="wx-val" id="wx-wind">—</div><div class="wx-lbl">WIND</div></div>
+            <div class="wx-item"><div class="wx-val" id="wx-cloud">—</div><div class="wx-lbl">CLOUD</div></div>
+            <div class="wx-item"><div class="wx-val" id="wx-precip">—</div><div class="wx-lbl">PRECIP</div></div>
+          </div>
+          <div class="go-row">
+            <div class="go-pill go-green" id="go-pill">GO</div>
+            <div class="go-text" id="go-text">Fetching weather data...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rocket-strip">
+      <div class="rocket-canvas-wrap">
+        <canvas id="rocketCanvas" width="50" height="100"></canvas>
+      </div>
+      <div class="rocket-info">
+        <div class="rocket-name" id="rocket-name">—</div>
+        <div class="rocket-sub"  id="rocket-sub">—</div>
+        <div class="rocket-tags" id="rocket-tags"></div>
+      </div>
+      <div class="stats-group">
+        <div class="stat-box"><div class="stat-num" id="stat-orbital">—</div><div class="stat-lbl">ORBITAL<br>THIS YEAR</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-agency">—</div><div class="stat-lbl">PROVIDER<br>THIS YEAR</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-pad">—</div><div class="stat-lbl">FROM<br>THIS PAD</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Earth canvas ─────────────────────────────────────────────────────────
+    const ec=document.getElementById('earthCanvas');
+    const ectx=ec.getContext('2d');
+    const CX=130,CY=130,R=65;
+    let angle=0,orbitType='LEO';
+
+    const ORBITS={
+      'LEO':{rx:R+26, ry:R+15, tilt:-0.15, color:'#00e87a'},
+      'MEO':{rx:R+50, ry:R+30, tilt:-0.1,  color:'#4a9ede'},
+      'GEO':{rx:R+80, ry:R+48, tilt:-0.05, color:'#ffd93d'},
+      'SSO':{rx:R+26, ry:R+15, tilt:-1.2,  color:'#ff9933'},
+      'TLI':{rx:R+95, ry:R+40, tilt:0.1,   color:'#ff4422'},
+      'SUB':{rx:R+14, ry:R+8,  tilt:-0.15, color:'#aaaaaa'},
+    };
+
+    function drawEarth(){
+      ectx.clearRect(0,0,260,260);
+      ectx.fillStyle='rgba(255,255,255,0.5)';
+      [[18,15],[240,22],[10,90],[248,80],[28,175],[238,165],[92,8],[115,248],[13,135],[244,128],[178,16],[38,65],[88,235],[210,42],[42,210],[208,205]].forEach(([sx,sy])=>ectx.fillRect(sx,sy,1,1));
+      const g=ectx.createRadialGradient(CX,CY,R*0.85,CX,CY,R*1.3);
+      g.addColorStop(0,'rgba(30,70,160,0.18)');g.addColorStop(1,'rgba(0,0,0,0)');
+      ectx.fillStyle=g;ectx.beginPath();ectx.arc(CX,CY,R*1.3,0,Math.PI*2);ectx.fill();
+      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);ectx.fillStyle='#1a5a8a';ectx.fill();
+      ectx.strokeStyle='rgba(255,255,255,0.07)';ectx.lineWidth=0.5;
+      for(let i=1;i<4;i++){const yy=CY-R+(R*2/4)*i;const hw=Math.sqrt(Math.max(0,R*R-(yy-CY)**2));ectx.beginPath();ectx.moveTo(CX-hw,yy);ectx.lineTo(CX+hw,yy);ectx.stroke();}
+      for(let i=0;i<6;i++){ectx.save();ectx.translate(CX,CY);ectx.rotate(Math.PI/6*i);ectx.beginPath();ectx.moveTo(0,-R);ectx.lineTo(0,R);ectx.stroke();ectx.restore();}
+      ectx.fillStyle='#4a7a3a';
+      [{ex:-14,ey:-9,rx:15,ry:13,rot:0.3},{ex:-16,ey:14,rx:9,ry:11,rot:-0.2},{ex:19,ey:-6,rx:11,ry:9,rot:0.1},{ex:15,ey:11,rx:7,ry:6,rot:0.2}].forEach(({ex,ey,rx,ry,rot})=>{ectx.beginPath();ectx.ellipse(CX+ex,CY+ey,rx,ry,rot,0,Math.PI*2);ectx.fill();});
+      ectx.beginPath();ectx.arc(CX,CY,R,0,Math.PI*2);ectx.strokeStyle='rgba(100,180,255,0.22)';ectx.lineWidth=1.5;ectx.stroke();
+      const orb=ORBITS[orbitType]||ORBITS['LEO'];
+      ectx.save();
+      ectx.strokeStyle=orb.color+'55';ectx.lineWidth=1.2;ectx.setLineDash([3,4]);
+      ectx.beginPath();ectx.ellipse(CX,CY,orb.rx,orb.ry,orb.tilt,0,Math.PI*2);ectx.stroke();
+      ectx.setLineDash([]);
+      const sa=Math.cos(orb.tilt),sb=Math.sin(orb.tilt);
+      for(let t=3;t>=0;t--){
+        const ta=angle-t*0.09;
+        const px=orb.rx*Math.cos(ta),py=orb.ry*Math.sin(ta);
+        const sx=CX+px*sa-py*sb,sy=CY+px*sb+py*sa;
+        if(t===0){ectx.fillStyle=orb.color;ectx.beginPath();ectx.arc(sx,sy,3.5,0,Math.PI*2);ectx.fill();}
+        else{ectx.fillStyle=orb.color+'44';ectx.beginPath();ectx.arc(sx,sy,2.5-t*0.5,0,Math.PI*2);ectx.fill();}
+      }
+      ectx.restore();
+    }
+    function loop(){angle+=0.013;drawEarth();requestAnimationFrame(loop);}
+    loop();
+
+    // ── Rocket canvas ────────────────────────────────────────────────────────
+    function drawRocket(){
+      const rc=document.getElementById('rocketCanvas');
+      const rctx=rc.getContext('2d');
+      rctx.clearRect(0,0,50,100);
+      const bx=18,bw=14;
+      rctx.fillStyle='rgba(255,255,255,0.5)';rctx.strokeStyle='rgba(255,255,255,0.2)';rctx.lineWidth=0.5;
+      rctx.fillRect(bx,28,bw,56);rctx.strokeRect(bx,28,bw,56);
+      rctx.beginPath();rctx.moveTo(bx,28);rctx.lineTo(bx+bw/2,6);rctx.lineTo(bx+bw,28);rctx.closePath();rctx.fill();rctx.stroke();
+      rctx.strokeStyle='rgba(255,255,255,0.12)';rctx.beginPath();rctx.moveTo(bx,40);rctx.lineTo(bx+bw,40);rctx.stroke();
+      rctx.fillStyle='rgba(0,0,0,0.3)';rctx.fillRect(bx,58,bw,4);
+      rctx.fillStyle='rgba(255,255,255,0.38)';rctx.fillRect(bx-6,68,6,16);rctx.fillRect(bx+bw,68,6,16);
+      rctx.fillStyle='rgba(180,180,180,0.55)';rctx.fillRect(bx+2,84,bw-4,6);
+      rctx.fillStyle='rgba(80,80,80,0.8)';rctx.beginPath();rctx.moveTo(bx+4,90);rctx.lineTo(bx+bw-4,90);rctx.lineTo(bx+bw-2,96);rctx.lineTo(bx+2,96);rctx.closePath();rctx.fill();
+      rctx.fillStyle='rgba(255,255,255,0.12)';rctx.fillRect(bx+2,28,2,56);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function inferOrbit(name,desc,vehicle){
+      const t=((name||'')+' '+(desc||'')+' '+(vehicle||'')).toLowerCase();
+      if(t.includes('geostationary')||t.includes(' geo ')||t.includes('gto'))return{abbrev:'GEO',name:'Geostationary Orbit'};
+      if(t.includes('medium earth')||t.includes(' meo ')||t.includes('gps')||t.includes('navigation'))return{abbrev:'MEO',name:'Medium Earth Orbit'};
+      if(t.includes('sun-sync')||t.includes('sso')||t.includes('polar'))return{abbrev:'SSO',name:'Sun-Synchronous Orbit'};
+      if(t.includes('lunar')||t.includes('moon')||t.includes('tli'))return{abbrev:'TLI',name:'Trans-Lunar Injection'};
+      if(t.includes('suborbital'))return{abbrev:'SUB',name:'Suborbital'};
+      return{abbrev:'LEO',name:'Low Earth Orbit'};
+    }
+    function fmtUTC(iso){if(!iso)return'—';try{return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'UTC',hour12:false})+' UTC';}catch(e){return'—';}}
+    function fmtDate(iso){if(!iso)return'—';try{return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}catch(e){return'—';}}
+    function shorten(s){return(s||'').replace('Space Launch Complex','SLC').replace('Launch Complex','LC').replace('Space Force Station','SFS').replace('Kennedy Space Center','KSC').replace('Cape Canaveral','CC').replace('Vandenberg Space Force Base','VSFB');}
+    function renderRow(key,val,cls){if(!val||val==='—'||val==='Unknown')return'';return`<div class="info-row"><div class="info-key">${key}</div><div class="info-val ${cls||''}">${val}</div></div>`;}
+
+    // ── Load ─────────────────────────────────────────────────────────────────
+    async function loadMission(){
+      const params=new URLSearchParams(window.location.search);
+      const launchName=params.get('name')||'';
+      const launchId=params.get('id')||'';
+
+      let base=null;
+      try{const r=await fetch('/api/launches');const d=await r.json();const launches=d.launches||[];base=launches.find(l=>String(l.id)===String(launchId))||launches[0];}catch(e){}
+
+      let ll2=null;
+      try{
+        const search=encodeURIComponent(launchName||(base?.name||''));
+        const r=await fetch(`https://ll.thespacedevs.com/2.3.0/launches/upcoming/?search=${search}&limit=1&format=json`);
+        const d=await r.json();ll2=(d.results||[])[0]||null;
+        if(!ll2){const r2=await fetch(`https://ll.thespacedevs.com/2.3.0/launches/?search=${search}&limit=1&format=json`);const d2=await r2.json();ll2=(d2.results||[])[0]||null;}
+      }catch(e){}
+
+      const name       =(ll2?.name||base?.name||'Unknown Mission').split('|').pop().trim();
+      const statusName =ll2?.status?.name||base?.status||'—';
+      const vehicle    =ll2?.rocket?.configuration?.full_name||base?.vehicle||'—';
+      const provider   =ll2?.launch_service_provider?.name||base?.provider||'—';
+      const padName    =ll2?.pad?.name||base?.pad||'—';
+      const location   =ll2?.pad?.location?.name||base?.location||'—';
+      const missionType=ll2?.mission?.type||'—';
+      const missionDesc=ll2?.mission?.description||'—';
+      const program    =ll2?.program?.[0]?.name||'—';
+      const t0         =ll2?.net||base?.t0||null;
+      const winOpen    =ll2?.window_start||base?.win_open||null;
+      const winClose   =ll2?.window_end||null;
+      const probability=ll2?.probability??null;
+      const wxConcerns =ll2?.weather_concerns||null;
+      const padCount   =ll2?.pad_launch_attempt_count??'—';
+      const orbitalYear=ll2?.orbital_launch_attempt_count_year??'—';
+      const agencyYear =ll2?.agency_launch_attempt_count_year??'—';
+
+      // Orbit
+      let orbitAbbrev,orbitFull;
+      if(ll2?.mission?.orbit){orbitAbbrev=ll2.mission.orbit.abbrev;orbitFull=ll2.mission.orbit.name;}
+      else{const inf=inferOrbit(name,missionDesc,vehicle);orbitAbbrev=inf.abbrev+' *';orbitFull=inf.name;}
+      orbitType=orbitAbbrev.replace(' *','');
+
+      // Title
+      const shortName=name.length>28?name.slice(0,26)+'…':name;
+      document.getElementById('page-title').textContent=shortName.toUpperCase();
+
+      // Status badge — live countdown or launched
+      const badge=document.getElementById('status-badge');
+      const sl=statusName.toLowerCase();
+      if(sl.includes('hold')){
+        badge.textContent='HOLD';badge.className='status-badge badge-hold';
+      } else if(t0){
+        function updateBadge(){
+          const diff=new Date(t0)-new Date();
+          if(diff<=0){
+            badge.textContent='LAUNCHED';badge.className='status-badge badge-success';
+            return;
+          }
+          badge.className='status-badge badge-go';
+          const d=Math.floor(diff/86400000);
+          const h=Math.floor((diff%86400000)/3600000);
+          const m=Math.floor((diff%3600000)/60000);
+          const s=Math.floor((diff%60000)/1000);
+          const hh=String(h).padStart(2,'0'),mm=String(m).padStart(2,'0'),ss=String(s).padStart(2,'0');
+          badge.textContent=d>0?`T− ${d}d ${hh}:${mm}:${ss}`:`T− ${hh}:${mm}:${ss}`;
+        }
+        updateBadge();
+        setInterval(updateBadge,1000);
+      } else {
+        badge.textContent=statusName.toUpperCase()||'TBD';
+        badge.className='status-badge badge-tbd';
+      }
+
+      // Orbit pill
+      document.getElementById('orbit-pill').textContent=`${orbitFull.toUpperCase()} · ${orbitAbbrev}`;
+
+      // Window bar
+      if(winOpen&&winClose&&t0){
+        const openMs=new Date(winOpen).getTime(),closeMs=new Date(winClose).getTime(),t0Ms=new Date(t0).getTime();
+        const t0Pct=Math.round(Math.max(5,Math.min(95,((t0Ms-openMs)/(closeMs-openMs))*100)));
+        document.getElementById('dot-t0').style.left=t0Pct+'%';
+        document.getElementById('win-open-str').textContent=fmtUTC(winOpen)+' OPEN';
+        document.getElementById('win-close-str').textContent='CLOSE '+fmtUTC(winClose);
+      } else {
+        document.getElementById('dot-open').style.display=winOpen?'':'none';
+        document.getElementById('dot-close').style.display=winClose?'':'none';
+        document.getElementById('win-open-str').textContent=winOpen?fmtUTC(winOpen)+' OPEN':'— OPEN';
+        document.getElementById('win-close-str').textContent=winClose?'CLOSE '+fmtUTC(winClose):'CLOSE —';
+      }
+      const t0El=document.getElementById('win-t0-str');
+      if(t0){t0El.textContent='T-0 · '+fmtDate(t0).toUpperCase()+' · '+fmtUTC(t0);t0El.className='win-t0';}
+      else{t0El.textContent='T-0 · TBD';t0El.className='win-t0 tbd';}
+
+      // Info rows
+      document.getElementById('info-scroll').innerHTML=[
+        renderRow('Mission',name,'blue'),
+        renderRow('Mission Type',missionType,''),
+        renderRow('Destination',orbitFull,'green'),
+        renderRow('Provider',provider,''),
+        renderRow('Vehicle',vehicle,''),
+        renderRow('Launch Site',location,''),
+        renderRow('Pad',shorten(padName),''),
+        renderRow('Program',program,'yellow'),
+        probability!=null?renderRow('Probability',probability+'%',probability>=80?'green':probability>=50?'yellow':'muted'):'',
+        missionDesc&&missionDesc!=='—'?`<div class="info-row" style="align-items:flex-start;padding:8px 14px;"><div class="info-key" style="padding-top:1px;flex-shrink:0;">Description</div><div class="info-val" style="font-size:9px;color:rgba(255,255,255,0.32);text-align:right;max-width:270px;line-height:1.6;">${missionDesc}</div></div>`:'',
+      ].join('');
+
+      // Weather
+      try{
+        const wr=await fetch('/api/weather');const wx=await wr.json();
+        document.getElementById('wx-temp').textContent=Math.round(wx.temp_f)+'°F';
+        document.getElementById('wx-wind').textContent=Math.round(wx.wind_speed)+'mph';
+        document.getElementById('wx-cloud').textContent=(wx.cloud_cover||0)+'%';
+        document.getElementById('wx-precip').textContent=(wx.precip||0).toFixed(1)+'"';
+        document.getElementById('wx-wrap').style.display='block';
+        const goPill=document.getElementById('go-pill'),goText=document.getElementById('go-text');
+        if(wxConcerns){goPill.textContent='CONCERN';goPill.className='go-pill go-yellow';goText.textContent=wxConcerns;}
+        else if(wx.cloud_cover>80||wx.wind_speed>25){goPill.textContent='MONITOR';goPill.className='go-pill go-yellow';goText.textContent='Weather conditions marginal';}
+        else{goPill.textContent='GO';goPill.className='go-pill go-green';goText.textContent='No weather concerns reported';}
+      }catch(e){
+        document.getElementById('wx-wrap').style.display='block';
+        document.getElementById('go-text').textContent='Weather unavailable';
+      }
+
+      // Rocket strip
+      document.getElementById('rocket-name').textContent=vehicle;
+      document.getElementById('rocket-sub').textContent=provider+' · Launch Vehicle';
+      drawRocket();
+      const tags=[];const vl=vehicle.toLowerCase();
+      if(vl.includes('block 5')||vl.includes('reusable'))tags.push('REUSABLE');
+      if(vl.includes('falcon 9')||vl.includes('electron')||vl.includes('kuaizhou'))tags.push('2-STAGE');
+      if(vl.includes('starship')||vl.includes('sls'))tags.push('SUPER HEAVY');
+      if(vl.includes('heavy'))tags.push('HEAVY LIFT');
+      tags.push(orbitAbbrev.replace(' *',''));
+      document.getElementById('rocket-tags').innerHTML=tags.map(t=>`<span class="rocket-tag">${t}</span>`).join('');
+      document.getElementById('stat-orbital').textContent=orbitalYear;
+      document.getElementById('stat-agency').textContent=agencyYear;
+      document.getElementById('stat-pad').textContent=padCount;
+    }
+
+    loadMission();
+  </script>
+</body>
+</html>

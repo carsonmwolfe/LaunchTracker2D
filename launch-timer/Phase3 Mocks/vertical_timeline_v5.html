@@ -1,0 +1,146 @@
+
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #080810; }</style>
+<canvas id="c" width="800" height="510"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const MILESTONES = [
+  {label:'PROP LOAD',    t:-2280},
+  {label:'ENGINE CHILL', t:-420},
+  {label:'STRONGBACK',   t:-270},
+  {label:'STARTUP',      t:-60},
+  {label:'IGNITION',     t:-3},
+  {label:'LIFTOFF',      t:0},
+  {label:'MAX-Q',        t:72},
+  {label:'MECO',         t:145},
+  {label:'STAGE SEP',    t:149},
+  {label:'FAIRING SEP',  t:178},
+  {label:'ENTRY BURN',   t:361},
+  {label:'LANDING',      t:500},
+  {label:'SECO-1',       t:532},
+  {label:'DEPLOY',       t:3691},
+];
+
+let simElapsed = -253;
+let lastTick = Date.now();
+let smoothOffset = 0;
+
+function getCurrentIdx(e) {
+  let idx = 0;
+  for (let i = 0; i < MILESTONES.length; i++) {
+    if (e >= MILESTONES[i].t) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function tStr(t) {
+  const a=Math.abs(t), m=Math.floor(a/60), s=a%60;
+  return (t<0?'T-':'T+')+m+':'+String(s).padStart(2,'0');
+}
+
+function draw() {
+  const W=800, H=510;
+  ctx.clearRect(0,0,W,H);
+
+  // Scene
+  ctx.fillStyle='#080810'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0a0a1e'; ctx.fillRect(0,0,W,380);
+  ctx.fillStyle='rgba(255,255,255,0.4)';
+  [[50,20],[150,45],[280,18],[420,38],[560,22],[100,80],[350,70]].forEach(([x,y])=>ctx.fillRect(x,y,1,1));
+  ctx.fillStyle='#3a6020'; ctx.fillRect(0,380,W,40);
+  ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,415,W,15);
+  ctx.fillStyle='rgba(8,8,18,0.97)'; ctx.fillRect(0,430,W,80);
+  ctx.strokeStyle='rgba(0,232,122,0.35)'; ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,430);ctx.lineTo(W,430);ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 18px Courier New'; ctx.textAlign='left';
+  ctx.fillText('Starlink Group 17-15', 20, 458);
+  ctx.fillStyle='#ffd93d'; ctx.font='11px Courier New';
+  ctx.fillText('Mar 20, 2026  ·  Falcon 9  ·  SpaceX  ·  SLC-4E', 20, 478);
+  const abs2=Math.abs(simElapsed), mm=Math.floor(abs2/60), ss=abs2%60;
+  ctx.font='bold 30px Courier New'; ctx.textAlign='center';
+  ctx.fillStyle='#00e87a';
+  ctx.fillText((simElapsed<0?'T- ':'T+ ')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'), 320, 110);
+
+  // ── TIMELINE ─────────────────────────────────────────────────────────────
+  const currentIdx = getCurrentIdx(simElapsed);
+  smoothOffset += (currentIdx * 70 - smoothOffset) * 0.08;
+
+  const dotX   = 762;
+  const centerY = 190; // center of sky area, well above grass
+  const spacing = 70;
+
+  // Only draw current-1, current, current+1
+  const visible = [currentIdx-1, currentIdx, currentIdx+1];
+
+  visible.forEach(i => {
+    if (i < 0 || i >= MILESTONES.length) return;
+    const m = MILESTONES[i];
+    const y = centerY + (i * spacing) - smoothOffset;
+    if (y < 20 || y > 360) return; // never overlap grass
+
+    const isDone    = simElapsed > m.t;
+    const isCurrent = i === currentIdx && !isDone;
+    const isPast    = i === currentIdx - 1;
+    const isFuture  = i === currentIdx + 1;
+
+    // Opacity per role
+    const opacity = isCurrent ? 1.0 : 0.35;
+    const scale   = isCurrent ? 1.0 : 0.7;
+
+    // Connecting line between items
+    if (i < MILESTONES.length - 1 && visible.includes(i+1)) {
+      const ny = centerY + (i+1)*spacing - smoothOffset;
+      if (ny < 370) {
+        ctx.strokeStyle = isDone
+          ? `rgba(0,232,122,0.3)`
+          : `rgba(255,255,255,0.08)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();ctx.moveTo(dotX, y+7);ctx.lineTo(dotX, ny-7);ctx.stroke();
+      }
+    }
+
+    // Dot
+    const r = Math.round(5 * scale);
+    if (isDone) {
+      ctx.fillStyle = `rgba(0,232,122,${opacity})`;
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
+    } else if (isCurrent) {
+      const pulse = 0.5+0.5*Math.sin(Date.now()/300);
+      ctx.fillStyle = `rgba(255,211,61,${0.15*pulse})`;
+      ctx.beginPath();ctx.arc(dotX,y,r+5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffd93d';
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.strokeStyle=`rgba(255,255,255,${opacity*0.4})`;
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(dotX,y,r,0,Math.PI*2);ctx.stroke();
+    }
+
+    // Label
+    const labelSize = isCurrent ? 9 : 7;
+    const timeSize  = isCurrent ? 7 : 6;
+
+    ctx.textAlign='right';
+    ctx.font=`bold ${labelSize}px Courier New`;
+    ctx.fillStyle = isCurrent
+      ? `rgba(255,211,61,1)`
+      : isDone
+        ? `rgba(0,232,122,0.4)`
+        : `rgba(255,255,255,0.35)`;
+    ctx.fillText(m.label, dotX-12, y+3);
+
+    ctx.font=`${timeSize}px Courier New`;
+    ctx.fillStyle=`rgba(255,255,255,${opacity*0.35})`;
+    ctx.fillText(tStr(m.t), dotX-12, y+labelSize+5);
+  });
+}
+
+function loop() {
+  draw();
+  if(Date.now()-lastTick>80){simElapsed++;lastTick=Date.now();}
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
