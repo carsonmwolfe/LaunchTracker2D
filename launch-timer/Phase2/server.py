@@ -1590,6 +1590,12 @@ def wifi_connect():
 
         if connected:
             _wlog(f'✅ CONNECTED to "{ssid}" in {round(time.time()-t_start,1)}s total')
+            # Harden the saved profile — infinite retries, power-save off
+            subprocess.run(
+                ['sudo', 'nmcli', 'connection', 'modify', ssid,
+                 'connection.autoconnect-retries', '0',
+                 '802-11-wireless.powersave', '2'],
+                capture_output=True, timeout=5)
             _data_cache['fetched_at'] = 0
             return jsonify({'ok': True})
 
