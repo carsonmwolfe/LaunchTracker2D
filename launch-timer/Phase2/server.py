@@ -1366,82 +1366,49 @@ def force_update():
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
-def _nm_client():
-    """Return a libnm NM.Client instance, or None if unavailable."""
-    try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        return NM.Client.new(None)
-    except Exception:
-        return None
+def _wlog(msg):
+    """Detailed WiFi logger — lands in server.log with a [WIFI] tag so the log
+    report shows exactly what happened, step by step, including the exact error."""
+    print(f'[{_ts()}] [WIFI] {msg}', flush=True)
 
-def _nm_wifi_device(client=None):
-    """Return the first WiFi device from NM client."""
-    try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        c = client or _nm_client()
-        if not c: return None
-        for dev in c.get_devices():
-            if dev.get_device_type() == NM.DeviceType.WIFI:
-                return dev
-    except Exception:
-        pass
-    return None
 
 @app.route('/api/wifi/scan')
 def wifi_scan():
+    # nmcli with --rescan yes forces a fresh scan and returns ALL nearby networks.
+    # (The old libnm request_scan path only returned the currently-connected AP.)
     try:
-        import gi
-        gi.require_version('NM', '1.0')
-        from gi.repository import NM
-        client = NM.Client.new(None)
-        dev = _nm_wifi_device(client)
-        if not dev:
-            return jsonify({'networks': [], 'error': 'No WiFi device'})
-        dev.request_scan(None)
-        time.sleep(4)
+        result = subprocess.run(
+            ['sudo', 'nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list', '--rescan', 'yes'],
+            capture_output=True, text=True, timeout=20)
         networks = []
         seen = set()
-        for ap in sorted(dev.get_access_points(), key=lambda a: -a.get_strength()):
-            raw = ap.get_ssid()
-            if not raw: continue
-            try: ssid = raw.get_data().decode('utf-8', errors='replace').strip()
-            except: continue
-            if not ssid or ssid in seen: continue
+        for line in result.stdout.splitlines():
+            if not line.strip():
+                continue
+            # -t output is SSID:FREQ:SECURITY. FREQ/SECURITY never contain ':', so
+            # split those two off the right; whatever's left is the SSID.
+            parts = line.rsplit(':', 2)
+            if len(parts) != 3:
+                continue
+            ssid = parts[0].replace('\\:', ':').strip()
+            if not ssid or ssid in seen:
+                continue
             seen.add(ssid)
-            freq = ap.get_frequency()
-            rsn  = ap.get_rsn_flags()
-            wpa  = ap.get_wpa_flags()
-            KEY_MGMT_8021X = 0x200  # NM_80211_AP_SEC_KEY_MGMT_802_1X
-            if (rsn & KEY_MGMT_8021X) or (wpa & KEY_MGMT_8021X):
+            freq_digits = ''.join(ch for ch in parts[1] if ch.isdigit())
+            band = '5GHz' if int(freq_digits or 0) >= 5000 else '2.4GHz'
+            sec_raw = parts[2].strip()
+            if '802.1X' in sec_raw or 'EAP' in sec_raw:
                 sec = 'Enterprise'
-            elif rsn or wpa:
+            elif sec_raw:
                 sec = 'WPA2'
             else:
                 sec = 'Open'
-            networks.append({'ssid': ssid, 'band': '5GHz' if freq >= 5000 else '2.4GHz', 'security': sec})
+            networks.append({'ssid': ssid, 'band': band, 'security': sec})
+        _wlog(f'scan: found {len(networks)} network(s): {", ".join(n["ssid"] for n in networks) or "(none)"}')
         return jsonify({'networks': networks})
     except Exception as e:
-        # Fallback to nmcli
-        try:
-            subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], capture_output=True, timeout=10)
-            result = subprocess.check_output(['nmcli', '-t', '-f', 'SSID,FREQ,SECURITY', 'dev', 'wifi', 'list'], text=True, timeout=15)
-            networks = []
-            seen = set()
-            for line in result.strip().split('\n'):
-                parts = line.split(':')
-                ssid = parts[0].strip() if parts else ''
-                if not ssid or ssid in seen: continue
-                seen.add(ssid)
-                freq = parts[1].strip() if len(parts) > 1 else ''
-                sec  = parts[2].strip() if len(parts) > 2 else ''
-                networks.append({'ssid': ssid, 'band': '5GHz' if freq.startswith('5') else '2.4GHz', 'security': sec})
-            return jsonify({'networks': networks})
-        except Exception as e2:
-            return jsonify({'networks': [], 'error': str(e2)})
+        _wlog(f'scan ERROR: {type(e).__name__}: {e}')
+        return jsonify({'networks': [], 'error': str(e)})
 
 @app.route('/api/wifi/current')
 def wifi_current():
@@ -1504,6 +1471,15 @@ def wifi_diag():
                 break
     except Exception as e:
         out['active'] = f'err:{e}'
+    try:
+        devs = re.findall(r'Interface (\S+)', subprocess.run(
+            ['iw', 'dev'], capture_output=True, text=True, timeout=5).stdout)
+        if devs:
+            ps = subprocess.run(['iw', 'dev', devs[0], 'get', 'power_save'],
+                                capture_output=True, text=True, timeout=5).stdout
+            out['power_save'] = 'on' if 'on' in ps.lower() else 'off'
+    except Exception as e:
+        out['power_save'] = f'err:{e}'
     return jsonify(out)
 
 @app.route('/api/wifi/restart', methods=['POST'])
@@ -1525,39 +1501,28 @@ def wifi_connect():
     password  = data.get('password', '')
     is_open   = data.get('open', False)
     is_hidden = data.get('hidden', False)
-    print(f'[{_ts()}] WiFi connect: ssid="{ssid}" pw_len={len(password)} open={is_open} hidden={is_hidden}')
+    _wlog('──────── CONNECT REQUEST ────────')
+    _wlog(f'ssid="{ssid}"  pw_len={len(password)}  open={is_open}  hidden={is_hidden}')
 
     if not ssid:
+        _wlog('REJECTED: no SSID given')
         return jsonify({'ok': False, 'error': 'No network selected'})
     if not is_open and not password:
+        _wlog('REJECTED: no password given')
         return jsonify({'ok': False, 'error': 'No password provided'})
 
+    t_start = time.time()
     try:
-        # Restart NM to clear cached secrets (a failed prior attempt poisons them).
-        # Prefer systemctl restart (cleanest), fall back to nmcli networking off/on
-        # if sudoers doesn't allow systemctl (older Pi images missing that entry).
-        r = subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'],
-                           capture_output=True, text=True, timeout=15)
-        print(f'[{_ts()}] NM restart rc={r.returncode} {r.stderr.strip()[:80]}')
-        if r.returncode != 0:
-            print(f'[{_ts()}] NM restart not permitted — falling back to nmcli networking off/on')
-            subprocess.run(['sudo', 'nmcli', 'networking', 'off'],
-                           capture_output=True, text=True, timeout=10)
-            time.sleep(1)
-            subprocess.run(['sudo', 'nmcli', 'networking', 'on'],
-                           capture_output=True, text=True, timeout=10)
+        cur = subprocess.run(['nmcli', '-t', '-f', 'NAME,DEVICE,STATE', 'con', 'show', '--active'],
+                             capture_output=True, text=True, timeout=5).stdout.strip().replace('\n', ' | ')
+        _wlog(f'active connections before: {cur or "(none)"}')
 
-        # Poll for NM to come back up instead of a fixed sleep (slow Pis vary)
-        for _ in range(20):  # up to ~10s
-            if subprocess.run(['nmcli', 'general', 'status'],
-                              capture_output=True, timeout=3).returncode == 0:
-                break
-            time.sleep(0.5)
-
-        # Delete ALL saved profiles whose SSID field matches — not just by profile name.
-        # NM sometimes creates "SSID 1" duplicates; deleting only by name leaves stale
-        # profiles with cached wrong secrets that cause false "wrong password" errors.
+        # Delete stale saved profile(s) for this SSID so a previous failed attempt's
+        # cached wrong password can't poison this one — but NEVER the live connection.
         try:
+            active = subprocess.run(
+                ['nmcli', '-t', '-f', 'NAME', 'con', 'show', '--active'],
+                capture_output=True, text=True, timeout=5).stdout.splitlines()
             con_list = subprocess.run(
                 ['sudo', 'nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
                 capture_output=True, text=True, timeout=5
@@ -1567,20 +1532,25 @@ def wifi_connect():
                 if len(parts) < 2 or parts[1] != '802-11-wireless':
                     continue
                 profile_name = parts[0]
+                if profile_name in active:
+                    _wlog(f'keeping live profile "{profile_name}" (currently in use)')
+                    continue
                 ssid_r = subprocess.run(
                     ['sudo', 'nmcli', '-g', '802-11-wireless.ssid', 'con', 'show', profile_name],
                     capture_output=True, text=True, timeout=5
                 )
                 if ssid_r.stdout.strip() == ssid:
-                    subprocess.run(['sudo', 'nmcli', 'con', 'delete', profile_name],
-                                   capture_output=True, text=True, timeout=5)
-                    print(f'[{_ts()}] Deleted stale profile: "{profile_name}"')
+                    d = subprocess.run(['sudo', 'nmcli', 'con', 'delete', profile_name],
+                                       capture_output=True, text=True, timeout=5)
+                    _wlog(f'deleted stale profile "{profile_name}" rc={d.returncode} {d.stderr.strip()}')
         except Exception as del_err:
-            print(f'[{_ts()}] Profile cleanup error (non-fatal): {del_err}')
+            _wlog(f'profile cleanup error (non-fatal): {del_err}')
 
-        # Rescan so NM has a fresh view of the AP before connecting
-        subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
-                       capture_output=True, timeout=8)
+        _wlog('rescanning for a fresh view of the AP...')
+        rs = subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
+                            capture_output=True, text=True, timeout=8)
+        if rs.returncode != 0:
+            _wlog(f'rescan rc={rs.returncode} {rs.stderr.strip()}')
         time.sleep(1)
 
         cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
@@ -1588,51 +1558,67 @@ def wifi_connect():
             cmd += ['password', password]
         if is_hidden:
             cmd += ['hidden', 'yes']
+        safe_cmd = ' '.join('****' if (password and c == password) else c for c in cmd)
 
-        def _attempt():
-            print(f'[{_ts()}] Running: {" ".join(cmd[:6])} ...')
+        def _attempt(n):
+            _wlog(f'attempt {n}: {safe_cmd}')
+            a0 = time.time()
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            print(f'[{_ts()}] rc={res.returncode} stdout={res.stdout[:150]} stderr={res.stderr[:150]}')
-            return res, res.returncode == 0 and 'successfully activated' in res.stdout
+            dt = round(time.time() - a0, 1)
+            ok = res.returncode == 0 and 'successfully activated' in res.stdout
+            _wlog(f'attempt {n} result: rc={res.returncode} took={dt}s ok={ok}')
+            if res.stdout.strip(): _wlog(f'attempt {n} stdout: {res.stdout.strip()}')
+            if res.stderr.strip(): _wlog(f'attempt {n} stderr: {res.stderr.strip()}')
+            return res, ok
 
-        result, connected = _attempt()
+        result, connected = _attempt(1)
 
-        # One automatic retry — association can be flaky on the first try
+        # Fail fast on a wrong password — retrying an auth failure just doubles the
+        # wait. Only retry a NON-auth failure (flaky association).
         if not connected:
-            print(f'[{_ts()}] First attempt failed — rescan + retry once')
-            subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
-                           capture_output=True, timeout=10)
-            time.sleep(2)
-            subprocess.run(['sudo', 'nmcli', 'con', 'delete', ssid],
-                           capture_output=True, text=True, timeout=5)
-            result, connected = _attempt()
+            err_txt = (result.stderr + result.stdout).lower()
+            wrong_pw = any(k in err_txt for k in
+                           ('secret', 'psk', '(7)', 'pre-shared', 'invalid password'))
+            if wrong_pw:
+                _wlog('classified as WRONG PASSWORD — failing fast (no retry)')
+            else:
+                _wlog('classified as association/other failure — retrying once')
+                subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
+                               capture_output=True, timeout=10)
+                time.sleep(2)
+                result, connected = _attempt(2)
 
         if connected:
+            _wlog(f'✅ CONNECTED to "{ssid}" in {round(time.time()-t_start,1)}s total')
             _data_cache['fetched_at'] = 0
             return jsonify({'ok': True})
 
-        # Get real reason from NM journal
+        # Pull the exact reason from the NetworkManager journal and log all of it.
         err = result.stderr.strip() or result.stdout.strip()
+        _wlog('── NetworkManager journal (last 15 lines) ──')
         try:
             journal = subprocess.run(
-                ['journalctl', '-u', 'NetworkManager', '-n', '10', '--no-pager', '--output=cat'],
+                ['journalctl', '-u', 'NetworkManager', '-n', '15', '--no-pager', '--output=cat'],
                 capture_output=True, text=True, timeout=5)
+            for line in journal.stdout.splitlines():
+                if line.strip():
+                    _wlog(f'  nm: {line.strip()}')
             for line in reversed(journal.stdout.splitlines()):
                 l = line.lower()
                 if any(k in l for k in ['secret', 'password', 'psk', 'auth', 'wrong', 'failed', 'dhcp', 'timeout']):
                     err = line.strip()
                     break
-        except Exception:
-            pass
+        except Exception as je:
+            _wlog(f'journal read error: {je}')
 
-        print(f'[{_ts()}] WiFi connect failed: {err[:160]}')
+        _wlog(f'❌ FAILED after {round(time.time()-t_start,1)}s — EXACT ERROR: {err[:200]}')
         return jsonify({'ok': False, 'error': err or 'Could not connect'})
 
     except subprocess.TimeoutExpired:
-        print(f'[{_ts()}] WiFi connect timed out')
+        _wlog(f'❌ TIMED OUT after {round(time.time()-t_start,1)}s (nmcli did not return within 30s)')
         return jsonify({'ok': False, 'error': 'Connection timed out — check password and signal'})
     except Exception as e:
-        print(f'[{_ts()}] WiFi connect error: {e}')
+        _wlog(f'❌ EXCEPTION: {type(e).__name__}: {e}')
         return jsonify({'ok': False, 'error': str(e)})
 
 
