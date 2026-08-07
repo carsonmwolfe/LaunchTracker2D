@@ -32,8 +32,8 @@ def _log_exit(sig=None, frame=None):  # noqa: ARG001
         sys.exit(0)
 
 atexit.register(_log_exit)
-for _s in (signal.SIGTERM, signal.SIGHUP):
-    signal.signal(_s, _log_exit)
+signal.signal(signal.SIGTERM, _log_exit)
+signal.signal(signal.SIGHUP, signal.SIG_IGN)  # nohup relies on SIGHUP being ignored
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
