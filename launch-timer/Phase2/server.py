@@ -940,14 +940,12 @@ def _auto_brightness():
                 brightness = manual_raw
             elif screen_mode == 'always_on' or display_mode == 'bright':
                 # Manual control — don't touch the backlight at all
-                time.sleep(300)
-                continue
+                pass
             elif display_mode == 'night':
                 # Sleep: respect manual pref but floor at SLEEP_MIN, cap at 40%
                 brightness = max(SLEEP_MIN, min(manual_raw, 102))
             elif not settings.get('auto_dim', True):
-                time.sleep(300)
-                continue
+                pass
             else:
                 # Day: use manual brightness preference. Night (10pm-7am): dim to minimum.
                 NIGHT_MIN = 51
@@ -969,7 +967,7 @@ def _auto_brightness():
                     pass
         except Exception as e:
             print(f'[{_ts()}] Auto brightness error: {e}')
-        time.sleep(300)
+        time.sleep(15)
 
 threading.Thread(target=_auto_brightness, daemon=True).start()
 
@@ -1545,13 +1543,6 @@ def wifi_connect():
                     _wlog(f'deleted stale profile "{profile_name}" rc={d.returncode} {d.stderr.strip()}')
         except Exception as del_err:
             _wlog(f'profile cleanup error (non-fatal): {del_err}')
-
-        _wlog('rescanning for a fresh view of the AP...')
-        rs = subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
-                            capture_output=True, text=True, timeout=8)
-        if rs.returncode != 0:
-            _wlog(f'rescan rc={rs.returncode} {rs.stderr.strip()}')
-        time.sleep(1)
 
         cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
         if not is_open:
