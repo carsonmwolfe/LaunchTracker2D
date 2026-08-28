@@ -6,13 +6,29 @@
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
 
 REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
-# Default to release branch — override by creating /home/pi/.rangetrack_branch
+
+# ── Data area (matches server.py DATA_DIR / start.sh) ──────────────────────────
+# On hardened read-only units, persistent state lives on the writable /data
+# partition. On legacy units it stays in /home/pi exactly as before.
+if [ -d /data/rangetrack ] && [ -w /data ]; then
+    DATA_DIR="/data/rangetrack"
+    HARDENED=1
+else
+    DATA_DIR="/home/pi"
+    HARDENED=0
+fi
+BRANCH_FILE="$DATA_DIR/.rangetrack_branch"
+LAST_CHECK_FILE="$DATA_DIR/.rangetrack_last_check"
+UPDATE_LOG="$DATA_DIR/.rangetrack_updates.json"
+SERVER_LOG_FILE="$DATA_DIR/server.log"
+[ "$HARDENED" -eq 1 ] || SERVER_LOG_FILE="/home/pi/server.log"
+
+# Default to release branch — override by creating <DATA_DIR>/.rangetrack_branch
 BRANCH="release"
-if [ -f /home/pi/.rangetrack_branch ]; then
-    BRANCH=$(cat /home/pi/.rangetrack_branch | tr -d '[:space:]')
+if [ -f "$BRANCH_FILE" ]; then
+    BRANCH=$(cat "$BRANCH_FILE" | tr -d '[:space:]')
 fi
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
-UPDATE_LOG="/home/pi/.rangetrack_updates.json"
 LOCK_FILE="/tmp/rangetrack_update.lock"
 
 # ── Lock — prevent supervisor and cron colliding ───────────────────────────────
@@ -22,7 +38,36 @@ if [ -e "$LOCK_FILE" ]; then
 fi
 trap 'rm -f "$LOCK_FILE"' EXIT
 touch "$LOCK_FILE"
-date -u '+%Y-%m-%dT%H:%M:%SZ' > /home/pi/.rangetrack_last_check
+date -u '+%Y-%m-%dT%H:%M:%SZ' > "$LAST_CHECK_FILE"
+
+# ── OTA policy on hardened (read-only root) units ──────────────────────────────
+# THE KEY DESIGN TENSION: git-OTA does `git reset --hard`, which writes into the
+# repo. On a read-only overlay root those writes land in a volatile tmpfs upper
+# layer and vanish on the next reboot — so a git-OTA on a read-only unit is at
+# best a no-op-until-reboot and at worst leaves an inconsistent half-written tree
+# in RAM. The professional appliance model is: read-only units are updated by
+# reflashing a new golden image, NOT by pulling code onto a live device.
+#
+# So on a hardened unit we DISABLE the destructive git pull and instead only run
+# the safe, idempotent provisioning (cron/sudoers/etc.) plus log rotation. Code
+# updates come from a new image. This is documented in READONLY_IMAGE.md.
+#
+# Escape hatch for maintainers ONLY: `touch /data/rangetrack/.allow_git_ota`
+# lets a single run pull code onto the LIVE overlay. IMPORTANT: with the
+# raspi-config overlayfs, that git reset writes into the tmpfs upper layer, so
+# the new code runs immediately but is DISCARDED on the next reboot (the real
+# read-only root is unchanged). This is intentionally only useful for "try this
+# commit right now" testing on a bench unit. To make a code change permanent on
+# a fleet unit, build and reflash a new golden image. See READONLY_IMAGE.md.
+if [ "$HARDENED" -eq 1 ] && [ ! -f "$DATA_DIR/.allow_git_ota" ]; then
+    echo "$LOG_PREFIX Hardened read-only unit: git-OTA disabled (reflash image to update code)."
+    echo "$LOG_PREFIX Running safe provisioning + log rotation only."
+    # Log rotation is safe: SERVER_LOG_FILE is on the writable /data partition.
+    if [ -f "$SERVER_LOG_FILE" ]; then
+        tail -500 "$SERVER_LOG_FILE" > "$SERVER_LOG_FILE.tmp" && mv "$SERVER_LOG_FILE.tmp" "$SERVER_LOG_FILE"
+    fi
+    exit 0
+fi
 
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 
@@ -170,8 +215,8 @@ done
 # ── Clear cache + restart ──────────────────────────────────────────────────────
 
 # Rotate server log — keep last 500 lines to prevent SD card fill
-if [ -f /home/pi/server.log ]; then
-    tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
+if [ -f "$SERVER_LOG_FILE" ]; then
+    tail -500 "$SERVER_LOG_FILE" > /tmp/server.log.tmp && mv /tmp/server.log.tmp "$SERVER_LOG_FILE"
 fi
 
 # Rotate health log — keep last 1000 lines
@@ -181,22 +226,31 @@ fi
 
 # Restart Flask server
 echo "$LOG_PREFIX Restarting server..."
-pkill -f "python3 server.py" 2>/dev/null
-fuser -k 5001/tcp 2>/dev/null || true
-sleep 2
 cd "$REPO_DIR/launch-timer/Phase2" || exit 1
-nohup nice -n -10 python3 server.py >> /home/pi/server.log 2>&1 &
-SERVER_PID=$!
+if command -v systemctl >/dev/null 2>&1 && systemctl cat rangetrack-server.service >/dev/null 2>&1; then
+    # systemd owns Flask (hardened escape-hatch path): let it restart cleanly.
+    sudo systemctl restart rangetrack-server.service 2>/dev/null || \
+        systemctl --user restart rangetrack-server.service 2>/dev/null || true
+    SERVER_PID=""
+else
+    pkill -f "python3 server.py" 2>/dev/null
+    fuser -k 5001/tcp 2>/dev/null || true
+    sleep 2
+    # NOTE: `nice -n -10` was removed — it requires root and FAILS on these Pis,
+    # which killed the restart entirely. -B => never write .pyc bytecode.
+    nohup python3 -B server.py >> "$SERVER_LOG_FILE" 2>&1 &
+    SERVER_PID=$!
+fi
 
 # Wait for server to actually respond before reloading Chromium (max 20s)
 for i in $(seq 1 13); do
     if curl -s -o /dev/null http://localhost:5001/ --max-time 1 2>/dev/null; then
-        echo "$LOG_PREFIX Server ready (PID $SERVER_PID)"
+        echo "$LOG_PREFIX Server ready${SERVER_PID:+ (PID $SERVER_PID)}"
         break
     fi
     sleep 1.5
 done
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+if [ -n "$SERVER_PID" ] && ! kill -0 "$SERVER_PID" 2>/dev/null; then
     echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 fi
 
@@ -217,13 +271,13 @@ if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
         --password-store=basic --disable-renderer-accessibility \
         --disable-extensions --disable-sync --disable-component-update \
         --renderer-process-limit=1 --app="http://localhost:5001/" \
-        >> /home/pi/server.log 2>&1 &
+        >> "$SERVER_LOG_FILE" 2>&1 &
     echo $! > /tmp/rangetrack_browser.pid
     echo "$LOG_PREFIX Chromium restarted (PID $!)"
 else
     XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
         nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
-        >> /home/pi/server.log 2>&1 &
+        >> "$SERVER_LOG_FILE" 2>&1 &
     echo $! > /tmp/rangetrack_browser.pid
     echo "$LOG_PREFIX WebKit restarted (PID $!)"
 fi
@@ -233,9 +287,10 @@ fi
 SHORT=$(git -C "$REPO_DIR" log -1 --pretty="%s" 2>/dev/null)
 TIME=$(date '+%Y-%m-%d %H:%M:%S')
 COMMIT_MSG="$SHORT" COMMIT_TIME="$TIME" COMMIT_FROM="$LOCAL" COMMIT_TO="$NEW_HEAD" \
+UPDATE_LOG="$UPDATE_LOG" \
 python3 - <<'PYEOF'
 import json, os
-log_file = os.environ['HOME'] + '/.rangetrack_updates.json'
+log_file = os.environ.get('UPDATE_LOG') or (os.environ['HOME'] + '/.rangetrack_updates.json')
 entry = {
     'time':   os.environ.get('COMMIT_TIME', ''),
     'commit': os.environ.get('COMMIT_MSG',  ''),

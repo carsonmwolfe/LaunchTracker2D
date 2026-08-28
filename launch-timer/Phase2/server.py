@@ -24,7 +24,10 @@ import atexit
 def _log_exit(sig=None, frame=None):  # noqa: ARG001
     label = f'signal {sig}' if sig else 'normal exit'
     try:
-        with open('/home/pi/server.log', 'a') as f:
+        # LOG_FILE is defined after this function at import time; fall back to the
+        # historical path if we somehow exit before it is bound.
+        _lf = globals().get('LOG_FILE', '/home/pi/server.log')
+        with open(_lf, 'a') as f:
             f.write(f'[{datetime.now().strftime("%H:%M:%S")}] Server process exiting ({label})\n')
     except Exception:
         pass
@@ -40,6 +43,71 @@ if getattr(sys, 'frozen', False):
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# ── Persistent writable data area ──────────────────────────────────────────────
+# On hardened (read-only-root / overlayfs) units the repo and /home live on a
+# read-only or volatile filesystem, so anything the app must persist across
+# reboots has to live on a dedicated writable partition mounted at /data.
+#
+# DATA_DIR resolves in priority order:
+#   1. $RANGETRACK_DATA_DIR                       (explicit override, tests/dev)
+#   2. /data/rangetrack   IF /data is writable    (hardened read-only image)
+#   3. /home/pi                                    (legacy / non-hardened units)
+#   4. BASE_DIR                                    (dev machine, last resort)
+#
+# Falling back keeps EXISTING units and the dev machine working unchanged: on
+# those, DATA_DIR is /home/pi and every path below stays byte-for-byte where it
+# was before this change.
+def _resolve_data_dir():
+    override = os.environ.get('RANGETRACK_DATA_DIR')
+    if override:
+        try:
+            os.makedirs(override, exist_ok=True)
+            return override
+        except Exception:
+            pass
+    # Hardened image: dedicated writable partition mounted at /data
+    if os.path.isdir('/data') and os.access('/data', os.W_OK):
+        d = '/data/rangetrack'
+        try:
+            os.makedirs(d, exist_ok=True)
+            return d
+        except Exception:
+            pass
+    # Legacy units: home dir (writable on non-read-only roots)
+    home = os.path.expanduser('~')
+    if home and os.path.isdir(home) and os.access(home, os.W_OK):
+        return home
+    return BASE_DIR
+
+DATA_DIR = _resolve_data_dir()
+# HARDENED == "use the dedicated writable data area for ALL persistent files".
+# True on a real hardened unit (/data partition) OR when RANGETRACK_DATA_DIR is
+# set (tests). False on legacy units where DATA_DIR fell back to /home/pi (or
+# BASE_DIR), so every path below stays byte-for-byte at its historical location.
+_LEGACY_DIRS = {os.path.expanduser('~'), BASE_DIR}
+HARDENED = DATA_DIR not in _LEGACY_DIRS
+
+def _data_path(name):
+    """Path for a persistent runtime file inside the writable data area."""
+    return os.path.join(DATA_DIR, name)
+
+# Log file: /data/rangetrack/server.log on hardened units, /home/pi/server.log
+# on legacy units (preserving the historical location + Mission Control reader).
+if HARDENED:
+    LOG_FILE = _data_path('server.log')
+else:
+    LOG_FILE = '/home/pi/server.log'
+
+# Files shared with update.sh / start.sh. On hardened units these move to /data;
+# the shell scripts resolve the SAME paths (they check for /data/rangetrack too),
+# so both sides stay in agreement.
+if HARDENED:
+    BRANCH_FILE      = _data_path('.rangetrack_branch')
+    LAST_CHECK_FILE  = _data_path('.rangetrack_last_check')
+else:
+    BRANCH_FILE      = '/home/pi/.rangetrack_branch'
+    LAST_CHECK_FILE  = '/home/pi/.rangetrack_last_check'
+
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, 'static'))
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -51,7 +119,22 @@ def _cors(response):
     response.headers['Access-Control-Allow-Private-Network'] = 'true'
     return response
 
-SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
+# settings.json must survive reboots. On hardened units it lives on the writable
+# /data partition; on legacy units it stays in the repo dir exactly as before.
+# On first boot of a hardened unit, seed /data copy from the repo default if the
+# repo ships one and /data doesn't have one yet.
+if HARDENED:
+    SETTINGS_FILE = _data_path('settings.json')
+    if not os.path.exists(SETTINGS_FILE):
+        _repo_settings = os.path.join(BASE_DIR, 'settings.json')
+        if os.path.exists(_repo_settings):
+            try:
+                import shutil as _shutil
+                _shutil.copy(_repo_settings, SETTINGS_FILE)
+            except Exception:
+                pass
+else:
+    SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
 LL2_BASE      = 'https://ll.thespacedevs.com/2.3.0'
 LL2_TIMEOUT   = 15
 RELAY_URL     = 'http://45.55.245.193'  # DO relay — Pi fetches from here instead of LL2 directly
@@ -405,8 +488,15 @@ def _is_valid(launch):
 
 # ── Central data cache ────────────────────────────────────────────────────────
 
-CACHE_FILE      = os.path.join(BASE_DIR, 'data_cache.json')
-T0_HIST_FILE    = os.path.join(os.path.expanduser('~'), '.rangetrack_t0_history.json')
+# data_cache.json is only a cache (safe to lose) but on hardened units BASE_DIR
+# is read-only, so it MUST live on the writable partition or every write fails.
+# t0_history is genuine state we want to keep; on hardened units ~ is volatile.
+if HARDENED:
+    CACHE_FILE   = _data_path('data_cache.json')
+    T0_HIST_FILE = _data_path('.rangetrack_t0_history.json')
+else:
+    CACHE_FILE   = os.path.join(BASE_DIR, 'data_cache.json')
+    T0_HIST_FILE = os.path.join(os.path.expanduser('~'), '.rangetrack_t0_history.json')
 T0_HIST_SEED    = os.path.join(BASE_DIR, 't0_history_seed.json')
 _cache_lock   = threading.Lock()   # guards all _data_cache mutations
 _weather_lock = threading.Lock()   # guards _weather_cache reads/writes
@@ -729,7 +819,9 @@ def _background_thread():
                 _weather_cache['data']    = data
                 _weather_cache['fetched'] = now
 
-_UNIT_ID_FILE = '/home/pi/.rangetrack_unit_id'
+# Unit identity must persist across reboots — on hardened units that means the
+# writable /data partition, not volatile /home.
+_UNIT_ID_FILE = _data_path('.rangetrack_unit_id') if HARDENED else '/home/pi/.rangetrack_unit_id'
 
 def _get_unit_id():
     # Return cached ID if already resolved this session
@@ -901,7 +993,7 @@ def _execute_command(cmd):
             # Applies on the next update. Lets us keep V4 on a branch only test units pull.
             branch = cmd.split(':', 1)[1].strip()
             if branch and all(c.isalnum() or c in '-_./' for c in branch):
-                with open('/home/pi/.rangetrack_branch', 'w') as f:
+                with open(BRANCH_FILE, 'w') as f:
                     f.write(branch + '\n')
                 print(f'[{_ts()}] Update branch set to "{branch}" — applies on next update')
     except Exception as e:
@@ -1271,7 +1363,7 @@ def api_device():
     except Exception:
         last_deploy = '—'
     try:
-        raw = open('/home/pi/.rangetrack_last_check').read().strip()
+        raw = open(LAST_CHECK_FILE).read().strip()
         from datetime import timezone
         ts = datetime.fromisoformat(raw.replace('Z', '+00:00'))
         diff = int((datetime.now(timezone.utc) - ts).total_seconds())
@@ -1287,7 +1379,7 @@ def api_log():
     """Return last N lines of server.log for Mission Control log viewer."""
     n = min(int(request.args.get('n', 80)), 200)
     try:
-        lines = open('/home/pi/server.log').readlines()
+        lines = open(LOG_FILE).readlines()
         return jsonify({'lines': [l.rstrip() for l in lines[-n:]]})
     except Exception as e:
         return jsonify({'lines': [], 'error': str(e)})

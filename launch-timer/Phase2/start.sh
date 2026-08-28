@@ -1,11 +1,30 @@
 #!/bin/bash
 APP_DIR="/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2"
-SERVER_LOG="/home/pi/server.log"
 APP_URL="http://localhost:5001/"
+
+# ── Resolve log location (matches server.py DATA_DIR logic) ─────────────────────
+# Hardened units keep logs on the writable /data partition; legacy units use
+# /home/pi/server.log exactly as before.
+if [ -d /data/rangetrack ] && [ -w /data ]; then
+    SERVER_LOG="/data/rangetrack/server.log"
+    export RANGETRACK_DATA_DIR="/data/rangetrack"
+else
+    SERVER_LOG="/home/pi/server.log"
+fi
 
 export DISPLAY=${DISPLAY:-:0}
 export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+
+# ── Is Flask supervised by systemd on this unit? ────────────────────────────────
+# On hardened units, systemd owns the Flask server (Restart=always). start.sh
+# then ONLY launches + supervises the browser. On legacy units the service is
+# absent, so start.sh keeps its original behaviour of launching Flask itself.
+SYSTEMD_FLASK=0
+if command -v systemctl >/dev/null 2>&1 && \
+   systemctl cat rangetrack-server.service >/dev/null 2>&1; then
+    SYSTEMD_FLASK=1
+fi
 
 # Only one instance of start.sh should ever run
 PIDFILE="/tmp/rangetrack_start.pid"
@@ -16,25 +35,38 @@ fi
 echo $$ > "$PIDFILE"
 trap 'rm -f "$PIDFILE"' EXIT
 
-# Kill anything left from a previous run
+# Kill anything left from a previous run (browser only; systemd owns Flask)
 pkill -f webkit_launch 2>/dev/null
 pkill -f chromium 2>/dev/null
-fuser -k 5001/tcp 2>/dev/null || true
 
-# Corruption guard: if server.py is empty restore from backup, else bail
-if [ ! -s "$APP_DIR/server.py" ]; then
-    BACKUP="/home/pi/.rangetrack_server_backup.py"
-    if [ -s "$BACKUP" ]; then
-        cp "$BACKUP" "$APP_DIR/server.py"
-        echo "[$(date '+%H:%M:%S')] server.py restored from backup" >> "$SERVER_LOG"
-    else
-        echo "[$(date '+%H:%M:%S')] FATAL: server.py missing and no backup" >> "$SERVER_LOG"
-        exit 1
+start_flask() {
+    # Legacy path only — systemd handles this on hardened units.
+    fuser -k 5001/tcp 2>/dev/null || true
+    # Corruption guard: if server.py is empty restore from backup, else bail
+    if [ ! -s "$APP_DIR/server.py" ]; then
+        BACKUP="/home/pi/.rangetrack_server_backup.py"
+        if [ -s "$BACKUP" ]; then
+            cp "$BACKUP" "$APP_DIR/server.py"
+            echo "[$(date '+%H:%M:%S')] server.py restored from backup" >> "$SERVER_LOG"
+        else
+            echo "[$(date '+%H:%M:%S')] FATAL: server.py missing and no backup" >> "$SERVER_LOG"
+            return 1
+        fi
     fi
-fi
+    cd "$APP_DIR" || return 1
+    # -B => never write .pyc (defense against bytecode corruption on power loss)
+    nohup python3 -B server.py >> "$SERVER_LOG" 2>&1 &
+}
 
-cd "$APP_DIR" || exit 1
-nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
+if [ "$SYSTEMD_FLASK" -eq 1 ]; then
+    echo "[$(date '+%H:%M:%S')] Flask supervised by systemd — start.sh manages browser only" >> "$SERVER_LOG"
+    # Make sure the service is up (setup enables it, but be resilient).
+    systemctl is-active --quiet rangetrack-server.service || \
+        sudo systemctl start rangetrack-server.service 2>/dev/null || true
+else
+    fuser -k 5001/tcp 2>/dev/null || true
+    start_flask
+fi
 
 # Wait for server (up to 60s)
 for i in $(seq 1 60); do
@@ -75,17 +107,19 @@ launch_browser() {
 
 BROWSER_PID=$(launch_browser)
 
-# Supervisor: restart server or browser if either crashes
+# Supervisor: restart server (legacy only) or browser if either crashes
 while true; do
     sleep 15
 
     if ! curl -s -o /dev/null "$APP_URL" --max-time 20 2>/dev/null; then
         if [ -e "/tmp/rangetrack_update.lock" ]; then
             echo "[$(date '+%H:%M:%S')] Server down — update in progress, waiting" >> "$SERVER_LOG"
+        elif [ "$SYSTEMD_FLASK" -eq 1 ]; then
+            # systemd (Restart=always) is bringing it back — just log and wait.
+            echo "[$(date '+%H:%M:%S')] Server not responding — systemd restarting it" >> "$SERVER_LOG"
         else
             echo "[$(date '+%H:%M:%S')] Server down — restarting" >> "$SERVER_LOG"
-            fuser -k 5001/tcp 2>/dev/null || true
-            nohup python3 server.py >> "$SERVER_LOG" 2>&1 &
+            start_flask
             sleep 5
         fi
     fi

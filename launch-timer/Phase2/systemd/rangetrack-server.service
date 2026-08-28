@@ -1,0 +1,37 @@
+[Unit]
+Description=RangeTrack Flask backend (launch countdown API on :5001)
+# Wait for the writable data partition so settings/cache live on /data, not on
+# the volatile overlay upper layer. NetworkManager-wait-online lets first-boot
+# data fetches succeed sooner (non-fatal if it times out).
+After=network.target data.mount local-fs.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2
+
+# -B => never write .pyc bytecode. On a read-only root that would fail anyway,
+# but this is defense-in-depth: corrupted .pyc files were a confirmed field
+# failure, so we make sure they can never be created in the first place.
+# PYTHONDONTWRITEBYTECODE is belt-and-suspenders for any child python procs.
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -B server.py
+
+# Self-healing: a crash (or OOM kill) restarts the server automatically instead
+# of leaving a black/dead unit until someone power-cycles it.
+Restart=always
+RestartSec=3
+# Don't give up: appliance must keep trying forever.
+StartLimitIntervalSec=0
+
+# Logs still land where Mission Control's /api/log reader expects them. The app
+# also appends to LOG_FILE itself; journald captures stdout/stderr as a backup.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rangetrack
+
+[Install]
+WantedBy=multi-user.target

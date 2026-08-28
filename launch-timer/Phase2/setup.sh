@@ -48,6 +48,7 @@ fi
 
 chmod +x "$SERVER_DIR/update.sh"
 chmod +x "$SERVER_DIR/start.sh"
+chmod +x "$SERVER_DIR/harden.sh" 2>/dev/null || true
 log "Repo ready at $REPO_DIR"
 
 # ── 3. Timezone ────────────────────────────────────────────────────────────────
@@ -211,7 +212,7 @@ log "Cron installed — updater hourly, health check every 5min"
 
 # ── 9. Passwordless sudo for reboot ───────────────────────────────────────────
 log "Configuring passwordless reboot..."
-printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
+printf 'pi ALL=(ALL) NOPASSWD: /sbin/reboot\npi ALL=(ALL) NOPASSWD: /usr/bin/timedatectl\npi ALL=(ALL) NOPASSWD: /usr/bin/nmcli\npi ALL=(ALL) NOPASSWD: /usr/sbin/ifconfig\npi ALL=(ALL) NOPASSWD: /usr/sbin/iwlist\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart NetworkManager\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start rangetrack-server.service\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart rangetrack-server.service\npi ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop rangetrack-server.service\n' | sudo tee /etc/sudoers.d/rangetrack > /dev/null
 log "Done"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
@@ -219,3 +220,8 @@ log ""
 log "=== Setup complete — reboot to launch ==="
 echo ""
 echo "All done. Run: sudo reboot"
+echo ""
+echo "To turn this into a bulletproof appliance (read-only root + watchdog +"
+echo "systemd-supervised Flask), first confirm the unit boots and shows the UI,"
+echo "then run:  sudo bash $SERVER_DIR/harden.sh && sudo reboot"
+echo "See $SERVER_DIR/READONLY_IMAGE.md for the full recipe and power-cut test plan."
