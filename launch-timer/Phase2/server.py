@@ -1027,6 +1027,11 @@ def _auto_brightness():
             manual_pct   = int(settings.get('brightness', 40))
             manual_raw   = int(manual_pct * 2.55)
 
+            # None = "leave the backlight alone this cycle" (manual/always-on modes).
+            # Must be initialized so the always_on / not-auto_dim branches below can
+            # fall through to the `if brightness is not None` guard without throwing.
+            brightness = None
+
             # Wake override — user tapped screen, hold manual brightness until sunrise
             if _wake_until and time.time() < _wake_until:
                 brightness = manual_raw
