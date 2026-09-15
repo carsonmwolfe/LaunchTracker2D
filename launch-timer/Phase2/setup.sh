@@ -51,6 +51,19 @@ chmod +x "$SERVER_DIR/start.sh"
 chmod +x "$SERVER_DIR/harden.sh" 2>/dev/null || true
 log "Repo ready at $REPO_DIR"
 
+# Seed a default settings.json so the unit boots straight to the countdown.
+# index() redirects to the first-run setup wizard whenever settings.json is
+# missing — and since settings.json is (correctly) gitignored, a fresh clone has
+# none, which would trap the kiosk on the setup screen. Create sane defaults if
+# absent (never clobber an existing file / real user prefs).
+SETTINGS_JSON="$SERVER_DIR/settings.json"
+if [ ! -f "$SETTINGS_JSON" ]; then
+    cat > "$SETTINGS_JSON" <<'SJEOF'
+{"brightness": 40, "temp_unit": "f", "site": "cape", "time_format": "local", "unit_id": "", "timezone": "America/New_York", "auto_dim": true, "display_mode": "auto", "screen_mode": "auto"}
+SJEOF
+    log "Seeded default settings.json (boots to countdown, not the setup wizard)"
+fi
+
 # ── 3. Timezone ────────────────────────────────────────────────────────────────
 echo ""
 echo "Select timezone:"
