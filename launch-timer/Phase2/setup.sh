@@ -194,6 +194,15 @@ if ! grep -q "^gpu_mem=16" "$CONFIG_FILE" 2>/dev/null; then
     log "GPU memory set to 16MB"
 fi
 
+# Disable the camera/MMAL stack. With gpu_mem=16 the bcm2835 camera driver can't
+# open its VCHI service and spams "Failed to open VCHI service" at boot — an alarming
+# message for a kiosk that has no camera. This silences it and costs zero RAM.
+if ! grep -q "^camera_auto_detect=0" "$CONFIG_FILE" 2>/dev/null; then
+    sudo sed -i '/^camera_auto_detect=/d' "$CONFIG_FILE"
+    echo "camera_auto_detect=0" | sudo tee -a "$CONFIG_FILE" > /dev/null
+    log "Camera auto-detect disabled (silences VCHI boot errors)"
+fi
+
 # Increase swap to 512MB (default is 100MB — not enough with Chromium on 512MB RAM)
 if [ -f /etc/dphys-swapfile ]; then
     sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
