@@ -423,7 +423,9 @@
 
     async function loadSettings() {
       try {
-        const r = await fetch('/api/settings');
+        // no-store: /api/settings has no cache headers, so WebKit would otherwise
+        // serve a stale cached copy and the page would "revert" to the old mode.
+        const r = await fetch('/api/settings', {cache:'no-store'});
         settings = { ...settings, ...await r.json() };
         applySettings();
       } catch(e) { applySettings(); }
