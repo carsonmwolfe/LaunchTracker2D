@@ -26,14 +26,17 @@ if command -v systemctl >/dev/null 2>&1 && \
     SYSTEMD_FLASK=1
 fi
 
-# Only one instance of start.sh should ever run
-PIDFILE="/tmp/rangetrack_start.pid"
-if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-    echo "[$(date '+%H:%M:%S')] start.sh already running (PID $(cat "$PIDFILE")) — exiting" >> "$SERVER_LOG"
+# Only one instance of start.sh should ever run. Use an ATOMIC flock, not a
+# check-then-write PID file: at boot two copies can launch near-simultaneously
+# and both pass a PID-file test before either writes it — that race launched TWO
+# browsers on a 512MB Pi and thrashed swap. flock is atomic, is held for the life
+# of this process, and releases automatically on exit (so a real restart works).
+LOCKFILE="/tmp/rangetrack_start.lock"
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    echo "[$(date '+%H:%M:%S')] start.sh already running — exiting" >> "$SERVER_LOG"
     exit 0
 fi
-echo $$ > "$PIDFILE"
-trap 'rm -f "$PIDFILE"' EXIT
 
 # Kill anything left from a previous run (browser only; systemd owns Flask)
 pkill -f webkit_launch 2>/dev/null
