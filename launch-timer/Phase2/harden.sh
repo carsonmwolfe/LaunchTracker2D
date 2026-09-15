@@ -46,7 +46,11 @@ CONFIG_TXT="$BOOT/config.txt"
 # If the root is already read-only we must NOT try to write to it here. Detect via
 # raspi-config's own state check (authoritative), falling back to the mount flags.
 ALREADY_RO=0
-if command -v raspi-config >/dev/null 2>&1 && raspi-config nonint get_overlay_now >/dev/null 2>&1; then
+# NOTE: `get_overlay_now` ECHOES the state (0=overlay active, 1=not) but always
+# EXITS 0 — so we must test its OUTPUT, not its exit code. (Testing the exit code
+# made this always report read-only and skip hardening entirely.)
+if command -v raspi-config >/dev/null 2>&1 && \
+   [ "$(raspi-config nonint get_overlay_now 2>/dev/null)" = "0" ]; then
     ALREADY_RO=1
 elif findmnt -no OPTIONS / | grep -qw ro || findmnt -no FSTYPE / | grep -qw overlay; then
     ALREADY_RO=1
