@@ -4,7 +4,7 @@ import gi, sys
 
 gi.require_version('WebKit2', '4.1')
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, WebKit2, Gdk
+from gi.repository import Gtk, WebKit2, Gdk, GLib
 
 url = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:5001/'
 
@@ -36,5 +36,14 @@ win.show_all()
 
 blank = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.BLANK_CURSOR)
 win.get_window().set_cursor(blank)
+
+# One-time reload ~20s after launch. On a slow/throttled boot (esp. a 512MB 3A+
+# with under-voltage) the first paint can come up before the heavy PNG assets are
+# decoded, leaving graphics blank until a manual refresh. Reloading once after the
+# system settles — with the images now cached — self-heals it so nobody has to.
+def _reload_once():
+    wv.reload()
+    return False  # fire only once
+GLib.timeout_add_seconds(20, _reload_once)
 
 Gtk.main()
