@@ -216,6 +216,20 @@ if ! grep -q "^camera_auto_detect=0" "$CONFIG_FILE" 2>/dev/null; then
     log "Camera auto-detect disabled (silences VCHI boot errors)"
 fi
 
+# Disable onboard audio. The bcm2835 audio DMA path intermittently oopses at boot
+# (bcm2835_finish_data / bcm2835_dma_complete_work), hanging the boot and forcing a
+# power-cycle. The kiosk has no audio, so turn it off in the device tree AND
+# blacklist the module (dtparam alone doesn't stop it from loading).
+sudo sed -i 's/^dtparam=audio=on/dtparam=audio=off/' "$CONFIG_FILE"
+grep -q "^dtparam=audio=off" "$CONFIG_FILE" || echo "dtparam=audio=off" | sudo tee -a "$CONFIG_FILE" > /dev/null
+sudo tee /etc/modprobe.d/rangetrack-noaudio.conf > /dev/null <<'AUDIOEOF'
+# Kiosk has no audio; the bcm2835 audio DMA path oopses at boot. Block it.
+blacklist snd_bcm2835
+blacklist snd_soc_bcm2835_i2s
+blacklist snd_bcm2835_soc_i2s
+AUDIOEOF
+log "Onboard audio disabled (avoids bcm2835 DMA boot oops)"
+
 # Increase swap to 512MB (default is 100MB — not enough with Chromium on 512MB RAM)
 if [ -f /etc/dphys-swapfile ]; then
     sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
