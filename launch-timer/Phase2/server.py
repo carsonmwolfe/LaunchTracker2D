@@ -1377,6 +1377,15 @@ def api_device():
                     'last_update': last_deploy, 'last_check': last_check})
 
 
+@app.route('/api/ping')
+def api_ping():
+    """Tiny liveness check for the client watchdog. Returns an empty 204 so the
+    browser has no response body to buffer — the watchdog used to poll the heavy
+    /api/data every 10s without reading the body, and those unread buffers piled
+    up as native memory on the 512MB unit until the renderer was OOM-killed."""
+    return ('', 204)
+
+
 @app.route('/api/log')
 def api_log():
     """Return last N lines of server.log for Mission Control log viewer."""

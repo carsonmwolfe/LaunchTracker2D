@@ -46,15 +46,4 @@ def _reload_once():
     return False  # fire only once
 GLib.timeout_add_seconds(20, _reload_once)
 
-# Periodic reload to flush WebKit memory. On the 512MB 3A+ the renderer slowly
-# leaks while the canvas animates; ~2.5h after the nightly reboot it exhausts RAM,
-# the OOM killer reaps the renderer, and the screen freezes on its last frame
-# (clock stuck ~06:36 with a 04:00 reboot). Reloading every 45 min resets the
-# JS/canvas heap well before it reaches that ceiling. reload() re-renders from
-# cached assets, so graphics come back immediately on a warm (non-boot) system.
-def _reload_periodic():
-    wv.reload()
-    return True  # keep repeating
-GLib.timeout_add_seconds(45 * 60, _reload_periodic)
-
 Gtk.main()

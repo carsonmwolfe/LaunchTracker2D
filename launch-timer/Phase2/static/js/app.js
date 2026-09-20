@@ -3034,7 +3034,10 @@ function restoreState() {
   let _wdOverlay = null;
   setInterval(async () => {
     try {
-      const r = await fetch('/api/data?_wd=1', { cache: 'no-store' });
+      // Tiny 204 ping — NOT /api/data. Polling the heavy data payload every 10s
+      // without reading the body leaked native memory and OOM-crashed the renderer
+      // overnight on the 512MB unit (~2.5h after reboot). This has no body.
+      const r = await fetch('/api/ping', { cache: 'no-store' });
       if (r.ok) {
         _wdFails = 0;
         if (_wdOverlay) { window.location.reload(); }
