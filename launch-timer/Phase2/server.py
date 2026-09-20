@@ -961,13 +961,14 @@ def _auto_brightness():
                     brightness = manual_raw  # respect user's set brightness during the day
 
             if brightness is not None:
-                print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
                 try:
                     bp = _backlight_path()
                     if bp:
                         cur = int(open(bp).read().strip())
                         if abs(cur - brightness) > 5:
                             open(bp, 'w').write(str(brightness))
+                            # Log only on an actual change — not every 15s poll.
+                            print(f'[{_ts()}] Auto brightness → {brightness} (mode={display_mode})')
                 except Exception:
                     pass
         except Exception as e:
