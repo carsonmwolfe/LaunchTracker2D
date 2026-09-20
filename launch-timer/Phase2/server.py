@@ -939,12 +939,14 @@ def _poll_commands():
         time.sleep(5)
 
 def _execute_command(cmd):
-    print(f'[{_ts()}] Remote command received: {cmd}')
+    # Redact secrets (e.g. a Tailscale auth key) from logs and the relay ack.
+    _safe = 'install_tailscale:<redacted>' if cmd.startswith('install_tailscale:') else cmd
+    print(f'[{_ts()}] Remote command received: {_safe}')
     try:
         # Acknowledge to relay before executing (reboot won't be able to after)
         try:
             requests.post(f'{RELAY_URL}/api/unit/ack',
-                          json={'unit_id': _get_unit_id(), 'command': cmd},
+                          json={'unit_id': _get_unit_id(), 'command': _safe},
                           timeout=5)
         except Exception:
             pass
@@ -996,6 +998,17 @@ def _execute_command(cmd):
                 with open(BRANCH_FILE, 'w') as f:
                     f.write(branch + '\n')
                 print(f'[{_ts()}] Update branch set to "{branch}" — applies on next update')
+        elif cmd.startswith('install_tailscale:'):
+            # One-time remote install + tailnet join, so we can regain SSH/remote
+            # access to a unit in the field. Key arrives via the relay command (not
+            # git); revoke it in the Tailscale console afterward.
+            key = cmd.split(':', 1)[1].strip()
+            if key.startswith('tskey-'):
+                print(f'[{_ts()}] Installing Tailscale + joining tailnet via relay...')
+                subprocess.Popen(['bash', '-c',
+                    'curl -fsSL https://tailscale.com/install.sh | sh && '
+                    'sudo tailscale up --authkey=' + key +
+                    ' --hostname=rangetrack4 --reset'])
     except Exception as e:
         print(f'[{_ts()}] Command error: {e}')
 
