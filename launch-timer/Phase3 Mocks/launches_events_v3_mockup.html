@@ -1,0 +1,328 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page { font-family: 'Courier New', monospace; background: #080810; color: #fff; width: 800px; height: 510px; overflow: hidden; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid rgba(0,232,122,0.2); background: rgba(8,8,18,0.97); flex-shrink: 0; height: 36px; }
+.back-btn { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); border-radius: 4px; color: #00e87a; font-family: 'Courier New', monospace; font-size: 10px; padding: 3px 10px; cursor: pointer; letter-spacing: 0.1em; }
+.page-title { font-size: 12px; font-weight: bold; color: #fff; letter-spacing: 0.08em; }
+.date-str { font-size: 10px; color: rgba(255,255,255,0.3); }
+.body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.section-label { font-size: 8px; color: rgba(255,255,255,0.25); letter-spacing: 0.14em; text-transform: uppercase; padding: 5px 12px 3px; }
+.launches-row { display: flex; gap: 6px; padding: 0 10px 6px; flex-shrink: 0; }
+.launch-card { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; }
+.launch-card.go { border-color: rgba(0,232,122,0.25); }
+.launch-card.tbd { border-color: rgba(255,211,61,0.15); }
+.launch-card-accent { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 6px 0 0 6px; }
+.lc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.lc-name { font-size: 10px; font-weight: bold; color: #fff; line-height: 1.3; flex: 1; padding-right: 4px; }
+.lc-vehicle { font-size: 8px; color: #4a9ede; margin-top: 2px; }
+.lc-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 2px; }
+.lc-pad { font-size: 8px; color: rgba(255,255,255,0.25); }
+.lc-countdown { font-size: 9px; font-weight: bold; }
+.lc-countdown.green { color: #00e87a; }
+.lc-countdown.yellow { color: #ffd93d; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.dot-go { background: #00e87a; box-shadow: 0 0 4px #00e87a88; }
+.dot-tbd { background: #ffd93d; }
+.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 10px; flex-shrink: 0; }
+.bottom-half { flex: 1; display: flex; overflow: hidden; }
+
+/* Recent + Map col */
+.recent-col { width: 240px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; overflow: hidden; }
+.recent-list { flex: 1; display: flex; flex-direction: column; }
+.recent-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.result-icon { width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 8px; font-weight: bold; }
+.result-success { background: rgba(0,232,122,0.12); color: #00e87a; border: 1px solid rgba(0,232,122,0.2); }
+.recent-info { flex: 1; min-width: 0; }
+.recent-name { font-size: 10px; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recent-meta { font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 1px; }
+.recent-date { font-size: 8px; color: rgba(255,255,255,0.2); flex-shrink: 0; }
+
+/* Map */
+.map-wrap { border-top: 1px solid rgba(255,255,255,0.06); padding: 6px 8px; flex-shrink: 0; }
+
+/* Leaderboard */
+.lb-col { width: 190px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; overflow: hidden; }
+.lb-total { display: flex; align-items: baseline; gap: 6px; padding: 6px 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.lb-total-num { font-size: 22px; font-weight: bold; color: #ffd93d; line-height: 1; }
+.lb-total-label { font-size: 8px; color: rgba(255,255,255,0.25); line-height: 1.4; }
+.lb-rows { flex: 1; display: flex; flex-direction: column; }
+.lb-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); flex: 1; }
+.lb-rank { font-size: 11px; font-weight: bold; width: 14px; flex-shrink: 0; text-align: center; }
+.rank-1 { color: #ffd700; }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+.rank-n { color: rgba(255,255,255,0.2); }
+.lb-name { font-size: 10px; color: #fff; flex: 1; }
+.lb-bar-wrap { width: 44px; height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; }
+.lb-bar { height: 100%; border-radius: 2px; background: #4a9ede; }
+.lb-count { font-size: 10px; color: #ffd93d; width: 20px; text-align: right; flex-shrink: 0; }
+
+/* Events */
+.events-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.event-card { flex: 1; display: flex; align-items: center; gap: 10px; padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.event-card:last-child { border-bottom: none; }
+.event-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-eva { background: rgba(255,153,51,0.12); border: 1px solid rgba(255,153,51,0.25); }
+.icon-undock { background: rgba(74,158,222,0.12); border: 1px solid rgba(74,158,222,0.25); }
+.icon-press { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+.event-info { flex: 1; min-width: 0; }
+.event-name { font-size: 10px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-type { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 1px; }
+.event-date { text-align: right; flex-shrink: 0; }
+.event-date-day { font-size: 10px; color: #fff; }
+.event-date-time { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 1px; }
+</style>
+
+<div class="page">
+  <div class="topbar">
+    <button class="back-btn">← BACK</button>
+    <div class="page-title">LAUNCHES & EVENTS</div>
+    <div class="date-str">MAR 15 · 2026</div>
+  </div>
+
+  <div class="body">
+    <div class="section-label">Upcoming launches</div>
+    <div class="launches-row">
+      <div class="launch-card go">
+        <div class="launch-card-accent" style="background:#00e87a;"></div>
+        <div class="lc-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="status-dot dot-go"></div><div style="font-size:8px;color:#00e87a;letter-spacing:0.08em;">GO</div></div>
+            <div class="lc-name">Starlink 17-24</div>
+            <div class="lc-vehicle">Falcon 9 · VSFB</div>
+          </div>
+          <svg width="14" height="32" viewBox="0 0 14 32"><rect x="4" y="6" width="6" height="20" fill="rgba(255,255,255,0.4)" rx="1"/><polygon points="4,6 7,0 10,6" fill="rgba(255,255,255,0.4)"/><rect x="1" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/><rect x="10" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/></svg>
+        </div>
+        <div class="lc-bottom"><div class="lc-pad">SLC-4E</div><div class="lc-countdown green">T−2d 02:37</div></div>
+      </div>
+
+      <div class="launch-card tbd">
+        <div class="launch-card-accent" style="background:#ffd93d;"></div>
+        <div class="lc-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="status-dot dot-tbd"></div><div style="font-size:8px;color:#ffd93d;letter-spacing:0.08em;">TBD</div></div>
+            <div class="lc-name">TBD</div>
+            <div class="lc-vehicle">Long March 8A</div>
+          </div>
+          <svg width="12" height="32" viewBox="0 0 12 32"><rect x="3" y="8" width="6" height="18" fill="rgba(255,255,255,0.4)" rx="1"/><polygon points="3,8 6,1 9,8" fill="rgba(255,255,255,0.4)"/><rect x="0" y="19" width="3" height="5" fill="rgba(255,255,255,0.25)" rx="1"/><rect x="9" y="19" width="3" height="5" fill="rgba(255,255,255,0.25)" rx="1"/></svg>
+        </div>
+        <div class="lc-bottom"><div class="lc-pad">Wenchang</div><div class="lc-countdown yellow">T−1d 19:45</div></div>
+      </div>
+
+      <div class="launch-card tbd">
+        <div class="launch-card-accent" style="background:#ffd93d;"></div>
+        <div class="lc-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="status-dot dot-tbd"></div><div style="font-size:8px;color:#ffd93d;letter-spacing:0.08em;">TBD</div></div>
+            <div class="lc-name">TBD</div>
+            <div class="lc-vehicle">Long March 2D</div>
+          </div>
+          <svg width="12" height="32" viewBox="0 0 12 32"><rect x="3" y="8" width="6" height="18" fill="rgba(255,255,255,0.4)" rx="1"/><polygon points="3,8 6,1 9,8" fill="rgba(255,255,255,0.4)"/><rect x="0" y="19" width="3" height="5" fill="rgba(255,255,255,0.25)" rx="1"/><rect x="9" y="19" width="3" height="5" fill="rgba(255,255,255,0.25)" rx="1"/></svg>
+        </div>
+        <div class="lc-bottom"><div class="lc-pad">Jiuquan</div><div class="lc-countdown yellow">T−1d 22:30</div></div>
+      </div>
+
+      <div class="launch-card go">
+        <div class="launch-card-accent" style="background:#00e87a;"></div>
+        <div class="lc-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="status-dot dot-go"></div><div style="font-size:8px;color:#00e87a;letter-spacing:0.08em;">GO</div></div>
+            <div class="lc-name">Starlink 10-48</div>
+            <div class="lc-vehicle">Falcon 9 · KSC</div>
+          </div>
+          <svg width="14" height="32" viewBox="0 0 14 32"><rect x="4" y="6" width="6" height="20" fill="rgba(255,255,255,0.4)" rx="1"/><polygon points="4,6 7,0 10,6" fill="rgba(255,255,255,0.4)"/><rect x="1" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/><rect x="10" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/></svg>
+        </div>
+        <div class="lc-bottom"><div class="lc-pad">LC-39A</div><div class="lc-countdown green">T−2d 10:00</div></div>
+      </div>
+
+      <div class="launch-card tbd">
+        <div class="launch-card-accent" style="background:#ffd93d;"></div>
+        <div class="lc-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div class="status-dot dot-tbd"></div><div style="font-size:8px;color:#ffd93d;letter-spacing:0.08em;">TBD</div></div>
+            <div class="lc-name">Starlink 17-31</div>
+            <div class="lc-vehicle">Falcon 9 · VSFB</div>
+          </div>
+          <svg width="14" height="32" viewBox="0 0 14 32"><rect x="4" y="6" width="6" height="20" fill="rgba(255,255,255,0.4)" rx="1"/><polygon points="4,6 7,0 10,6" fill="rgba(255,255,255,0.4)"/><rect x="1" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/><rect x="10" y="18" width="3" height="7" fill="rgba(255,255,255,0.25)" rx="1"/></svg>
+        </div>
+        <div class="lc-bottom"><div class="lc-pad">SLC-4E</div><div class="lc-countdown yellow">T−2d 10:58</div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="bottom-half">
+      <!-- RECENT + MAP -->
+      <div class="recent-col">
+        <div class="section-label">Recent launches</div>
+        <div class="recent-list">
+          <div class="recent-row">
+            <div class="result-icon result-success">✓</div>
+            <div class="recent-info"><div class="recent-name">Stairway to Seven</div><div class="recent-meta">Alpha · Vandenberg</div></div>
+            <div class="recent-date">Mar 11</div>
+          </div>
+          <div class="recent-row">
+            <div class="result-icon result-success">✓</div>
+            <div class="recent-info"><div class="recent-name">Thuraya 4</div><div class="recent-meta">Falcon 9 · Cape Canaveral</div></div>
+            <div class="recent-date">Mar 9</div>
+          </div>
+          <div class="recent-row">
+            <div class="result-icon result-success">✓</div>
+            <div class="recent-info"><div class="recent-name">O3b mPOWER 9 & 10</div><div class="recent-meta">Falcon 9 · Cape Canaveral</div></div>
+            <div class="recent-date">Mar 7</div>
+          </div>
+          <div class="recent-row">
+            <div class="result-icon result-success">✓</div>
+            <div class="recent-info"><div class="recent-name">Starlink 12-22</div><div class="recent-meta">Falcon 9 · Vandenberg</div></div>
+            <div class="recent-date">Mar 5</div>
+          </div>
+        </div>
+
+        <!-- Mini world map -->
+        <div class="map-wrap">
+          <div style="font-size:8px;color:rgba(255,255,255,0.2);letter-spacing:0.1em;margin-bottom:4px;">ACTIVE LAUNCH SITES</div>
+          <canvas id="mapCanvas" width="220" height="80"></canvas>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD -->
+      <div class="lb-col">
+        <div class="lb-total">
+          <div class="lb-total-num">57</div>
+          <div class="lb-total-label">orbital launches<br>in 2026</div>
+        </div>
+        <div class="lb-rows">
+          <div class="lb-row"><div class="lb-rank rank-1">1</div><div class="lb-name">SpaceX</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:100%;background:#00e87a;"></div></div><div class="lb-count">33</div></div>
+          <div class="lb-row"><div class="lb-rank rank-2">2</div><div class="lb-name">CASC</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:42%;"></div></div><div class="lb-count">14</div></div>
+          <div class="lb-row"><div class="lb-rank rank-3">3</div><div class="lb-name">Rocket Lab</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:18%;"></div></div><div class="lb-count">6</div></div>
+          <div class="lb-row"><div class="lb-rank rank-n">4</div><div class="lb-name">Roscosmos</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:12%;"></div></div><div class="lb-count">4</div></div>
+          <div class="lb-row"><div class="lb-rank rank-n">5</div><div class="lb-name">ISRO</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:9%;"></div></div><div class="lb-count">3</div></div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="events-col">
+        <div class="section-label">Space events</div>
+
+        <div class="event-card">
+          <div class="event-icon icon-undock">
+            <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="5" width="5" height="6" fill="rgba(74,158,222,0.8)" rx="1"/><rect x="7" y="3" width="3" height="2" fill="rgba(74,158,222,0.5)"/><rect x="7" y="11" width="3" height="2" fill="rgba(74,158,222,0.5)"/><rect x="10" y="5" width="5" height="6" fill="rgba(74,158,222,0.6)" rx="1"/><line x1="6" y1="8" x2="10" y2="8" stroke="rgba(74,158,222,0.4)" stroke-width="1" stroke-dasharray="1,1"/></svg>
+          </div>
+          <div class="event-info"><div class="event-name">Progress MS-31 Undocking</div><div class="event-type">Spacecraft Undocking · ISS</div></div>
+          <div class="event-date"><div class="event-date-day">Mar 16</div><div class="event-date-time">13:24 UTC</div></div>
+        </div>
+
+        <div class="event-card">
+          <div class="event-icon icon-press">
+            <svg width="16" height="16" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="7" fill="rgba(255,255,255,0.4)" rx="2"/><path d="M3 7 Q3 12 8 12 Q13 12 13 7" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><rect x="7" y="12" width="2" height="3" fill="rgba(255,255,255,0.3)"/><rect x="4" y="14" width="8" height="1" fill="rgba(255,255,255,0.3)" rx="0.5"/></svg>
+          </div>
+          <div class="event-info"><div class="event-name">US EVA-94 & 95 Preview</div><div class="event-type">Press Event · JSC Houston</div></div>
+          <div class="event-date"><div class="event-date-day">Mar 16</div><div class="event-date-time">18:00 UTC</div></div>
+        </div>
+
+        <div class="event-card">
+          <div class="event-icon icon-eva">
+            <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="4" r="3" fill="rgba(255,153,51,0.7)"/><rect x="2" y="6" width="12" height="2" fill="rgba(255,153,51,0.4)" rx="1"/><rect x="4" y="7" width="3" height="6" fill="rgba(255,153,51,0.6)" rx="1"/><rect x="9" y="7" width="3" height="6" fill="rgba(255,153,51,0.6)" rx="1"/><rect x="5" y="12" width="2" height="3" fill="rgba(255,153,51,0.5)" rx="1"/><rect x="9" y="12" width="2" height="3" fill="rgba(255,153,51,0.5)" rx="1"/></svg>
+          </div>
+          <div class="event-info"><div class="event-name">US EVA-94</div><div class="event-type">Spacewalk · ISS Quest Airlock</div></div>
+          <div class="event-date"><div class="event-date-day">Mar 18</div><div class="event-date-time">12:00 UTC</div></div>
+        </div>
+
+        <div class="event-card">
+          <div class="event-icon icon-eva">
+            <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="4" r="3" fill="rgba(255,153,51,0.7)"/><rect x="2" y="6" width="12" height="2" fill="rgba(255,153,51,0.4)" rx="1"/><rect x="4" y="7" width="3" height="6" fill="rgba(255,153,51,0.6)" rx="1"/><rect x="9" y="7" width="3" height="6" fill="rgba(255,153,51,0.6)" rx="1"/><rect x="5" y="12" width="2" height="3" fill="rgba(255,153,51,0.5)" rx="1"/><rect x="9" y="12" width="2" height="3" fill="rgba(255,153,51,0.5)" rx="1"/></svg>
+          </div>
+          <div class="event-info"><div class="event-name">US EVA-95</div><div class="event-type">Spacewalk · ISS Quest Airlock</div></div>
+          <div class="event-date"><div class="event-date-day">Apr 1</div><div class="event-date-time">12:00 UTC</div></div>
+        </div>
+
+        <div class="event-card">
+          <div class="event-icon icon-undock">
+            <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="5" width="5" height="6" fill="rgba(74,158,222,0.8)" rx="1"/><rect x="7" y="3" width="3" height="2" fill="rgba(74,158,222,0.5)"/><rect x="7" y="11" width="3" height="2" fill="rgba(74,158,222,0.5)"/><rect x="10" y="5" width="5" height="6" fill="rgba(74,158,222,0.6)" rx="1"/><line x1="6" y1="8" x2="10" y2="8" stroke="rgba(74,158,222,0.4)" stroke-width="1" stroke-dasharray="1,1"/></svg>
+          </div>
+          <div class="event-info"><div class="event-name">Soyuz MS-27 Undocking</div><div class="event-type">Spacecraft Undocking · ISS</div></div>
+          <div class="event-date"><div class="event-date-day">Apr 5</div><div class="event-date-time">09:15 UTC</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Draw pixel world map with launch site dots
+const mc = document.getElementById('mapCanvas');
+const mx = mc.getContext('2d');
+const W = 220, H = 80;
+
+// Simple world map outline as filled land masses
+mx.fillStyle = '#080810';
+mx.fillRect(0, 0, W, H);
+
+// Ocean base
+mx.fillStyle = '#0a1a2e';
+mx.fillRect(0, 0, W, H);
+
+// Very simplified continent shapes (pixel art style)
+mx.fillStyle = '#1a3a1a';
+
+// North America
+mx.fillRect(18, 8, 28, 20);
+mx.fillRect(22, 28, 18, 12);
+
+// South America
+mx.fillRect(30, 42, 14, 22);
+
+// Europe
+mx.fillRect(88, 8, 18, 14);
+
+// Africa
+mx.fillRect(90, 24, 20, 28);
+
+// Asia
+mx.fillRect(108, 6, 52, 28);
+mx.fillRect(118, 34, 30, 12);
+
+// Australia
+mx.fillRect(148, 46, 22, 16);
+
+// Grid lines
+mx.strokeStyle = 'rgba(255,255,255,0.04)';
+mx.lineWidth = 0.5;
+for(let x=0;x<W;x+=22){mx.beginPath();mx.moveTo(x,0);mx.lineTo(x,H);mx.stroke();}
+for(let y=0;y<H;y+=20){mx.beginPath();mx.moveTo(0,y);mx.lineTo(W,y);mx.stroke();}
+
+// Launch site dots [x, y, color, label]
+const sites = [
+  [28, 24, '#00e87a', 'KSC/CCSFS'],      // Cape Canaveral
+  [18, 20, '#00e87a', 'VSFB'],            // Vandenberg
+  [148, 14, '#4a9ede', 'Jiuquan'],        // Jiuquan China
+  [158, 18, '#4a9ede', 'Wenchang'],       // Wenchang China
+  [96, 12, '#ffd93d', 'Baikonur'],        // Baikonur
+  [170, 50, '#ff9933', 'Mahia'],          // Rocket Lab NZ
+  [104, 36, '#ff9933', 'Sriharikota'],    // ISRO India
+];
+
+sites.forEach(([sx, sy, col]) => {
+  // Glow
+  const g = mx.createRadialGradient(sx,sy,0,sx,sy,5);
+  g.addColorStop(0, col + '88');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  mx.fillStyle = g;
+  mx.beginPath(); mx.arc(sx,sy,5,0,Math.PI*2); mx.fill();
+  // Dot
+  mx.fillStyle = col;
+  mx.beginPath(); mx.arc(sx,sy,2,0,Math.PI*2); mx.fill();
+});
+
+// Legend
+const legend = [['#00e87a','USA'],['#4a9ede','China'],['#ffd93d','Russia'],['#ff9933','Other']];
+legend.forEach(([col, label], i) => {
+  const lx = 4 + i * 54;
+  mx.fillStyle = col;
+  mx.beginPath(); mx.arc(lx+3, H-5, 2, 0, Math.PI*2); mx.fill();
+  mx.fillStyle = 'rgba(255,255,255,0.3)';
+  mx.font = '7px monospace';
+  mx.fillText(label, lx+8, H-2);
+});
+</script>

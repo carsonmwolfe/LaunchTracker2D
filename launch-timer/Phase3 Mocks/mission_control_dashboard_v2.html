@@ -1,0 +1,359 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page { font-family: 'Courier New', monospace; background: #080810; color: #fff; min-height: 600px; display: flex; flex-direction: column; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid rgba(0,232,122,0.15); background: rgba(8,8,24,0.98); flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(0,232,122,0.12); border: 1px solid rgba(0,232,122,0.25); display: flex; align-items: center; justify-content: center; }
+.logo-title { font-size: 14px; font-weight: bold; color: #fff; letter-spacing: 0.06em; }
+.logo-sub { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 0.12em; margin-top: 1px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.sync { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 0.08em; }
+.hbtn { font-family: 'Courier New', monospace; font-size: 10px; padding: 5px 14px; border-radius: 4px; cursor: pointer; letter-spacing: 0.06em; font-weight: bold; border: 1px solid; }
+.hbtn-green { background: rgba(0,232,122,0.1); border-color: rgba(0,232,122,0.4); color: #00e87a; }
+.hbtn-blue { background: rgba(74,158,222,0.1); border-color: rgba(74,158,222,0.4); color: #4a9ede; }
+.hbtn-red { background: rgba(255,68,34,0.1); border-color: rgba(255,68,34,0.3); color: #ff4422; }
+
+/* Body */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 200px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; padding: 12px 0; }
+.sidebar-section { padding: 0 12px; margin-bottom: 8px; }
+.sidebar-label { font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; padding: 0 4px; }
+.nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.45); margin-bottom: 2px; }
+.nav-item.active { background: rgba(0,232,122,0.1); color: #00e87a; border: 1px solid rgba(0,232,122,0.2); }
+.nav-item:hover:not(.active) { background: rgba(255,255,255,0.04); }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.nav-count { margin-left: auto; font-size: 9px; color: rgba(255,255,255,0.2); }
+.sidebar-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 8px 12px; }
+
+/* Stat pills in sidebar */
+.stat-pill { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; margin-bottom: 4px; }
+.stat-pill-label { font-size: 9px; color: rgba(255,255,255,0.3); }
+.stat-pill-val { font-size: 13px; font-weight: bold; }
+
+/* Main content */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Stats row */
+.stats-row { display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.stat-card { flex: 1; padding: 12px 20px; border-right: 1px solid rgba(255,255,255,0.06); }
+.stat-card:last-child { border-right: none; }
+.stat-num { font-size: 28px; font-weight: bold; line-height: 1; }
+.stat-label { font-size: 8px; color: rgba(255,255,255,0.25); letter-spacing: 0.1em; margin-top: 4px; text-transform: uppercase; }
+
+/* Filter bar */
+.filter-bar { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.filter-btn { font-family: 'Courier New', monospace; font-size: 9px; padding: 3px 10px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: rgba(255,255,255,0.3); cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; }
+.filter-btn.active { border-color: rgba(0,232,122,0.4); color: #00e87a; background: rgba(0,232,122,0.08); }
+.search { margin-left: auto; font-family: 'Courier New', monospace; font-size: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; color: rgba(255,255,255,0.5); padding: 3px 10px; width: 160px; }
+
+/* Unit list */
+.unit-list { flex: 1; overflow-y: auto; }
+.unit-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; gap: 0; }
+.unit-row:hover { background: rgba(255,255,255,0.02); }
+.unit-row.expanded { background: rgba(0,232,122,0.03); border-bottom-color: rgba(0,232,122,0.1); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-right: 12px; }
+.dot-online { background: #00e87a; box-shadow: 0 0 5px #00e87a66; }
+.dot-offline { background: #ff4422; }
+.dot-warn { background: #ffd93d; }
+.unit-id { font-size: 12px; font-weight: bold; color: #fff; width: 72px; flex-shrink: 0; }
+.unit-loc { flex: 2; font-size: 11px; color: rgba(255,255,255,0.4); }
+.unit-wifi { flex: 1.5; font-size: 10px; color: rgba(255,255,255,0.3); }
+.unit-version { width: 70px; flex-shrink: 0; }
+.ver-badge { font-size: 9px; padding: 2px 7px; border-radius: 3px; }
+.ver-ok { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.25); color: #00e87a; }
+.ver-old { background: rgba(255,211,61,0.1); border: 1px solid rgba(255,211,61,0.25); color: #ffd93d; }
+.unit-seen { width: 80px; font-size: 10px; color: rgba(255,255,255,0.2); text-align: right; flex-shrink: 0; }
+.unit-launch { flex: 1.5; font-size: 10px; color: rgba(255,211,61,0.6); text-align: right; padding-right: 8px; }
+
+/* Expanded detail */
+.unit-detail { padding: 12px 40px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.2); }
+.detail-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 12px; }
+.detail-field { }
+.detail-label { font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+.detail-val { font-size: 11px; color: rgba(255,255,255,0.6); }
+.detail-val.green { color: #00e87a; }
+.detail-val.yellow { color: #ffd93d; }
+.detail-actions { display: flex; gap: 6px; }
+
+/* Log panel */
+.log-panel { height: 120px; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.06); background: #05050f; padding: 8px 16px; overflow-y: auto; }
+.log-header { font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; margin-bottom: 6px; }
+.log-entry { font-size: 10px; color: rgba(255,255,255,0.35); line-height: 1.8; }
+.log-entry .ts { color: rgba(0,232,122,0.5); margin-right: 8px; }
+.log-entry .unit { color: #4a9ede; margin-right: 6px; }
+.log-entry.warn .msg { color: #ffd93d; }
+.log-entry.err .msg { color: #ff4422; }
+</style>
+
+<div class="page">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20">
+          <rect x="7" y="3" width="6" height="11" fill="rgba(0,232,122,0.8)" rx="1"/>
+          <polygon points="7,3 10,0 13,3" fill="rgba(0,232,122,0.8)"/>
+          <rect x="3" y="9" width="4" height="5" fill="rgba(0,232,122,0.45)" rx="1"/>
+          <rect x="13" y="9" width="4" height="5" fill="rgba(0,232,122,0.45)" rx="1"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-title">MISSION CONTROL</div>
+        <div class="logo-sub">LAUNCHTRACKER FLEET · 6 UNITS</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="sync">LAST SYNC: 18:42:05 UTC</div>
+      <button class="hbtn hbtn-blue" onclick="this.textContent='Pushing...'">Push update</button>
+      <button class="hbtn hbtn-green">Force sync</button>
+      <button class="hbtn hbtn-red">Reboot all</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Views</div>
+        <div class="nav-item active"><div class="nav-dot" style="background:#00e87a;"></div>All units<span class="nav-count">6</span></div>
+        <div class="nav-item"><div class="nav-dot" style="background:#00e87a;"></div>Online<span class="nav-count">4</span></div>
+        <div class="nav-item"><div class="nav-dot" style="background:#ff4422;"></div>Offline<span class="nav-count">2</span></div>
+        <div class="nav-item"><div class="nav-dot" style="background:#ffd93d;"></div>Outdated<span class="nav-count">2</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Fleet health</div>
+        <div class="stat-pill"><div class="stat-pill-label">Uptime avg</div><div class="stat-pill-val" style="color:#00e87a;">3d 4h</div></div>
+        <div class="stat-pill"><div class="stat-pill-label">Current version</div><div class="stat-pill-val" style="color:#fff;font-size:11px;">v1.0.0</div></div>
+        <div class="stat-pill"><div class="stat-pill-label">API calls today</div><div class="stat-pill-val" style="color:#4a9ede;">847</div></div>
+        <div class="stat-pill"><div class="stat-pill-label">Alerts</div><div class="stat-pill-val" style="color:#ffd93d;">2</div></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Quick actions</div>
+        <div class="nav-item" style="font-size:10px;">↺ Push update</div>
+        <div class="nav-item" style="font-size:10px;">⌘ Sync all</div>
+        <div class="nav-item" style="font-size:10px;">📋 Export logs</div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" style="color:#fff;">6</div><div class="stat-label">Total units</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#00e87a;">4</div><div class="stat-label">Online</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#ff4422;">2</div><div class="stat-label">Offline</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#ffd93d;">2</div><div class="stat-label">Outdated</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#4a9ede;">33s</div><div class="stat-label">Avg ping</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <button class="filter-btn active">All</button>
+        <button class="filter-btn">Online</button>
+        <button class="filter-btn">Offline</button>
+        <button class="filter-btn">Outdated</button>
+        <input class="search" placeholder="Search unit ID or location..." />
+      </div>
+
+      <!-- Unit list -->
+      <div class="unit-list" id="unit-list">
+
+        <!-- Online units -->
+        <div class="unit-row" onclick="toggleExpand('lt001')" id="row-lt001">
+          <div class="status-dot dot-online"></div>
+          <div class="unit-id">LT-001</div>
+          <div class="unit-loc">Cape Canaveral, FL</div>
+          <div class="unit-wifi">Riemanwifi</div>
+          <div class="unit-launch">Starlink 17-24</div>
+          <div class="unit-version"><span class="ver-badge ver-ok">v1.0.0</span></div>
+          <div class="unit-seen">12s ago</div>
+        </div>
+        <div id="detail-lt001" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:f0:f8:2a</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">192.168.1.93</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val green">3d 4h 12m</div></div>
+              <div class="detail-field"><div class="detail-label">Current launch</div><div class="detail-val yellow">Starlink 17-24</div></div>
+              <div class="detail-field"><div class="detail-label">Brightness</div><div class="detail-val">40%</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue">SSH</button>
+              <button class="hbtn hbtn-green">Update</button>
+              <button class="hbtn hbtn-red">Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="unit-row" onclick="toggleExpand('lt002')" id="row-lt002">
+          <div class="status-dot dot-online"></div>
+          <div class="unit-id">LT-002</div>
+          <div class="unit-loc">Houston, TX</div>
+          <div class="unit-wifi">HomeNetwork</div>
+          <div class="unit-launch">Starlink 17-24</div>
+          <div class="unit-version"><span class="ver-badge ver-ok">v1.0.0</span></div>
+          <div class="unit-seen">1m ago</div>
+        </div>
+        <div id="detail-lt002" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:a1:2c:4f</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">192.168.0.44</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val green">1d 12h 5m</div></div>
+              <div class="detail-field"><div class="detail-label">Current launch</div><div class="detail-val yellow">Starlink 17-24</div></div>
+              <div class="detail-field"><div class="detail-label">Brightness</div><div class="detail-val">60%</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue">SSH</button>
+              <button class="hbtn hbtn-green">Update</button>
+              <button class="hbtn hbtn-red">Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="unit-row" onclick="toggleExpand('lt004')" id="row-lt004">
+          <div class="status-dot dot-online"></div>
+          <div class="unit-id">LT-004</div>
+          <div class="unit-loc">Denver, CO</div>
+          <div class="unit-wifi">SpacenerdsHQ</div>
+          <div class="unit-launch">Starlink 17-24</div>
+          <div class="unit-version"><span class="ver-badge ver-ok">v1.0.0</span></div>
+          <div class="unit-seen">30s ago</div>
+        </div>
+        <div id="detail-lt004" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:77:bc:88</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">192.168.2.101</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val green">5h 22m</div></div>
+              <div class="detail-field"><div class="detail-label">Current launch</div><div class="detail-val yellow">Starlink 17-24</div></div>
+              <div class="detail-field"><div class="detail-label">Brightness</div><div class="detail-val">40%</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue">SSH</button>
+              <button class="hbtn hbtn-green">Update</button>
+              <button class="hbtn hbtn-red">Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="unit-row" onclick="toggleExpand('lt005')" id="row-lt005">
+          <div class="status-dot dot-online"></div>
+          <div class="unit-id">LT-005</div>
+          <div class="unit-loc">Seattle, WA</div>
+          <div class="unit-wifi">LaunchFan_Net</div>
+          <div class="unit-launch">Starlink 17-24</div>
+          <div class="unit-version"><span class="ver-badge ver-ok">v1.0.0</span></div>
+          <div class="unit-seen">4m ago</div>
+        </div>
+        <div id="detail-lt005" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:cc:01:fe</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">172.16.0.5</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val green">2d 1h 14m</div></div>
+              <div class="detail-field"><div class="detail-label">Current launch</div><div class="detail-val yellow">Starlink 17-24</div></div>
+              <div class="detail-field"><div class="detail-label">Brightness</div><div class="detail-val">55%</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue">SSH</button>
+              <button class="hbtn hbtn-green">Update</button>
+              <button class="hbtn hbtn-red">Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Offline units -->
+        <div class="unit-row" style="opacity:0.55;" onclick="toggleExpand('lt003')" id="row-lt003">
+          <div class="status-dot dot-offline"></div>
+          <div class="unit-id">LT-003</div>
+          <div class="unit-loc">Austin, TX</div>
+          <div class="unit-wifi">OfficeWifi</div>
+          <div class="unit-launch" style="color:rgba(255,255,255,0.2);">—</div>
+          <div class="unit-version"><span class="ver-badge ver-old">v0.9.8</span></div>
+          <div class="unit-seen">2h ago</div>
+        </div>
+        <div id="detail-lt003" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:33:9d:11</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">10.0.0.12</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val" style="color:#ff4422;">Offline</div></div>
+              <div class="detail-field"><div class="detail-label">Last launch</div><div class="detail-val" style="color:rgba(255,255,255,0.3);">—</div></div>
+              <div class="detail-field"><div class="detail-label">Last seen</div><div class="detail-val">2h ago</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue" style="opacity:0.4;cursor:not-allowed;" disabled>SSH</button>
+              <button class="hbtn hbtn-green" style="opacity:0.4;cursor:not-allowed;" disabled>Update</button>
+              <button class="hbtn hbtn-red" style="opacity:0.4;cursor:not-allowed;" disabled>Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="unit-row" style="opacity:0.55;" onclick="toggleExpand('lt006')" id="row-lt006">
+          <div class="status-dot dot-offline"></div>
+          <div class="unit-id">LT-006</div>
+          <div class="unit-loc">Unknown</div>
+          <div class="unit-wifi">—</div>
+          <div class="unit-launch" style="color:rgba(255,255,255,0.2);">—</div>
+          <div class="unit-version"><span class="ver-badge ver-old">v0.9.8</span></div>
+          <div class="unit-seen">1d ago</div>
+        </div>
+        <div id="detail-lt006" style="display:none;">
+          <div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">MAC Address</div><div class="detail-val">b8:27:eb:55:de:23</div></div>
+              <div class="detail-field"><div class="detail-label">IP Address</div><div class="detail-val">—</div></div>
+              <div class="detail-field"><div class="detail-label">Uptime</div><div class="detail-val" style="color:#ff4422;">Offline</div></div>
+              <div class="detail-field"><div class="detail-label">Last launch</div><div class="detail-val" style="color:rgba(255,255,255,0.3);">—</div></div>
+              <div class="detail-field"><div class="detail-label">Last seen</div><div class="detail-val">1d ago</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-blue" style="opacity:0.4;cursor:not-allowed;" disabled>SSH</button>
+              <button class="hbtn hbtn-green" style="opacity:0.4;cursor:not-allowed;" disabled>Update</button>
+              <button class="hbtn hbtn-red" style="opacity:0.4;cursor:not-allowed;" disabled>Reboot</button>
+              <button class="hbtn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);">View logs</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Log panel -->
+      <div class="log-panel">
+        <div class="log-header">ACTIVITY LOG</div>
+        <div class="log-entry"><span class="ts">18:42:01</span><span class="unit">LT-001</span><span class="msg">Heartbeat received · uptime 3d 4h · v1.0.0</span></div>
+        <div class="log-entry"><span class="ts">18:41:58</span><span class="unit">LT-004</span><span class="msg">Heartbeat received · uptime 5h 22m · v1.0.0</span></div>
+        <div class="log-entry warn"><span class="ts">18:40:12</span><span class="unit">LT-003</span><span class="msg">Missed heartbeat — unit may be offline</span></div>
+        <div class="log-entry"><span class="ts">18:38:44</span><span class="unit">LT-002</span><span class="msg">Update pulled successfully · v0.9.8 → v1.0.0</span></div>
+        <div class="log-entry err"><span class="ts">18:35:01</span><span class="unit">LT-006</span><span class="msg">Offline — no heartbeat in 24h</span></div>
+        <div class="log-entry"><span class="ts">18:30:00</span><span class="unit">ALL</span><span class="msg">Push update triggered by admin · v1.0.0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleExpand(id) {
+  const detail = document.getElementById('detail-' + id);
+  const row = document.getElementById('row-' + id);
+  const isOpen = detail.style.display !== 'none';
+  document.querySelectorAll('[id^="detail-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.unit-row').forEach(el => el.classList.remove('expanded'));
+  if (!isOpen) {
+    detail.style.display = 'block';
+    row.classList.add('expanded');
+  }
+}
+</script>

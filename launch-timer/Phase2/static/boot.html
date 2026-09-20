@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800">
+<title>RangeTrack OS — Starting</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060a10;
+    color: #00e87a;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .logo-img { width: 220px; margin-bottom: 32px; }
+  .sub { font-size: 11px; color: rgba(0,232,122,0.45); letter-spacing: 3px; margin-bottom: 56px; }
+  .bar-wrap {
+    width: 280px; height: 2px;
+    background: rgba(0,232,122,0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .bar {
+    height: 100%;
+    background: #00e87a;
+    width: 0%;
+    animation: pulse-bar 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-bar {
+    0%   { width: 0%;   margin-left: 0%; }
+    50%  { width: 60%;  margin-left: 20%; }
+    100% { width: 0%;   margin-left: 100%; }
+  }
+  .status {
+    font-size: 10px;
+    color: rgba(0,232,122,0.4);
+    letter-spacing: 2px;
+    min-height: 16px;
+  }
+  .dot { display: inline-block; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+  <img class="logo-img" src="assets/BootLOGO.png" alt="RangeTrack">
+  <div class="sub">LAUNCH DISPLAY SYSTEM</div>
+  <div class="bar-wrap"><div class="bar"></div></div>
+  <div class="status" id="status">INITIALIZING<span class="dot">...</span></div>
+
+  <script>
+    let attempts = 0;
+    const status = document.getElementById('status');
+    const messages = [
+      'INITIALIZING',
+      'STARTING SERVER',
+      'LOADING DATA',
+      'CONNECTING',
+      'ALMOST READY',
+    ];
+
+    function tryConnect() {
+      attempts++;
+      const msg = messages[Math.min(Math.floor(attempts / 3), messages.length - 1)];
+      status.innerHTML = msg + '<span class="dot">...</span>';
+      // Image probe — onload only fires when Flask is genuinely up and serving files.
+      // Works cross-origin from file:// with no CORS issues.
+      const img = new Image();
+      img.onload = function() {
+        status.innerHTML = 'READY &mdash; LAUNCHING<span class="dot">...</span>';
+        setTimeout(() => { window.location = 'http://localhost:5001/'; }, 500);
+      };
+      img.onerror = function() {
+        // Server down or not ready yet — try again
+        setTimeout(tryConnect, 1500);
+      };
+      img.src = 'http://localhost:5001/static/assets/BootLOGO.png?_=' + Date.now();
+    }
+
+    tryConnect();
+  </script>
+</body>
+</html>

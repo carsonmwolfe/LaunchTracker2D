@@ -1,0 +1,297 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page { font-family: 'Courier New', monospace; background: #080810; color: #fff; width: 800px; min-height: 510px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(0,232,122,0.2); background: rgba(8,8,18,0.97); }
+.back-btn { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); border-radius: 4px; color: #00e87a; font-family: 'Courier New', monospace; font-size: 10px; padding: 4px 10px; cursor: pointer; letter-spacing: 0.1em; }
+.page-title { font-size: 13px; font-weight: bold; color: #fff; letter-spacing: 0.08em; }
+.date-str { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.05em; }
+.body { display: flex; height: 468px; overflow: hidden; }
+.col { flex: 1; overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.06); }
+.col:last-child { border-right: none; }
+.col-header { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; }
+.col-title { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.12em; text-transform: uppercase; }
+.col-count { font-size: 9px; color: rgba(255,255,255,0.2); }
+
+.launch-card { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); border-left: 2px solid transparent; }
+.launch-card.upcoming { border-left-color: rgba(0,232,122,0.5); }
+.launch-card.past { border-left-color: rgba(255,255,255,0.1); opacity: 0.6; }
+.launch-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+.launch-name { font-size: 12px; font-weight: bold; color: #fff; }
+.launch-name.past { color: rgba(255,255,255,0.5); }
+.launch-status { font-size: 9px; padding: 2px 7px; border-radius: 3px; flex-shrink: 0; margin-left: 6px; }
+.status-go { background: rgba(0,232,122,0.15); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; }
+.status-tbd { background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.3); color: #ffd93d; }
+.status-success { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.35); }
+.launch-bottom { display: flex; justify-content: space-between; align-items: center; }
+.launch-vehicle { font-size: 10px; color: #4a9ede; }
+.launch-time { font-size: 10px; color: rgba(255,255,255,0.3); }
+.countdown-str { font-size: 10px; color: #00e87a; }
+
+.section-divider { padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); display: flex; justify-content: space-between; }
+.section-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.event-card { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
+.event-left { flex: 1; min-width: 0; }
+.event-type { font-size: 8px; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-bottom: 4px; }
+.type-eva { background: rgba(255,153,51,0.15); border: 1px solid rgba(255,153,51,0.3); color: #ff9933; }
+.type-undocking { background: rgba(74,158,222,0.15); border: 1px solid rgba(74,158,222,0.3); color: #4a9ede; }
+.type-press { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.35); }
+.type-landing { background: rgba(0,232,122,0.15); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; }
+.event-name { font-size: 12px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-sub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-date { font-size: 10px; color: rgba(255,255,255,0.3); text-align: right; flex-shrink: 0; line-height: 1.6; }
+
+.lb-header { padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); display: flex; justify-content: space-between; }
+.lb-title { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; text-transform: uppercase; }
+.lb-sub { font-size: 9px; color: rgba(255,255,255,0.2); }
+.lb-row { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 8px; }
+.lb-rank { font-size: 12px; font-weight: bold; color: rgba(255,255,255,0.2); width: 16px; flex-shrink: 0; }
+.lb-rank.gold { color: #ffd700; }
+.lb-rank.silver { color: #c0c0c0; }
+.lb-rank.bronze { color: #cd7f32; }
+.lb-name { font-size: 11px; color: #fff; flex: 1; }
+.lb-bar-wrap { width: 70px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+.lb-bar { height: 100%; border-radius: 2px; }
+.lb-count { font-size: 11px; color: #ffd93d; width: 24px; text-align: right; flex-shrink: 0; }
+</style>
+
+<div class="page">
+  <div class="topbar">
+    <button class="back-btn">← BACK</button>
+    <div class="page-title">LAUNCHES & EVENTS</div>
+    <div class="date-str">MAR 15, 2026</div>
+  </div>
+
+  <div class="body">
+    <!-- LEFT: LAUNCHES -->
+    <div class="col">
+      <div class="col-header">
+        <span class="col-title">Upcoming</span>
+        <span class="col-count">5</span>
+      </div>
+
+      <div class="launch-card upcoming">
+        <div class="launch-top">
+          <div class="launch-name">Starlink Group 17-24</div>
+          <span class="launch-status status-go">GO</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Vandenberg</span>
+          <span class="countdown-str">T−2d 02:37</span>
+        </div>
+      </div>
+
+      <div class="launch-card upcoming">
+        <div class="launch-top">
+          <div class="launch-name">TBD</div>
+          <span class="launch-status status-tbd">TBD</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Long March 8A · Wenchang</span>
+          <span class="countdown-str">T−1d 19:45</span>
+        </div>
+      </div>
+
+      <div class="launch-card upcoming">
+        <div class="launch-top">
+          <div class="launch-name">TBD</div>
+          <span class="launch-status status-tbd">TBD</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Long March 2D · Jiuquan</span>
+          <span class="countdown-str">T−1d 22:30</span>
+        </div>
+      </div>
+
+      <div class="launch-card upcoming">
+        <div class="launch-top">
+          <div class="launch-name">Starlink Group 10-48</div>
+          <span class="launch-status status-go">GO</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Kennedy SC</span>
+          <span class="countdown-str">T−2d 10:00</span>
+        </div>
+      </div>
+
+      <div class="launch-card upcoming">
+        <div class="launch-top">
+          <div class="launch-name">Starlink Group 17-31</div>
+          <span class="launch-status status-tbd">TBD</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Vandenberg</span>
+          <span class="countdown-str">T−2d 10:58</span>
+        </div>
+      </div>
+
+      <div class="section-divider">
+        <span class="section-label">Recent</span>
+        <span class="col-count">5</span>
+      </div>
+
+      <div class="launch-card past">
+        <div class="launch-top">
+          <div class="launch-name past">Stairway to Seven</div>
+          <span class="launch-status status-success">SUCCESS</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Alpha · Vandenberg</span>
+          <span class="launch-time">Mar 11 · 00:50 UTC</span>
+        </div>
+      </div>
+
+      <div class="launch-card past">
+        <div class="launch-top">
+          <div class="launch-name past">Thuraya 4</div>
+          <span class="launch-status status-success">SUCCESS</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Cape Canaveral</span>
+          <span class="launch-time">Mar 09 · 22:10 UTC</span>
+        </div>
+      </div>
+
+      <div class="launch-card past">
+        <div class="launch-top">
+          <div class="launch-name past">O3b mPOWER 9 & 10</div>
+          <span class="launch-status status-success">SUCCESS</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Cape Canaveral</span>
+          <span class="launch-time">Mar 07 · 18:30 UTC</span>
+        </div>
+      </div>
+
+      <div class="launch-card past">
+        <div class="launch-top">
+          <div class="launch-name past">Starlink Group 12-22</div>
+          <span class="launch-status status-success">SUCCESS</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Vandenberg</span>
+          <span class="launch-time">Mar 05 · 09:12 UTC</span>
+        </div>
+      </div>
+
+      <div class="launch-card past">
+        <div class="launch-top">
+          <div class="launch-name past">Crew-12</div>
+          <span class="launch-status status-success">SUCCESS</span>
+        </div>
+        <div class="launch-bottom">
+          <span class="launch-vehicle">Falcon 9 · Kennedy SC</span>
+          <span class="launch-time">Mar 02 · 04:03 UTC</span>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="lb-header">
+        <span class="lb-title">Top Providers</span>
+        <span class="lb-sub">2026 launches</span>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank gold">1</div>
+        <div class="lb-name">SpaceX</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:100%;background:#00e87a;"></div></div>
+        <div class="lb-count">33</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank silver">2</div>
+        <div class="lb-name">CASC</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:42%;background:#4a9ede;"></div></div>
+        <div class="lb-count">14</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank bronze">3</div>
+        <div class="lb-name">Rocket Lab</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:18%;background:#4a9ede;"></div></div>
+        <div class="lb-count">6</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">4</div>
+        <div class="lb-name">Roscosmos</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:12%;background:#4a9ede;"></div></div>
+        <div class="lb-count">4</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">5</div>
+        <div class="lb-name">ISRO</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:9%;background:#4a9ede;"></div></div>
+        <div class="lb-count">3</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: EVENTS -->
+    <div class="col" style="max-width:290px;">
+      <div class="col-header">
+        <span class="col-title">Space Events</span>
+        <span class="col-count">34</span>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-undocking">Undocking</span>
+          <div class="event-name">Progress MS-31 Undocking</div>
+          <div class="event-sub">International Space Station</div>
+        </div>
+        <div class="event-date">Mar 16<br>13:24 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-press">Press Event</span>
+          <div class="event-name">US EVA-94 & 95 Preview</div>
+          <div class="event-sub">Johnson Space Center, TX</div>
+        </div>
+        <div class="event-date">Mar 16<br>18:00 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-eva">EVA</span>
+          <div class="event-name">US EVA-94</div>
+          <div class="event-sub">International Space Station</div>
+        </div>
+        <div class="event-date">Mar 18<br>12:00 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-landing">Booster Landing</span>
+          <div class="event-name">B1088 Return to Port</div>
+          <div class="event-sub">Port of Long Beach, CA</div>
+        </div>
+        <div class="event-date">Mar 19<br>08:30 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-eva">EVA</span>
+          <div class="event-name">US EVA-95</div>
+          <div class="event-sub">International Space Station</div>
+        </div>
+        <div class="event-date">Apr 1<br>12:00 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-undocking">Undocking</span>
+          <div class="event-name">Soyuz MS-27 Undocking</div>
+          <div class="event-sub">International Space Station</div>
+        </div>
+        <div class="event-date">Apr 5<br>09:15 UTC</div>
+      </div>
+
+      <div class="event-card">
+        <div class="event-left">
+          <span class="event-type type-eva">EVA</span>
+          <div class="event-name">Orlan EVA-62</div>
+          <div class="event-sub">International Space Station</div>
+        </div>
+        <div class="event-date">Apr 12<br>TBD</div>
+      </div>
+    </div>
+  </div>
+</div>

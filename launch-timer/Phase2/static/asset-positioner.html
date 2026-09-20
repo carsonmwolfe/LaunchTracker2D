@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rocket Positioner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0e14; color: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+.topbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #0d1620; border-bottom: 2px solid #00e87a; flex-shrink: 0; }
+.topbar h1 { font-size: 11px; letter-spacing: 2px; color: #00e87a; }
+.topbar .hint { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-left: auto; }
+
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* Left: rocket list */
+.sidebar { width: 200px; flex-shrink: 0; border-right: 2px solid #1a2030; display: flex; flex-direction: column; background: #080c12; }
+.sidebar-hdr { font-size: 8px; color: #4a9ede; letter-spacing: 2px; padding: 8px 10px; border-bottom: 1px solid #1a2030; }
+.rocket-list { flex: 1; overflow-y: auto; }
+.rocket-item { padding: 8px 10px; font-size: 9px; cursor: pointer; border-bottom: 1px solid #0d1520; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 6px; }
+.rocket-item:hover { background: #0d1520; color: #fff; }
+.rocket-item.active { background: rgba(0,232,122,0.1); color: #00e87a; border-left: 2px solid #00e87a; }
+.rocket-dot { width: 6px; height: 6px; border-radius: 50%; background: #1a2030; flex-shrink: 0; }
+.rocket-item.active .rocket-dot { background: #00e87a; }
+
+/* Center: canvas */
+.canvas-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #060a10; gap: 8px; min-width: 0; }
+canvas { image-rendering: pixelated; border: 1px solid #1a2030; max-width: 100%; }
+
+/* Right: controls */
+.controls { width: 260px; flex-shrink: 0; border-left: 2px solid #1a2030; display: flex; flex-direction: column; background: #080c12; overflow-y: auto; }
+.ctrl-hdr { font-size: 8px; color: #ffd93d; letter-spacing: 2px; padding: 8px 10px; border-bottom: 1px solid #1a2030; }
+.ctrl-section { padding: 10px; border-bottom: 1px solid #1a2030; }
+.ctrl-label { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-bottom: 6px; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ctrl-row label { font-size: 9px; color: rgba(255,255,255,0.5); width: 14px; }
+.ctrl-row input[type=range] { flex: 1; accent-color: #00e87a; }
+.ctrl-row .val { font-size: 10px; color: #ffd93d; width: 36px; text-align: right; flex-shrink: 0; }
+.ctrl-row input[type=number] { flex: 1; background: #0d1520; border: 1px solid #1a2030; color: #fff; font-family: 'Courier New', monospace; font-size: 10px; padding: 3px 6px; }
+
+.output { padding: 10px; }
+.output-label { font-size: 8px; color: #4a5568; letter-spacing: 1px; margin-bottom: 6px; }
+.output-code { background: #0d1520; border: 1px solid #1a2030; padding: 8px; font-size: 9px; color: #00e87a; line-height: 1.8; word-break: break-all; cursor: pointer; }
+.output-code:hover { border-color: #00e87a; }
+.copy-btn { margin-top: 6px; width: 100%; font-family: 'Courier New', monospace; font-size: 9px; background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; padding: 6px; cursor: pointer; letter-spacing: 1px; }
+.copy-btn:hover { background: rgba(0,232,122,0.2); }
+.copy-btn.copied { background: rgba(0,232,122,0.3); }
+
+.coords { font-size: 9px; color: #4a5568; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>ROCKET POSITIONER</h1>
+  <span class="hint">Select rocket → adjust sliders → copy config</span>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-hdr">ROCKETS</div>
+    <div class="rocket-list" id="rocket-list"></div>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <canvas id="c" width="800" height="480" style="width:600px;height:360px;"></canvas>
+    <div class="coords" id="coords">click canvas to read position</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-hdr" style="color:#00e87a;">PAD 1 — MAIN</div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-row">
+        <label>X</label>
+        <input type="range" id="pad-x" min="380" max="560" value="476" oninput="update()">
+        <span class="val" id="pad-x-val">476</span>
+      </div>
+      <div class="ctrl-row">
+        <label>Y</label>
+        <input type="range" id="pad-y" min="100" max="320" value="217" oninput="update()">
+        <span class="val" id="pad-y-val">217</span>
+      </div>
+      <div class="ctrl-row">
+        <label>H</label>
+        <input type="range" id="pad-h" min="60" max="280" value="142" oninput="update()">
+        <span class="val" id="pad-h-val">142</span>
+      </div>
+      <div class="ctrl-row">
+        <label>FX</label>
+        <input type="range" id="pad-fx" min="-80" max="80" value="0" oninput="update()">
+        <span class="val" id="pad-fx-val">0</span>
+      </div>
+      <div class="ctrl-row">
+        <label>FY</label>
+        <input type="range" id="pad-fy" min="-40" max="40" value="0" oninput="update()">
+        <span class="val" id="pad-fy-val">0</span>
+      </div>
+    </div>
+
+    <div class="ctrl-hdr" style="color:#4a9ede;">PAD 2 — BACKGROUND</div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-row">
+        <label>X</label>
+        <input type="range" id="te-x" min="80" max="280" value="170" oninput="update()">
+        <span class="val" id="te-x-val">170</span>
+      </div>
+      <div class="ctrl-row">
+        <label>Y</label>
+        <input type="range" id="te-y" min="100" max="320" value="217" oninput="update()">
+        <span class="val" id="te-y-val">217</span>
+      </div>
+      <div class="ctrl-row">
+        <label>H</label>
+        <input type="range" id="te-h" min="60" max="280" value="142" oninput="update()">
+        <span class="val" id="te-h-val">142</span>
+      </div>
+    </div>
+
+    <div class="output">
+      <div class="output-label">CONFIG — click to copy</div>
+      <div class="output-code" id="output-code" onclick="copyConfig()" style="line-height:2;">—</div>
+      <button class="copy-btn" id="copy-btn" onclick="copyConfig()">COPY TO CLIPBOARD</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROCKETS = {
+  rocket_falcon9:     { file: 'rocket-falcon9.png',    pad: { x: 439, y: 211, h: 155, fx: -33, fy: -12 }, te: { x: 250, y: 291, h: 71 } },
+  rocket_atlas:       { file: 'rocket-atlasV.png',     pad: { x: 462, y: 196, h: 183, fy: -26 },          te: { x: 261, y: 292, h: 79 } },
+  rocket_vulcan:      { file: 'rocket-vulcan.png',     pad: { x: 472, y: 200, h: 153 },                    te: { x: 265, y: 291, h: 67 } },
+  rocket_electron:    { file: 'rocket-electron.png',   pad: { x: 485, y: 252, h: 116, fy: -18 },          te: { x: 268, y: 309, h: 60 } },
+  rocket_ng:          { file: 'rocket-NG.png',         pad: { x: 452, y: 159, h: 216, fx: 2, fy: -20 },   te: { x: 252, y: 261, h: 109 } },
+  rocket_kairos:      { file: 'rocket-KAIROS.png',     pad: { x: 480, y: 238, h: 127, fy: -10 },          te: { x: 267, y: 304, h: 60 } },
+  rocket_longmarch:   { file: 'rocket-longmarch.png',  pad: { x: 471, y: 207, h: 156, fy: -10 },          te: { x: 263, y: 290, h: 74 } },
+  rocket_firefly:     { file: 'rocket-firefly.png',    pad: { x: 469, y: 215, h: 164, fy: -25 },          te: { x: 258, y: 284, h: 91 } },
+  rocket_starship:    { file: 'rocket-starship.png',   pad: { x: 429, y: 122, h: 280, fy: -40 },          te: { x: 242, y: 247, h: 138 } },
+  rocket_soyuz:       { file: 'rocket-Soyuz.png',      pad: { x: 480, y: 223, h: 131 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_soyuz5:      { file: 'rocket-Soyuz5.png',     pad: { x: 480, y: 228, h: 131, fy: -3 },           te: { x: 266, y: 296, h: 66 } },
+  rocket_ariane6:     { file: 'rocket-Ariane6.png',    pad: { x: 477, y: 220, h: 133 },                    te: { x: 265, y: 292, h: 67 } },
+  rocket_sls:         { file: 'rocket-SLS.png',        pad: { x: 509, y: 161, h: 194 },                    te: { x: 280, y: 272, h: 87 } },
+  rocket_gslv:        { file: 'rocket-GSLV.png',       pad: { x: 479, y: 221, h: 132 },                    te: { x: 268, y: 297, h: 62 } },
+  rocket_longmarch12: { file: 'rocket-longmarch12.png',pad: { x: 470, y: 218, h: 155, fy: -17 },          te: { x: 261, y: 294, h: 76 } },
+  rocket_longmarch2d: { file: 'rocket-longmarch2d.png',pad: { x: 476, y: 218, h: 147, fy: -12 },          te: { x: 263, y: 290, h: 73 } },
+  rocket_vegaC:       { file: 'rocket-vegaC.png',      pad: { x: 459, y: 190, h: 187, fy: -22 },          te: { x: 258, y: 284, h: 89 } },
+  rocket_jielong:     { file: 'rocket-Jielong.png',    pad: { x: 460, y: 191, h: 189, fx: 1, fy: -26 },   te: { x: 257, y: 281, h: 88 } },
+  rocket_falconheavy: { file: 'rocket-FalconHeavy.png',pad: { x: 477, y: 213, h: 143, fx: -2 },           te: { x: 265, y: 296, h: 65 } },
+  rocket_minotaur:    { file: 'rocket-MinotaurIV.png', pad: { x: 485, y: 244, h: 115, fy: -9 },           te: { x: 268, y: 304, h: 60 } },
+  rocket_neutron:     { file: 'rocket-Neutron.png',    pad: { x: 483, y: 235, h: 119 },                    te: { x: 267, y: 302, h: 60 } },
+  rocket_rfaone:      { file: 'rocket-RFAone.png',     pad: { x: 478, y: 244, h: 127, fy: -17 },          te: { x: 266, y: 305, h: 60 } },
+  rocket_spectrum:    { file: 'rocket-Spectrum.png',   pad: { x: 476, y: 225, h: 142, fy: -13 },          te: { x: 264, y: 296, h: 69 } },
+  rocket_tianlong:    { file: 'rocket-tianlong3.png',  pad: { x: 475, y: 226, h: 136, fy: -9 },           te: { x: 265, y: 298, h: 65 } },
+  rocket_kinetica:    { file: 'rocket-Kinetica.png',   pad: { x: 506, y: 240, h: 109 },                    te: { x: 277, y: 299, h: 60 } },
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let currentKey = null;
+let images = {};
+let towerImg = null;
+let floodlightImg = null;
+
+// Load tower + floodlight assets
+function loadBg() {
+  return new Promise(resolve => {
+    let loaded = 0;
+    const done = () => { if (++loaded === 2) resolve(); };
+    const t = new Image(); t.onload = done; t.onerror = done;
+    t.src = '/static/assets/ground-LaunchPad.png';
+    towerImg = t;
+    const f = new Image(); f.onload = done; f.onerror = done;
+    f.src = '/static/assets/ground-floodlight.png';
+    floodlightImg = f;
+  });
+}
+
+// Build sidebar
+function buildList() {
+  const list = document.getElementById('rocket-list');
+  Object.keys(ROCKETS).forEach(key => {
+    const div = document.createElement('div');
+    div.className = 'rocket-item';
+    div.id = 'item-' + key;
+    div.innerHTML = `<div class="rocket-dot"></div>${key.replace('rocket_', '')}`;
+    div.onclick = () => selectRocket(key);
+    list.appendChild(div);
+  });
+}
+
+function selectRocket(key) {
+  currentKey = key;
+  document.querySelectorAll('.rocket-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('item-' + key).classList.add('active');
+
+  const pad = ROCKETS[key].pad;
+  document.getElementById('pad-x').value = pad.x;
+  document.getElementById('pad-y').value = pad.y;
+  document.getElementById('pad-h').value = pad.h;
+  document.getElementById('pad-fx').value = pad.fx || 0;
+  document.getElementById('pad-fy').value = pad.fy || 0;
+
+  const te = ROCKETS[key].te || { x: pad.x - 300, y: pad.y, h: pad.h };
+  document.getElementById('te-x').value = te.x;
+  document.getElementById('te-y').value = te.y;
+  document.getElementById('te-h').value = te.h;
+
+  // Load image if not cached
+  if (!images[key]) {
+    const img = new Image();
+    img.onload = () => { images[key] = img; update(); };
+    img.onerror = () => { images[key] = null; update(); };
+    img.src = '/static/assets/' + ROCKETS[key].file;
+  } else {
+    update();
+  }
+}
+
+function getVals() {
+  const x   = parseInt(document.getElementById('pad-x').value);
+  const y   = parseInt(document.getElementById('pad-y').value);
+  const h   = parseInt(document.getElementById('pad-h').value);
+  const fx  = parseInt(document.getElementById('pad-fx').value);
+  const fy  = parseInt(document.getElementById('pad-fy').value);
+  const tex = parseInt(document.getElementById('te-x').value);
+  const tey = parseInt(document.getElementById('te-y').value);
+  const teh = parseInt(document.getElementById('te-h').value);
+  document.getElementById('pad-x-val').textContent  = x;
+  document.getElementById('pad-y-val').textContent  = y;
+  document.getElementById('pad-h-val').textContent  = h;
+  document.getElementById('pad-fx-val').textContent = fx;
+  document.getElementById('pad-fy-val').textContent = fy;
+  document.getElementById('te-x-val').textContent   = tex;
+  document.getElementById('te-y-val').textContent   = tey;
+  document.getElementById('te-h-val').textContent   = teh;
+  return { x, y, h, fx, fy, tex, tey, teh };
+}
+
+function drawScene({ x, y, h, fx, fy, tex, tey, teh }) {
+  const img = images[currentKey] || null;
+
+  // ── Sky ──
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0, 0, 800, 400);
+
+  // ── Grass (app: 365 to BAR_Y=400) ──
+  ctx.fillStyle = '#5a8c3a';
+  ctx.fillRect(0, 365, 800, 35);
+
+  // ── Road (app: ROAD_Y=375, h=18) ──
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(0, 375, 800, 18);
+  ctx.fillStyle = '#5a5a5a'; ctx.fillRect(0, 375, 800, 2);
+  ctx.fillStyle = '#5a5a5a'; ctx.fillRect(0, 391, 800, 2);
+
+  // ── Bottom bar (app: BAR_Y=400, BAR_H=80) ──
+  ctx.fillStyle = 'rgba(8,8,18,0.97)';
+  ctx.fillRect(0, 400, 800, 80);
+  ctx.strokeStyle = 'rgba(0,232,122,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 400); ctx.lineTo(800, 400); ctx.stroke();
+
+  // ── Pad 2 (background, left) — app: sc=0.40, groundY=385, padX=300 ──
+  if (towerImg && towerImg.complete && towerImg.naturalWidth) {
+    const sc = 0.40;
+    const th2 = Math.round(289 * sc);  // 115px
+    const tw2 = Math.round(towerImg.width * (th2 / towerImg.height));
+    const tx2 = 300 - tw2 / 2;
+    const ty2 = 385 - th2;
+
+    // Rocket on pad 2 — uses independent te x/y/h sliders
+    if (img && teh > 0) {
+      const rw2 = Math.round(img.width * (teh / img.height));
+      ctx.globalAlpha = 0.82;
+      ctx.drawImage(img, tex, tey, rw2, teh);
+      ctx.globalAlpha = 1;
+    }
+
+    // Tower drawn after rocket so it sits in front
+    ctx.globalAlpha = 0.82;
+    ctx.drawImage(towerImg, tx2, ty2, tw2, th2);
+    ctx.globalAlpha = 1;
+
+    // Pad 2 floodlights — app: sl2groundY = groundY-11 = 374, sl2lx=260, sl2rx=350
+    if (floodlightImg && floodlightImg.complete && floodlightImg.naturalWidth) {
+      const fh2 = 18;
+      const fw2 = Math.round(floodlightImg.width * (fh2 / floodlightImg.height));
+      const sl2lx = 260, sl2rx = 350, sl2groundY = 374;
+      ctx.drawImage(floodlightImg, sl2lx - fw2/2, sl2groundY - fh2, fw2, fh2);
+      ctx.save();
+      ctx.translate(sl2rx - fw2/2 + fw2, sl2groundY - fh2);
+      ctx.scale(-1, 1);
+      ctx.drawImage(floodlightImg, 0, 0, fw2, fh2);
+      ctx.restore();
+    }
+  }
+
+  // ── Main pad tower — app: (465, 160, tw, 250) ──
+  if (towerImg && towerImg.complete && towerImg.naturalWidth) {
+    const th = 250;
+    const tw = Math.round(towerImg.width * (th / towerImg.height));
+    ctx.drawImage(towerImg, 465, 160, tw, th);
+  }
+
+  // ── Main pad floodlights — app: PAD_Y_BASE+22=381, lx=targetX-110=415, rx=targetX+110=635, fh=40 ──
+  if (floodlightImg && floodlightImg.complete && floodlightImg.naturalWidth) {
+    const fh = 40;
+    const fw = Math.round(floodlightImg.width * (fh / floodlightImg.height));
+    const groundY = 381, lx = 415, rx = 635;
+    ctx.drawImage(floodlightImg, lx, groundY - fh, fw, fh);
+    ctx.save();
+    ctx.translate(rx + fw, groundY - fh);
+    ctx.scale(-1, 1);
+    ctx.drawImage(floodlightImg, 0, 0, fw, fh);
+    ctx.restore();
+  }
+
+  // ── Reference lines ──
+  ctx.strokeStyle = 'rgba(255,0,0,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, 359); ctx.lineTo(800, 359); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(515, 0); ctx.lineTo(515, 480); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Rocket on main pad ──
+  if (img && h > 0) {
+    const w = Math.round(img.width * (h / img.height));
+    ctx.drawImage(img, x, y, w, h);
+    ctx.strokeStyle = 'rgba(0,232,122,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, w, h);
+
+    // ── Flame origin indicator (matches app.js: x + w/2 + fx, y + h + fy) ──
+    const flameX = Math.round(x + w / 2 + fx);
+    const flameY = Math.round(y + h + fy);
+    // Pixel flame column — same palette as app.js
+    const FLAME_PALETTE = ['#ffffff','#ffff88','#ffcc00','#ff8800','#ff4400','#cc2200','#661100'];
+    const colW = 4, segH = 4;
+    for (let i = 0; i < FLAME_PALETTE.length; i++) {
+      const halfW = Math.max(1, Math.round((colW * (1 - i * 0.08)) / 2));
+      ctx.fillStyle = FLAME_PALETTE[i];
+      ctx.globalAlpha = i < 2 ? 1 : (1 - i / FLAME_PALETTE.length * 0.5);
+      ctx.fillRect(flameX - halfW, flameY + i * segH, halfW * 2, segH);
+    }
+    ctx.globalAlpha = 1;
+    // Crosshair at origin
+    ctx.strokeStyle = 'rgba(255,180,0,0.9)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(flameX, flameY - 6); ctx.lineTo(flameX, flameY + 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(flameX - 8, flameY); ctx.lineTo(flameX + 8, flameY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Labels ──
+  ctx.fillStyle = 'rgba(255,0,0,0.7)';
+  ctx.font = '9px Courier New';
+  ctx.fillText('PAD_Y=359', 4, 356);
+  ctx.fillText('NOZZLE_X=515', 518, 20);
+}
+
+function update() {
+  if (!currentKey) return;
+  const vals = getVals();
+  drawScene(vals);
+
+  const { x, y, h, fx, fy, tex, tey, teh } = vals;
+  const fxStr = fx !== 0 ? `, fx: ${fx}` : '';
+  const fyStr = fy !== 0 ? `, fy: ${fy}` : '';
+  const line = `  ${currentKey.padEnd(20)}: { pad: { x: ${x}, y: ${y}, h: ${h}${fxStr}${fyStr} }, te: { x: ${tex}, y: ${tey}, h: ${teh} } },`;
+  document.getElementById('output-code').textContent = line;
+}
+
+function copyConfig() {
+  const text = document.getElementById('output-code').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ COPIED';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY TO CLIPBOARD'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Click canvas to read coords
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = 800 / rect.width;
+  const scaleY = 480 / rect.height;
+  const cx = Math.round((e.clientX - rect.left) * scaleX);
+  const cy = Math.round((e.clientY - rect.top) * scaleY);
+  document.getElementById('coords').textContent = `clicked: x=${cx}, y=${cy}`;
+});
+
+// Init
+loadBg().then(() => {
+  buildList();
+  drawScene({ x: 0, y: 0, h: 0, fx: 0, fy: 0, tex: 0, tey: 0, teh: 0 }); // background only until rocket selected
+});
+</script>
+</body>
+</html>

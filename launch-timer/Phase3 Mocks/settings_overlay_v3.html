@@ -1,0 +1,127 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page { font-family: 'Courier New', monospace; background: #080810; color: #fff; width: 800px; height: 510px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.app-header { flex-shrink: 0; padding: 18px 20px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.05); background: #080810; flex: 1; }
+.app-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(0,232,122,0.12); border: 1px solid rgba(0,232,122,0.25); display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 8px; }
+.app-name { font-size: 16px; font-weight: bold; color: #fff; letter-spacing: 0.08em; }
+.app-meta { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 6px; }
+.app-version { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; }
+.unit-id { font-size: 11px; color: rgba(0,232,122,0.6); letter-spacing: 0.15em; padding: 3px 12px; border-radius: 4px; background: rgba(0,232,122,0.06); border: 1px solid rgba(0,232,122,0.15); }
+.unit-id-label { font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; margin-top: 1px; }
+
+.panel { background: #0e0e20; border-top: 1px solid rgba(0,232,122,0.25); flex-shrink: 0; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.panel-title { font-size: 11px; font-weight: bold; color: #fff; letter-spacing: 0.12em; }
+.close-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: rgba(255,255,255,0.4); font-family: 'Courier New', monospace; font-size: 10px; padding: 3px 10px; cursor: pointer; letter-spacing: 0.1em; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); }
+.setting-row:nth-child(even) { border-right: none; }
+.setting-row:nth-last-child(-n+2) { border-bottom: none; }
+.setting-label { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; text-transform: uppercase; }
+.setting-sub { font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 2px; }
+.toggle-wrap { display: flex; gap: 2px; }
+.toggle-opt { font-size: 10px; padding: 4px 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: pointer; background: transparent; font-family: 'Courier New', monospace; }
+.toggle-opt.active { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
+.slider-wrap { display: flex; align-items: center; gap: 8px; }
+.slider-val { font-size: 10px; color: #ffd93d; width: 28px; text-align: right; }
+input[type=range] { width: 100px; accent-color: #00e87a; }
+.location-select { display: flex; flex-direction: column; gap: 3px; }
+.loc-opt { font-size: 9px; padding: 3px 10px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.3); cursor: pointer; text-align: center; background: transparent; font-family: 'Courier New', monospace; }
+.loc-opt.active { background: rgba(74,158,222,0.15); border-color: rgba(74,158,222,0.4); color: #4a9ede; }
+.actions { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+.action-btn { flex: 1; padding: 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; cursor: pointer; letter-spacing: 0.08em; border: 1px solid; }
+.btn-restart { background: rgba(255,211,61,0.1); border-color: rgba(255,211,61,0.3); color: #ffd93d; }
+.btn-wifi { background: rgba(74,158,222,0.1); border-color: rgba(74,158,222,0.3); color: #4a9ede; }
+.btn-danger { background: rgba(255,68,34,0.1); border-color: rgba(255,68,34,0.3); color: #ff4422; }
+</style>
+
+<div class="page">
+  <div class="app-header">
+    <div class="app-icon">🚀</div>
+    <div class="app-name">LAUNCHTRACKER 2D</div>
+    <div class="app-meta">
+      <div class="app-version">v1.0.0 · Raspberry Pi · Cape Canaveral, FL</div>
+      <div class="unit-id">LT-001 · b8:27:eb:f0:f8:2a</div>
+      <div class="unit-id-label">UNIT ID · MAC ADDRESS</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">SETTINGS</div>
+      <button class="close-btn">✕ CLOSE</button>
+    </div>
+
+    <div class="settings-grid">
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Brightness</div>
+          <div class="setting-sub">Screen backlight level</div>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" min="0" max="100" value="40" id="brightness">
+          <div class="slider-val" id="bval">40</div>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Temperature</div>
+          <div class="setting-sub">Weather display units</div>
+        </div>
+        <div class="toggle-wrap">
+          <button class="toggle-opt active">°F</button>
+          <button class="toggle-opt">°C</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Launch Site</div>
+          <div class="setting-sub">Filter by location</div>
+        </div>
+        <div class="location-select">
+          <button class="loc-opt active">Cape Canaveral</button>
+          <button class="loc-opt">Vandenberg SFB</button>
+          <button class="loc-opt">All Sites</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Time Format</div>
+          <div class="setting-sub">Countdown display</div>
+        </div>
+        <div class="toggle-wrap">
+          <button class="toggle-opt active">UTC</button>
+          <button class="toggle-opt">LOCAL</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn btn-restart">↺ RESTART PAGE</button>
+      <button class="action-btn btn-wifi">⌘ WIFI SETTINGS</button>
+      <button class="action-btn btn-danger">⏻ REBOOT PI</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const slider = document.getElementById('brightness');
+const bval = document.getElementById('bval');
+slider.addEventListener('input', () => bval.textContent = slider.value);
+document.querySelectorAll('.toggle-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.querySelectorAll('.toggle-opt').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+document.querySelectorAll('.loc-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.loc-opt').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>

@@ -1,0 +1,185 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page { font-family: 'Courier New', monospace; background: #080810; color: #fff; width: 800px; height: 510px; overflow: hidden; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(0,232,122,0.2); background: rgba(8,8,18,0.97); flex-shrink: 0; height: 40px; }
+.back-btn { background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.3); border-radius: 4px; color: #00e87a; font-family: 'Courier New', monospace; font-size: 10px; padding: 4px 10px; cursor: pointer; letter-spacing: 0.1em; }
+.mission-title { font-size: 13px; font-weight: bold; color: #fff; letter-spacing: 0.05em; }
+.status-badge { font-size: 9px; padding: 3px 8px; border-radius: 3px; background: rgba(0,232,122,0.15); border: 1px solid rgba(0,232,122,0.4); color: #00e87a; letter-spacing: 0.1em; }
+
+/* Main body - top section */
+.main { display: flex; flex: 1; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.left { width: 300px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; }
+.right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Earth */
+.earth-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: #05050f; }
+.orbit-type { position: absolute; top: 8px; left: 10px; font-size: 8px; color: rgba(255,255,255,0.25); letter-spacing: 0.1em; }
+.orbit-pill { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 9px; padding: 2px 10px; border-radius: 10px; background: rgba(74,158,222,0.15); border: 1px solid rgba(74,158,222,0.35); color: #4a9ede; letter-spacing: 0.08em; white-space: nowrap; }
+
+/* Window */
+.window-wrap { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.win-label { font-size: 8px; color: rgba(255,255,255,0.25); letter-spacing: 0.1em; margin-bottom: 5px; }
+.win-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; margin: 7px 0 5px; }
+.win-fill { position: absolute; inset: 0; background: rgba(0,232,122,0.2); border-radius: 2px; }
+.win-dot { position: absolute; top: -4px; width: 11px; height: 11px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #05050f; }
+.win-times { display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.25); }
+.win-t0 { text-align: center; font-size: 9px; color: #00e87a; margin-top: 2px; }
+
+/* Info rows on right */
+.info-scroll { flex: 1; overflow-y: auto; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.info-key { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; }
+.info-val { font-size: 11px; color: #fff; text-align: right; }
+.info-val.blue { color: #4a9ede; }
+.info-val.green { color: #00e87a; }
+.info-val.yellow { color: #ffd93d; }
+
+/* Weather strip on right bottom */
+.wx-wrap { padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+.wx-row { display: flex; gap: 0; margin-bottom: 6px; }
+.wx-item { flex: 1; text-align: center; }
+.wx-val { font-size: 13px; font-weight: bold; color: #fff; line-height: 1; }
+.wx-lbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.06em; }
+.go-row { display: flex; align-items: center; gap: 8px; }
+.go-pill { font-size: 9px; padding: 2px 8px; border-radius: 3px; background: rgba(0,232,122,0.15); border: 1px solid rgba(0,232,122,0.3); color: #00e87a; font-weight: bold; }
+.go-text { font-size: 9px; color: rgba(255,255,255,0.25); }
+
+/* Bottom rocket strip */
+.rocket-strip { height: 110px; flex-shrink: 0; display: flex; align-items: stretch; border-top: 1px solid rgba(255,255,255,0.07); background: #05050f; position: relative; overflow: hidden; }
+.rocket-info { padding: 10px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px; z-index: 1; flex: 1; }
+.rocket-name { font-size: 14px; font-weight: bold; color: #fff; }
+.rocket-sub { font-size: 10px; color: rgba(255,255,255,0.35); }
+.rocket-tags { display: flex; gap: 6px; margin-top: 4px; }
+.rocket-tag { font-size: 8px; padding: 2px 7px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.35); }
+.stats-group { display: flex; gap: 0; border-left: 1px solid rgba(255,255,255,0.06); }
+.stat-box { padding: 10px 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.06); min-width: 80px; }
+.stat-num { font-size: 18px; font-weight: bold; color: #ffd93d; line-height: 1; }
+.stat-lbl { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 4px; letter-spacing: 0.06em; text-align: center; line-height: 1.4; }
+
+/* Rocket silhouette */
+.rocket-svg { position: absolute; right: 280px; bottom: 0; opacity: 0.12; }
+</style>
+
+<div class="page">
+  <div class="topbar">
+    <button class="back-btn">← BACK</button>
+    <div class="mission-title">STARLINK GROUP 17-24</div>
+    <div class="status-badge">GO FOR LAUNCH</div>
+  </div>
+
+  <div class="main">
+    <!-- LEFT -->
+    <div class="left">
+      <div class="earth-wrap">
+        <div class="orbit-type">EST. ORBIT</div>
+        <canvas id="ec" width="160" height="160"></canvas>
+        <div class="orbit-pill">LOW EARTH ORBIT · LEO</div>
+      </div>
+      <div class="window-wrap">
+        <div class="win-label">LAUNCH WINDOW</div>
+        <div class="win-bar">
+          <div class="win-fill"></div>
+          <div class="win-dot" style="left:0%;background:#ffd93d;"></div>
+          <div class="win-dot" style="left:33%;background:#00e87a;"></div>
+          <div class="win-dot" style="left:100%;background:#ffd93d;"></div>
+        </div>
+        <div class="win-times"><span>02:37 OPEN</span><span>06:37 CLOSE</span></div>
+        <div class="win-t0">T-0 · MAR 17 · 02:37 UTC</div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right">
+      <div class="info-scroll">
+        <div class="info-row"><div class="info-key">Mission</div><div class="info-val blue">Starlink Group 17-24</div></div>
+        <div class="info-row"><div class="info-key">Mission Type</div><div class="info-val">Communications</div></div>
+        <div class="info-row"><div class="info-key">Destination</div><div class="info-val green">Low Earth Orbit</div></div>
+        <div class="info-row"><div class="info-key">Provider</div><div class="info-val">SpaceX</div></div>
+        <div class="info-row"><div class="info-key">Vehicle</div><div class="info-val">Falcon 9 Block 5</div></div>
+        <div class="info-row"><div class="info-key">Launch Site</div><div class="info-val">Vandenberg SFB, CA</div></div>
+        <div class="info-row"><div class="info-key">Pad</div><div class="info-val">SLC-4E</div></div>
+        <div class="info-row"><div class="info-key">Program</div><div class="info-val yellow">Starlink</div></div>
+      </div>
+      <div class="wx-wrap">
+        <div class="wx-row">
+          <div class="wx-item"><div class="wx-val">58°F</div><div class="wx-lbl">TEMP</div></div>
+          <div class="wx-item"><div class="wx-val">12mph</div><div class="wx-lbl">WIND</div></div>
+          <div class="wx-item"><div class="wx-val">12%</div><div class="wx-lbl">CLOUD</div></div>
+          <div class="wx-item"><div class="wx-val">0.0"</div><div class="wx-lbl">PRECIP</div></div>
+        </div>
+        <div class="go-row">
+          <div class="go-pill">GO</div>
+          <div class="go-text">No weather concerns reported</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROCKET STRIP -->
+  <div class="rocket-strip">
+    <!-- Faint rocket silhouette -->
+    <svg class="rocket-svg" width="60" height="110" viewBox="0 0 60 110">
+      <rect x="22" y="20" width="16" height="70" fill="white" rx="2"/>
+      <polygon points="22,20 30,0 38,20" fill="white"/>
+      <rect x="12" y="60" width="10" height="20" fill="white" rx="1"/>
+      <rect x="38" y="60" width="10" height="20" fill="white" rx="1"/>
+      <rect x="20" y="85" width="20" height="8" fill="white"/>
+    </svg>
+
+    <div class="rocket-info">
+      <div class="rocket-name">Falcon 9 Block 5</div>
+      <div class="rocket-sub">SpaceX · Commercial Launch Vehicle</div>
+      <div class="rocket-tags">
+        <span class="rocket-tag">2-STAGE</span>
+        <span class="rocket-tag">REUSABLE</span>
+        <span class="rocket-tag">LEO · GTO · SSO</span>
+      </div>
+    </div>
+
+    <div class="stats-group">
+      <div class="stat-box">
+        <div class="stat-num">57</div>
+        <div class="stat-lbl">ORBITAL<br>THIS YEAR</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">33</div>
+        <div class="stat-lbl">SPACEX<br>THIS YEAR</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">254</div>
+        <div class="stat-lbl">FROM<br>THIS PAD</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const c=document.getElementById('ec'),x=c.getContext('2d');
+const cx=80,cy=80,R=62;
+let a=0;
+function draw(){
+  x.clearRect(0,0,160,160);
+  x.fillStyle='rgba(255,255,255,0.5)';
+  [[12,10],[148,18],[6,72],[158,62],[22,135],[145,128],[72,6],[90,154],[10,105],[155,100],[135,28],[28,52]].forEach(([sx,sy])=>x.fillRect(sx,sy,1,1));
+  const g=x.createRadialGradient(cx,cy,R*0.85,cx,cy,R*1.2);
+  g.addColorStop(0,'rgba(30,70,160,0.2)');g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.beginPath();x.arc(cx,cy,R*1.2,0,Math.PI*2);x.fill();
+  x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.fillStyle='#1a5a8a';x.fill();
+  x.strokeStyle='rgba(255,255,255,0.07)';x.lineWidth=0.5;
+  for(let i=1;i<4;i++){const yy=cy-R+(R*2/4)*i;const hw=Math.sqrt(Math.max(0,R*R-(yy-cy)**2));x.beginPath();x.moveTo(cx-hw,yy);x.lineTo(cx+hw,yy);x.stroke();}
+  for(let i=0;i<6;i++){x.save();x.translate(cx,cy);x.rotate(Math.PI/6*i);x.beginPath();x.moveTo(0,-R);x.lineTo(0,R);x.stroke();x.restore();}
+  x.fillStyle='#4a7a3a';
+  [{ex:-14,ey:-9,rx:17,ry:15,rot:0.3},{ex:-16,ey:15,rx:10,ry:12,rot:-0.2},{ex:21,ey:-7,rx:12,ry:10,rot:0.1},{ex:17,ey:12,rx:8,ry:6,rot:0.2}].forEach(({ex,ey,rx,ry,rot})=>{x.beginPath();x.ellipse(cx+ex,cy+ey,rx,ry,rot,0,Math.PI*2);x.fill();});
+  x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.strokeStyle='rgba(100,180,255,0.25)';x.lineWidth=1.5;x.stroke();
+  x.save();x.strokeStyle='rgba(0,232,122,0.45)';x.lineWidth=1.2;x.setLineDash([3,4]);
+  x.beginPath();x.ellipse(cx,cy,R+15,R+8,-0.15,0,Math.PI*2);x.stroke();x.setLineDash([]);
+  const sa=Math.cos(-0.15),sb=Math.sin(-0.15);
+  const px=(R+15)*Math.cos(a),py=(R+8)*Math.sin(a);
+  const sx=cx+px*sa-py*sb,sy=cy+px*sb+py*sa;
+  x.fillStyle='#00e87a';x.beginPath();x.arc(sx,sy,3,0,Math.PI*2);x.fill();
+  x.restore();
+}
+function loop(){a+=0.014;draw();requestAnimationFrame(loop);}
+loop();
+</script>

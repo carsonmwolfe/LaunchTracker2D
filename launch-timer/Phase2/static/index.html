@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=800" />
+  <title>Launch Countdown</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; cursor: none !important; }
+
+    body {
+      background: #0a0e14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 480px;
+      overflow: hidden;
+    }
+
+    #wrapper {
+      position: relative;
+      width: 800px;
+      height: 480px;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    #btn-test {
+      display: none;
+    }
+
+    #btn-launches {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,211,61,0.6);
+      color: #ffd93d;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 5px 10px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    #btn-launches::before {
+      content: ''; position: absolute; inset: -14px;
+    }
+    #btn-launches:hover { background: rgba(74,158,222,0.35); }
+
+    #btn-wake {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    #page-frame {
+      display: none;
+      position: absolute;
+      inset: 0;
+      width: 800px;
+      height: 480px;
+      border: none;
+      z-index: 50;
+    }
+
+    /* ── Info bar ── */
+    #info-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 800px; height: 90px;
+      background: rgba(8,12,18,0.97);
+      border-top: 3px solid #00e87a;
+      display: flex;
+      font-family: 'Press Start 2P', monospace;
+      z-index: 5;
+    }
+    @keyframes t10-flash {
+      0%, 100% { border-top-color: #ff0022; background: rgba(8,12,18,0.97); }
+      50%       { border-top-color: #ff4400; background: rgba(60,6,6,0.97); }
+    }
+    #info-bar.t10-alert { animation: t10-flash 0.75s ease-in-out infinite; }
+
+    @keyframes t1hr-pulse {
+      0%, 100% { border-top-color: #ffd93d; }
+      50%       { border-top-color: #ffaa00; background: rgba(20,16,4,0.97); }
+    }
+    #info-bar.t1hr-alert { animation: t1hr-pulse 2s ease-in-out infinite; }
+
+    /* LEFT panel — launch window */
+    #ib-window {
+      width: 185px; flex-shrink: 0;
+      padding: 0 12px;
+      display: flex; flex-direction: column;
+      justify-content: center; gap: 8px;
+      border-right: 2px solid #0d1620;
+    }
+    #ib-win-label { font-size: 9px; color: rgba(0,232,122,0.8); letter-spacing: 0.05em; }
+    #ib-win-times-row { display: flex; justify-content: space-between; align-items: center; }
+    .ib-win-time { font-size: 11px; color: #00e87a; line-height: 1; }
+    .ib-win-sublbl { font-size: 8px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+    #ib-win-sep { font-size: 10px; color: rgba(255,255,255,0.2); }
+    #ib-win-track {
+      height: 6px; background: rgba(255,255,255,0.07);
+      position: relative; border-radius: 1px;
+    }
+    #ib-win-fill {
+      position: absolute; top: 0; left: 0; height: 100%;
+      background: rgba(0,232,122,0.25); pointer-events: none;
+    }
+    #ib-win-dot {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 9px; height: 9px;
+      background: #00e87a; border: 2px solid #080c12;
+      left: 0%;
+    }
+    #ib-win-t0-row { display: flex; align-items: center; justify-content: center; }
+    #ib-win-t0 { font-size: 9px; color: #ffd93d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+
+    /* CENTER panel — mission info */
+    #ib-left {
+      flex: 1;
+      padding: 0 14px;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      gap: 4px; min-width: 0; overflow: hidden;
+      cursor: pointer; position: relative;
+    }
+    #ib-name-row { display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-width: 0; }
+    #ib-name { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ib-badge { font-size: 8px; padding: 4px 8px; letter-spacing: 0.05em; flex-shrink: 0; background: rgba(255,211,61,0.15); border: 2px solid rgba(255,211,61,0.4); color: #ffd93d; }
+    #ib-badge.go   { background: rgba(0,232,122,0.15); border-color: rgba(0,232,122,0.4); color: #00e87a; }
+    #ib-badge.hold { background: rgba(255,68,34,0.15);  border-color: rgba(255,68,34,0.4);  color: #ff4422; }
+    #ib-prob-badge { font-size: 8px; padding: 4px 8px; flex-shrink: 0; background: rgba(0,232,122,0.08); border: 2px solid rgba(0,232,122,0.2); color: #00e87a; display: none; }
+    #ib-detail-row { font-size: 10px; text-align: center; line-height: 1.6; width: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
+    #ib-sub-row  { font-size: 10px; }
+    #ib-loc-row  { font-size: 10px; }
+    #ib-sub      { color: #4a9ede; }
+    #ib-location { color: rgba(255,255,255,0.75); }
+    #ib-t0       { color: #ffd93d; }
+    .ib-sep      { color: rgba(255,255,255,0.2); }
+
+    /* hidden — kept for JS compat */
+    #ib-tap { display: none; }
+    #ib-cd  { display: none; }
+    #ib-date { display: none; }
+    #ib-prob-wrap { display: none; }
+    #ib-center { display: none; }
+
+    /* RIGHT panel — weather */
+    #ib-right {
+      width: 185px; flex-shrink: 0;
+      padding: 0 10px;
+      display: flex; flex-direction: column;
+      justify-content: center; gap: 5px;
+      border-left: 2px solid #0d1620;
+      overflow: hidden;
+    }
+    #ib-wx-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .ib-wx { text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .ib-wx-val { font-size: 16px; color: #fff; line-height: 1; }
+    .ib-wx-lbl { font-size: 7px; color: rgba(255,255,255,0.7); margin-top: 6px; line-height: 1.4; height: 20px; display: flex; align-items: flex-start; justify-content: center; }
+    #ib-wx-now-lbl { font-size: 8px; color: #4a9ede; letter-spacing: 0.06em; text-align: center; margin-top: 10px; }
+    #ib-liftoff-row { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+    #ib-wx-label { font-size: 6px; color: #4a9ede; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
+    #ib-ver { font-size: 9px; padding: 3px 6px; letter-spacing: 0.03em; text-align: center; white-space: nowrap; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+    #ib-ver.wx-go       { color: #00e87a; background: rgba(0,232,122,0.12); border: 1px solid rgba(0,232,122,0.4); }
+    #ib-ver.wx-marginal { color: #ffd93d; background: rgba(255,211,61,0.15); border: 1px solid rgba(255,211,61,0.5); }
+    #ib-ver.wx-nogo     { color: #fff;    background: rgba(180,20,0,0.85);   border: 1px solid #cc2200; }
+    #ib-ver.wx-stale    { color: #ff4422; background: none; border: none; font-size: 6px; }
+    .ib-reticle {
+      position: absolute; width: 10px; height: 10px;
+      border-color: rgba(0,232,122,0.4); border-style: solid;
+      pointer-events: none;
+    }
+    .ib-reticle.tl { top: 7px;    left: 8px;   border-width: 2px 0 0 2px; }
+    .ib-reticle.tr { top: 7px;    right: 8px;  border-width: 2px 2px 0 0; }
+    .ib-reticle.bl { bottom: 7px; left: 8px;   border-width: 0 0 2px 2px; }
+    .ib-reticle.br { bottom: 7px; right: 8px;  border-width: 0 2px 2px 0; }
+    @keyframes reticle-breathe {
+      0%, 100% { opacity: 0.35; }
+      50%       { opacity: 0.85; }
+    }
+    .ib-reticle.tl { animation: reticle-breathe 3s ease-in-out infinite 0s; }
+    .ib-reticle.tr { animation: reticle-breathe 3s ease-in-out infinite 0.75s; }
+    .ib-reticle.bl { animation: reticle-breathe 3s ease-in-out infinite 1.5s; }
+    .ib-reticle.br { animation: reticle-breathe 3s ease-in-out infinite 2.25s; }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <canvas id="c" width="800" height="480"></canvas>
+    <button id="btn-test">TEST LAUNCH</button>
+    <button id="btn-launches" onclick="showPage('/launches')">LAUNCHES & EVENTS</button>
+    <button id="btn-wake" onclick="disableNightMode()"></button>
+    <iframe id="page-frame" src="about:blank"></iframe>
+
+    <div id="info-bar">
+
+      <!-- LEFT: launch window -->
+      <div id="ib-window">
+        <div id="ib-win-label">LAUNCH WINDOW</div>
+        <div id="ib-win-times-row">
+          <div>
+            <div class="ib-win-time" id="ib-win-open">—:—</div>
+            <div class="ib-win-sublbl">OPEN</div>
+          </div>
+          <div id="ib-win-sep" style="color:rgba(0,232,122,0.4); position:relative; top:-5px;">-</div>
+          <div style="text-align:right;">
+            <div class="ib-win-time" id="ib-win-close">—:—</div>
+            <div class="ib-win-sublbl">CLOSE</div>
+          </div>
+        </div>
+        <div id="ib-win-track">
+          <div id="ib-win-fill"></div>
+          <div id="ib-win-dot"></div>
+        </div>
+        <div id="ib-win-t0-row">
+          <div id="ib-win-t0">—</div>
+        </div>
+      </div>
+
+      <!-- CENTER: mission info — tappable → mission page (onclick set dynamically by updateInfoBar) -->
+      <div id="ib-left">
+        <div id="ib-name-row">
+          <div id="ib-name">—</div>
+          <div id="ib-badge">TBD</div>
+          <div id="ib-prob-badge">—%</div>
+        </div>
+        <div id="ib-detail-row">
+          <div id="ib-sub-row"><span id="ib-sub">—</span></div>
+          <div id="ib-loc-row"><span id="ib-location">—</span></div>
+          <span id="ib-t0" style="display:none;"></span>
+        </div>
+        <div class="ib-reticle tl"></div>
+        <div class="ib-reticle tr"></div>
+        <div class="ib-reticle bl"></div>
+        <div class="ib-reticle br"></div>
+        <!-- hidden — kept for JS compat -->
+        <div id="ib-tap" style="display:none;"></div>
+        <div id="ib-cd" style="display:none;"></div>
+        <div id="ib-date" style="display:none;"></div>
+        <div id="ib-prob-wrap" style="display:none;">
+          <div id="ib-prob-row">
+            <span id="ib-prob-label"></span>
+            <div id="ib-prob-bar"><div id="ib-prob-fill"></div></div>
+            <span id="ib-prob-pct">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- hidden center — kept for JS compat -->
+      <div id="ib-center" style="display:none;"></div>
+
+      <!-- RIGHT: weather -->
+      <div id="ib-right">
+        <div id="ib-wx-now-lbl">CURRENT CONDITIONS</div>
+        <div id="ib-wx-row">
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-temp">—</div><div class="ib-wx-lbl">TEMP</div></div>
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-wind">—</div><div class="ib-wx-lbl">WIND MPH</div></div>
+          <div class="ib-wx"><div class="ib-wx-val" id="ib-cloud">—</div><div class="ib-wx-lbl">CLOUD</div></div>
+        </div>
+        <div id="ib-liftoff-row">
+          <div id="ib-wx-label">AT LIFTOFF</div>
+          <div id="ib-ver">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+<script src="/static/js/notify.js"></script>
+<script>
+  const _frame = document.getElementById('page-frame');
+
+  function showPage(url) {
+    const currentHref = _frame.contentWindow?.location?.href;
+    if (currentHref !== location.origin + url) {
+      _frame.src = url;
+    }
+    _frame.style.display = 'block';
+    history.pushState({ page: url }, '', url);
+  }
+
+  function hidePage() {
+    _frame.style.display = 'none';
+    history.pushState({ page: '/' }, '', '/');
+  }
+
+  // Back button / popstate
+  window.addEventListener('popstate', (e) => {
+    if (!e.state || e.state.page === '/') hidePage();
+    else showPage(e.state.page);
+  });
+
+  // Child pages post messages to parent
+  window.addEventListener('message', (e) => {
+    if (e.data === 'spa-back') { hidePage(); return; }
+    if (e.data?.action === 'screen_mode') {
+      // Instant screen_mode update from settings page — no 5s poll wait
+      if (typeof state !== 'undefined' && state.settings) {
+        if (e.data.mode === 'sleep') {
+          state._nightWakeUntil = null;
+          try { localStorage.removeItem('_nightWakeUntil'); } catch(e2) {}
+        }
+        state.settings.screen_mode = e.data.mode;
+      }
+    }
+  });
+
+  // NOTE: iframe preload disabled — Pi 3 A+ has insufficient RAM for two renderers simultaneously.
+</script>
+</body>
+</html>

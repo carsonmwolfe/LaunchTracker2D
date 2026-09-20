@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>LaunchTracker2D — Mission Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .scanlines {
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+      pointer-events: none; z-index: 1000;
+    }
+
+    /* HEADER */
+    .header {
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      padding: 0 20px;
+      height: 50px;
+      display: flex; align-items: center; gap: 14px;
+      flex-shrink: 0;
+    }
+    .logo-sqs { display: flex; gap: 5px; }
+    .logo-sq { width: 10px; height: 10px; }
+    .header-title { flex: 1; }
+    .header-title-main { font-size: 10px; color: #fff; }
+    .header-title-sub { font-size: 6px; color: rgba(0,232,122,0.5); margin-top: 3px; }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+    .hbtn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px; padding: 5px 10px;
+      border: 2px solid; cursor: pointer;
+      background: transparent;
+    }
+    .hbtn-green { border-color: #00e87a; color: #00e87a; }
+    .hbtn-green:hover { background: rgba(0,232,122,0.1); }
+    .hbtn-blue { border-color: #4a9ede; color: #4a9ede; }
+    .hbtn-blue:hover { background: rgba(74,158,222,0.1); }
+    .hbtn-red { border-color: #ff4422; color: #ff4422; }
+    .hbtn-red:hover { background: rgba(255,68,34,0.1); }
+    .sync-time { font-size: 6px; color: rgba(255,255,255,0.2); }
+
+    /* BODY */
+    .body { flex: 1; display: flex; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 200px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #080c12;
+    }
+    .sidebar-section { padding: 10px 0; border-bottom: 1px solid #1a2030; }
+    .sidebar-label { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.12em; padding: 0 12px 6px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; cursor: pointer;
+      font-size: 7px; color: rgba(255,255,255,0.4);
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.03); }
+    .nav-item.active { color: #00e87a; border-left-color: #00e87a; background: rgba(0,232,122,0.05); }
+    .nav-dot { width: 6px; height: 6px; flex-shrink: 0; }
+    .nav-count { margin-left: auto; font-size: 6px; color: rgba(255,255,255,0.2); }
+    .sidebar-stat { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; }
+    .sidebar-stat-label { font-size: 6px; color: rgba(255,255,255,0.25); }
+    .sidebar-stat-val { font-size: 9px; }
+
+    /* MAIN */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* STATS ROW */
+    .stats-row { display: flex; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .stat-card { flex: 1; padding: 12px 16px; border-right: 1px solid #1a2030; position: relative; }
+    .stat-card:last-child { border-right: none; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card:nth-child(1)::before { background: #fff; }
+    .stat-card:nth-child(2)::before { background: #00e87a; }
+    .stat-card:nth-child(3)::before { background: #ff4422; }
+    .stat-card:nth-child(4)::before { background: #ffd93d; }
+    .stat-card:nth-child(5)::before { background: #4a9ede; }
+    .stat-num { font-size: 24px; color: #fff; line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 6px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; }
+
+    /* FILTER BAR */
+    .filter-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-bottom: 2px solid #1a2030;
+      flex-shrink: 0; background: #080c12;
+    }
+    .fbtn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px; padding: 4px 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: rgba(255,255,255,0.3);
+      cursor: pointer; letter-spacing: 0.06em;
+    }
+    .fbtn.active { border-color: #00e87a; color: #00e87a; background: rgba(0,232,122,0.08); }
+    .fbtn:hover:not(.active) { background: rgba(255,255,255,0.04); }
+    .search-input {
+      margin-left: auto;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5);
+      padding: 4px 10px; width: 180px;
+    }
+
+    /* UNIT LIST */
+    .unit-list { flex: 1; overflow-y: auto; }
+    .unit-list::-webkit-scrollbar { width: 3px; }
+    .unit-list::-webkit-scrollbar-thumb { background: #1a2030; }
+
+    .unit-row {
+      display: flex; align-items: center;
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      cursor: pointer; gap: 0;
+    }
+    .unit-row:hover { background: rgba(255,255,255,0.02); }
+    .unit-row.expanded { background: rgba(0,232,122,0.03); border-bottom-color: rgba(0,232,122,0.1); }
+    .unit-row.offline { opacity: 0.5; }
+
+    .status-dot { width: 8px; height: 8px; flex-shrink: 0; margin-right: 12px; }
+    .ts-badge { font-size: 6px; padding: 1px 4px; border: 1px solid rgba(74,158,222,0.4); color: #4a9ede; background: rgba(74,158,222,0.08); flex-shrink: 0; margin-left: 4px; cursor: default; }
+    .ts-badge:hover { background: rgba(74,158,222,0.18); cursor: pointer; }
+    .dot-online  { background: #00e87a; box-shadow: 0 0 5px #00e87a66; animation: pulse-dot 2s infinite; }
+    .dot-offline { background: #ff4422; }
+    .dot-warn    { background: #ffd93d; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .unit-id { font-size: 10px; color: #fff; width: 140px; flex-shrink: 0; line-height: 1.5; }
+    .unit-nick { font-size: 10px; color: #fff; display: flex; align-items: center; gap: 5px; }
+    .unit-nick-edit { font-size: 8px; color: rgba(74,158,222,0.6); cursor: pointer; border: 1px solid rgba(74,158,222,0.3); background: rgba(74,158,222,0.08); font-family: 'Press Start 2P', monospace; padding: 1px 5px; line-height: 1.4; }
+    .unit-nick-edit:hover { color: #4a9ede; border-color: #4a9ede; background: rgba(74,158,222,0.15); }
+    .unit-raw-id { font-size: 6px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    .nick-input {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px; background: rgba(74,158,222,0.1);
+      border: 1px solid #4a9ede; color: #fff;
+      padding: 2px 6px; width: 100px; outline: none;
+    }
+    .unit-loc { flex: 2; font-size: 7px; color: rgba(255,255,255,0.4); }
+    .unit-wifi { flex: 1.5; font-size: 7px; color: rgba(255,255,255,0.3); }
+    .unit-launch { flex: 2; font-size: 7px; color: rgba(255,211,61,0.7); text-align: right; padding-right: 10px; }
+    .unit-version { width: 80px; flex-shrink: 0; }
+    .ver-badge { font-size: 6px; padding: 2px 6px; border: 1px solid; }
+    .ver-ok  { border-color: rgba(0,232,122,0.3);  color: #00e87a;  background: rgba(0,232,122,0.08); }
+    .ver-old { border-color: rgba(255,211,61,0.3); color: #ffd93d; background: rgba(255,211,61,0.08); }
+    .unit-seen { width: 80px; font-size: 7px; color: rgba(255,255,255,0.2); text-align: right; flex-shrink: 0; }
+
+    /* EXPANDED DETAIL */
+    .unit-detail {
+      padding: 12px 40px 14px;
+      border-bottom: 2px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.2);
+    }
+    .detail-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 12px; }
+    .detail-field { }
+    .detail-label { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.08em; margin-bottom: 3px; }
+    .detail-val { font-size: 8px; color: rgba(255,255,255,0.6); }
+    .detail-val.green { color: #00e87a; }
+    .detail-val.yellow { color: #ffd93d; }
+    .detail-val.red { color: #ff4422; }
+    .detail-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .detail-controls { display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .ctrl-label { font-size: 6px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+    .brightness-slider { width: 120px; accent-color: #ffd93d; cursor: pointer; }
+    .notify-input { font-family: 'Press Start 2P', monospace; font-size: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; width: 160px; }
+    /* Pi server log modal */
+    #log-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; }
+    #log-modal.open { display:flex; }
+    #log-box { background:#05080d; border:2px solid #00e87a; width:700px; max-height:480px; display:flex; flex-direction:column; }
+    #log-box-header { background:#0d1620; padding:8px 14px; font-size:7px; color:#00e87a; display:flex; justify-content:space-between; }
+    #log-box-close { cursor:pointer; color:#ff4422; background:none; border:none; font-family:'Press Start 2P',monospace; font-size:7px; }
+    #log-box-lines { flex:1; overflow-y:auto; padding:10px 14px; font-size:7px; color:rgba(255,255,255,0.5); line-height:2; font-family:monospace; }
+    #log-box-lines::-webkit-scrollbar { width:3px; }
+    #log-box-lines::-webkit-scrollbar-thumb { background:#1a2030; }
+
+    /* LOG PANEL */
+    .log-panel {
+      height: 130px; flex-shrink: 0;
+      border-top: 2px solid #1a2030;
+      background: #05080d;
+      overflow-y: auto; padding: 8px 14px;
+    }
+    .log-panel::-webkit-scrollbar { width: 3px; }
+    .log-panel::-webkit-scrollbar-thumb { background: #1a2030; }
+    .log-header { font-size: 6px; color: rgba(0,232,122,0.4); margin-bottom: 6px; letter-spacing: 0.1em; }
+    .log-entry { font-size: 7px; color: rgba(255,255,255,0.3); line-height: 2; display: flex; gap: 8px; }
+    .log-ts   { color: rgba(0,232,122,0.5); flex-shrink: 0; }
+    .log-unit { color: #4a9ede; flex-shrink: 0; }
+    .log-msg  { }
+    .log-entry.warn .log-msg { color: #ffd93d; }
+    .log-entry.err  .log-msg { color: #ff4422; }
+    .log-entry.ok   .log-msg { color: rgba(0,232,122,0.6); }
+
+    /* LIVE SNAPSHOT */
+    .snapshot-wrap {
+      width: 160px; height: 90px;
+      border: 1px solid #1a2030;
+      overflow: hidden; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #05080d;
+    }
+    .snapshot-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: 20% center; }
+    .no-signal-txt { font-size: 5px; color: rgba(255,68,34,0.4); text-align: center; line-height: 2; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="header">
+    <div class="logo-sqs">
+      <div class="logo-sq" style="background:#00e87a;"></div>
+      <div class="logo-sq" style="background:#4a9ede;"></div>
+      <div class="logo-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="header-title">
+      <div class="header-title-main">MISSION CONTROL</div>
+      <div class="header-title-sub">// LAUNCHTRACKER2D FLEET MANAGEMENT //</div>
+    </div>
+    <div class="header-right">
+      <div class="sync-time" id="sync-time">LAST SYNC: —</div>
+      <button class="hbtn hbtn-blue" onclick="pushUpdate()">↑ PUSH UPDATE</button>
+      <button class="hbtn hbtn-green" onclick="syncAll()">⟳ SYNC ALL</button>
+      <button class="hbtn hbtn-red" onclick="rebootAll()">⏻ REBOOT ALL</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">VIEWS</div>
+        <div class="nav-item active" onclick="setFilter('all')">
+          <div class="nav-dot" style="background:#fff;"></div>All units
+          <span class="nav-count" id="count-all">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('online')">
+          <div class="nav-dot" style="background:#00e87a;"></div>Online
+          <span class="nav-count" id="count-online">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('offline')">
+          <div class="nav-dot" style="background:#ff4422;"></div>Offline
+          <span class="nav-count" id="count-offline">0</span>
+        </div>
+        <div class="nav-item" onclick="setFilter('outdated')">
+          <div class="nav-dot" style="background:#ffd93d;"></div>Outdated
+          <span class="nav-count" id="count-outdated">0</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">FLEET HEALTH</div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Avg uptime</div><div class="sidebar-stat-val" style="color:#00e87a;" id="avg-uptime">—</div></div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Current ver</div><div class="sidebar-stat-val" style="color:#fff;font-size:7px;" id="cur-version">v1.0.0</div></div>
+        <div class="sidebar-stat"><div class="sidebar-stat-label">Alerts</div><div class="sidebar-stat-val" style="color:#ffd93d;" id="alert-count">0</div></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">QUICK ACTIONS</div>
+        <div class="nav-item" onclick="pushUpdate()">↑ Push update</div>
+        <div class="nav-item" onclick="syncAll()">⟳ Sync all</div>
+        <div class="nav-item" onclick="exportLogs()">⬇ Export logs</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">TOTAL UNITS</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-online" style="color:#00e87a;">0</div><div class="stat-label">ONLINE</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-offline" style="color:#ff4422;">0</div><div class="stat-label">OFFLINE</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-outdated" style="color:#ffd93d;">0</div><div class="stat-label">OUTDATED</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-ping" style="color:#4a9ede;">—</div><div class="stat-label">AVG PING</div></div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="fbtn active" id="fbtn-all"      onclick="setFilter('all')">ALL</button>
+        <button class="fbtn"        id="fbtn-online"   onclick="setFilter('online')">ONLINE</button>
+        <button class="fbtn"        id="fbtn-offline"  onclick="setFilter('offline')">OFFLINE</button>
+        <button class="fbtn"        id="fbtn-outdated" onclick="setFilter('outdated')">OUTDATED</button>
+        <input class="search-input" placeholder="Search unit ID or location..." id="search-input" oninput="renderUnits()">
+      </div>
+
+      <div class="unit-list" id="unit-list"><div style="padding:24px 14px;font-size:7px;color:rgba(255,255,255,0.3);">CONNECTING TO RELAY…</div></div>
+
+      <div class="log-panel">
+        <div class="log-header">> ACTIVITY LOG</div>
+        <div id="log-entries"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RELAY      = 'http://45.55.245.193';
+    const ONLINE_TTL = 180;   // seconds — unit considered offline if not seen in 3 min
+    const POLL_MS    = 15000; // poll relay every 15s
+    const ACK_WAIT   = 60;    // seconds to wait for ack before giving up
+
+    // fetch with timeout that works in all browsers (no AbortSignal.timeout)
+    function fetchWithTimeout(url, opts={}, ms=8000) {
+      return Promise.race([
+        fetch(url, opts),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after '+ms+'ms')), ms)),
+      ]);
+    }
+
+    let units = {};           // keyed by unit_id, populated from relay
+    let currentFilter = 'all';
+    let expandedId    = null;
+    let relayOk       = true;
+    let cmdState      = {};   // per-unit command state: {cmd, status, ts}
+
+    // ── Timestamps ───────────────────────────────────────────────────────────
+    function tsNow() {
+      return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    }
+    function relAge(secs) {
+      if (secs < 60)   return secs + 's ago';
+      if (secs < 3600) return Math.floor(secs/60) + 'm ago';
+      return Math.floor(secs/3600) + 'h ago';
+    }
+
+    // ── Activity log ─────────────────────────────────────────────────────────
+    const logs = [];
+    function addLog(unit, msg, type='') {
+      logs.unshift({ts: tsNow(), unit, msg, type});
+      if (logs.length > 100) logs.pop();
+      renderLogs();
+    }
+    function renderLogs() {
+      document.getElementById('log-entries').innerHTML = logs.map(l =>
+        `<div class="log-entry ${l.type}">
+          <span class="log-ts">${l.ts}</span>
+          <span class="log-unit">${l.unit}</span>
+          <span class="log-msg">${l.msg}</span>
+        </div>`
+      ).join('') || '<div class="log-entry"><span class="log-msg" style="color:rgba(255,255,255,0.15);">Waiting for activity…</span></div>';
+    }
+
+    // ── Filter ────────────────────────────────────────────────────────────────
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.fbtn, .nav-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('fbtn-'+f)?.classList.add('active');
+      renderUnits();
+    }
+
+    // ── Nicknames — stored on relay, not localStorage ─────────────────────────
+    let nicknames  = {};   // populated from relay on load
+    let editingNick = null;
+    function getNick(id) { return nicknames[id] || ''; }
+    async function saveNick(id, nick) {
+      nick = nick.trim();
+      if (nick) nicknames[id] = nick; else delete nicknames[id];
+      editingNick = null;
+      renderUnits();
+      try {
+        await fetchWithTimeout(`${RELAY}/api/nickname`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id: id, nickname: nick}),
+        }, 5000);
+      } catch(e) { addLog(id, 'Nickname save failed: '+e.message, 'err'); }
+    }
+    async function loadNicknames() {
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/nicknames`, {}, 5000);
+        nicknames = await r.json();
+        renderUnits();
+      } catch(e) {}
+    }
+    function startNickEdit(id, e) {
+      e.stopPropagation();
+      editingNick = id;
+      renderUnits();
+      setTimeout(() => { const el = document.getElementById('nick-input-'+id); if(el){el.focus();el.select();} }, 0);
+    }
+    function onNickKey(id, e) {
+      if (e.key==='Enter')  saveNick(id, e.target.value);
+      if (e.key==='Escape') { editingNick=null; renderUnits(); }
+    }
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
+    function updateStats() {
+      const arr     = Object.values(units);
+      const online  = arr.filter(u=>u._online).length;
+      const offline = arr.filter(u=>!u._online).length;
+
+      // "outdated" = version differs from most common version
+      const verCounts = {};
+      arr.forEach(u=>{ if(u.version) verCounts[u.version]=(verCounts[u.version]||0)+1; });
+      const latestVer = Object.entries(verCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+      const outdated  = arr.filter(u=>u.version && u.version !== latestVer).length;
+      document.getElementById('cur-version').textContent = latestVer ? latestVer.slice(0,7) : '—';
+
+      document.getElementById('stat-total').textContent    = arr.length;
+      document.getElementById('stat-online').textContent   = online;
+      document.getElementById('stat-offline').textContent  = offline;
+      document.getElementById('stat-outdated').textContent = outdated;
+      document.getElementById('stat-ping').textContent     = relayOk ? 'OK' : 'ERR';
+
+      document.getElementById('count-all').textContent      = arr.length;
+      document.getElementById('count-online').textContent   = online;
+      document.getElementById('count-offline').textContent  = offline;
+      document.getElementById('count-outdated').textContent = outdated;
+      document.getElementById('alert-count').textContent    = offline + outdated;
+    }
+
+    // ── Render units ──────────────────────────────────────────────────────────
+    function renderUnits() {
+      const search = (document.getElementById('search-input')?.value||'').toLowerCase();
+      const arr = Object.values(units).sort((a,b) => (b._online?1:0)-(a._online?1:0) || a.unit_id.localeCompare(b.unit_id));
+
+      // version for outdated detection
+      const verCounts = {};
+      arr.forEach(u=>{ if(u.version) verCounts[u.version]=(verCounts[u.version]||0)+1; });
+      const latestVer = Object.entries(verCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+
+      let filtered = arr.filter(u => {
+        if (currentFilter==='online'   && !u._online) return false;
+        if (currentFilter==='offline'  &&  u._online) return false;
+        if (currentFilter==='outdated' && u.version===latestVer) return false;
+        const nick = getNick(u.unit_id).toLowerCase();
+        if (search && !u.unit_id.toLowerCase().includes(search) && !nick.includes(search)) return false;
+        return true;
+      });
+
+      document.getElementById('unit-list').innerHTML = filtered.map(u => {
+        const id        = u.unit_id;
+        const isOnline  = u._online;
+        const isExp     = expandedId === id;
+        const dotCls    = isOnline ? 'dot-online' : 'dot-offline';
+        const isOutdated = u.version && u.version !== latestVer;
+        const verCls    = isOutdated ? 'ver-old' : 'ver-ok';
+        const ageSecs   = u.last_seen ? Math.round(Date.now()/1000 - u.last_seen) : null;
+        const seenStr   = isOnline ? (ageSecs!==null ? relAge(ageSecs) : '—') : 'OFFLINE';
+        const cs        = cmdState[id];
+
+        const nick = getNick(id);
+        let nameHtml;
+        if (editingNick===id) {
+          nameHtml = `<input class="nick-input" id="nick-input-${id}" value="${nick}" placeholder="nickname..."
+            onblur="saveNick('${id}',this.value)" onkeydown="onNickKey('${id}',event)" onclick="event.stopPropagation()">`;
+        } else if (nick) {
+          nameHtml = `<div class="unit-nick">${nick} <button class="unit-nick-edit" onclick="startNickEdit('${id}',event)">✎</button></div><div class="unit-raw-id">${id}</div>`;
+        } else {
+          nameHtml = `<div class="unit-nick">${id} <button class="unit-nick-edit" onclick="startNickEdit('${id}',event)">+</button></div>`;
+        }
+
+        // Command status badge
+        let cmdBadge = '';
+        if (cs) {
+          const col = cs.status==='ok'?'#00e87a':cs.status==='err'?'#ff4422':'#ffd93d';
+          cmdBadge = `<span style="font-size:6px;color:${col};margin-left:8px;">${cs.label}</span>`;
+        }
+
+        const tsIp  = u.tailscale_ip || null;
+        const tsBadge = tsIp
+          ? `<span class="ts-badge" title="Tailscale: ${tsIp}" onclick="copySSH('${tsIp}');event.stopPropagation()">TS ✓</span>`
+          : '';
+
+        const launchShort = u.current_launch
+          ? u.current_launch.split(' | ').pop().replace(/\s*\(.*?\)/g,'').trim().slice(0,28)
+          : '—';
+        const dimIcon = u.screen_mode==='always_on'?'☀ ':'';
+
+        let html = `<div class="unit-row ${isExp?'expanded':''} ${isOnline?'':'offline'}" onclick="toggleExpand('${id}')">
+          <div class="status-dot ${dotCls}"></div>
+          <div class="unit-id">${nameHtml}${tsBadge}${cmdBadge}</div>
+          <div class="unit-loc">${dimIcon}${u.site||'—'}</div>
+          <div class="unit-wifi">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div>
+          <div class="unit-launch" style="font-size:6px;color:rgba(255,211,61,0.7);">${launchShort}</div>
+          <div class="unit-version"><span class="ver-badge ${verCls}">${isOutdated?'OUTDATED':'CURRENT'}</span></div>
+          <div class="unit-seen">${seenStr}</div>
+        </div>`;
+
+        if (isExp) {
+          const cs = cmdState[id];
+          let updateBtnStyle = '', updateBtnTxt = 'UPDATE';
+          let rebootBtnStyle = '', rebootBtnTxt = 'REBOOT';
+          if (cs?.cmd==='update') { updateBtnStyle='opacity:0.6;'; updateBtnTxt=cs.label; }
+          if (cs?.cmd==='reboot') { rebootBtnStyle='opacity:0.6;'; rebootBtnTxt=cs.label; }
+
+          const cpuTemp  = u.cpu_temp != null ? u.cpu_temp + '°C' : '—';
+          const cpuCls   = u.cpu_temp > 75 ? 'red' : u.cpu_temp > 60 ? 'yellow' : 'green';
+          const diskPct  = u.disk_pct != null ? u.disk_pct + '%' : '—';
+          const diskCls  = u.disk_pct > 85 ? 'red' : u.disk_pct > 70 ? 'yellow' : 'green';
+          const memStr   = u.mem_free_mb != null ? `${u.mem_free_mb}MB free` : '—';
+          const dataAgeStr = u.data_age != null ? (u.data_age > 600 ? `⚠ ${Math.round(u.data_age/60)}m old` : `${u.data_age}s`) : '—';
+          const dataAgeCls = u.data_age > 600 ? 'red' : u.data_age > 300 ? 'yellow' : 'green';
+
+          html += `<div class="unit-detail">
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">CPU TEMP</div><div class="detail-val ${cpuCls}">${cpuTemp}</div></div>
+              <div class="detail-field"><div class="detail-label">DISK</div><div class="detail-val ${diskCls}">${diskPct}</div></div>
+              <div class="detail-field"><div class="detail-label">MEMORY</div><div class="detail-val">${memStr}</div></div>
+              <div class="detail-field"><div class="detail-label">DATA AGE</div><div class="detail-val ${dataAgeCls}">${dataAgeStr}</div></div>
+              <div class="detail-field"><div class="detail-label">TAILSCALE</div><div class="detail-val ${tsIp?'green':'red'}">${tsIp||'NOT INSTALLED'}</div></div>
+              <div class="detail-field"><div class="detail-label">VERSION</div><div class="detail-val ${isOutdated?'yellow':'green'}">${(u.version||'—').slice(0,7)}</div></div>
+              <div class="detail-field"><div class="detail-label">BRIGHTNESS</div><div class="detail-val">${u.brightness!=null?u.brightness+'%':'—'}</div></div>
+              <div class="detail-field"><div class="detail-label">LAST SEEN</div><div class="detail-val ${isOnline?'green':'red'}">${seenStr}</div></div>
+              <div class="detail-field"><div class="detail-label">WEATHER</div><div class="detail-val">${u.condition||'—'} ${u.temp_f!=null?Math.round(u.temp_f)+'°F':''}</div></div>
+              <div class="detail-field"><div class="detail-label">SITE</div><div class="detail-val">${(u.site||'—').toUpperCase()}</div></div>
+            </div>
+            <div class="detail-actions">
+              <button class="hbtn hbtn-green" style="${updateBtnStyle}" onclick="cmdUnit('${id}','update',this);event.stopPropagation()">${updateBtnTxt}</button>
+              <button class="hbtn hbtn-red"   style="${rebootBtnStyle}" onclick="cmdUnit('${id}','reboot',this);event.stopPropagation()">${rebootBtnTxt}</button>
+              <button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="cmdUnit('${id}','refresh',this);event.stopPropagation()">REFRESH DATA</button>
+              ${tsIp ? `<button class="hbtn" style="border-color:#4a9ede;color:#4a9ede;" onclick="copySSH('${tsIp}');event.stopPropagation()">COPY SSH</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#ffd93d;color:#ffd93d;" onclick="openLog('${id}','${tsIp}');event.stopPropagation()">VIEW LOG</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:#00e87a;" onclick="openUnit('${tsIp}');event.stopPropagation()">OPEN UI ↗</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#00e87a;color:${u.screen_mode!=='always_on'?'#00e87a':'rgba(0,232,122,0.3)'};" onclick="setDisplayMode('${tsIp}','${id}','auto');event.stopPropagation()">⟳ AUTO</button>` : ''}
+              ${tsIp ? `<button class="hbtn" style="border-color:#fff;color:${u.screen_mode==='always_on'?'#fff':'rgba(255,255,255,0.25)'};" onclick="setDisplayMode('${tsIp}','${id}','always_on');event.stopPropagation()">● ALWAYS ON</button>` : ''}
+              <button class="hbtn" style="border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);" onclick="removeUnit('${id}');event.stopPropagation()">REMOVE</button>
+            </div>
+            <div class="detail-controls" onclick="event.stopPropagation()">
+              ${tsIp ? `<span class="ctrl-label">BRIGHTNESS</span><input type="range" class="brightness-slider" min="20" max="100" value="${u.brightness||40}" oninput="setBrightness('${tsIp}','${id}',this.value)" title="Drag to set brightness">` : ''}
+              ${tsIp ? `<span class="ctrl-label">NOTIFY</span><input class="notify-input" placeholder="Message to display..." onkeydown="if(event.key==='Enter')sendNotify('${tsIp}',this,'${id}')">` : ''}
+            </div>
+          </div>`;
+        }
+        return html;
+      }).join('') || '<div style="padding:24px 14px;font-size:7px;color:rgba(255,255,255,0.2);">No units found.</div>';
+    }
+
+    function toggleExpand(id) {
+      expandedId = expandedId===id ? null : id;
+      renderUnits();
+    }
+
+    function copySSH(ip) {
+      const cmd = `ssh pi@${ip}`;
+      navigator.clipboard.writeText(cmd).then(() => {
+        addLog('SSH', `Copied: ${cmd}`, 'ok');
+      }).catch(() => {
+        addLog('SSH', `SSH: ${cmd}`, '');
+      });
+    }
+
+    // ── Direct Tailscale commands (instant — no relay delay) ──────────────────
+    async function cmdUnit(id, cmd, btn) {
+      if (cmdState[id]?.active) return;
+      const setLabel = (label, status=null) => {
+        cmdState[id] = { cmd, label, status, active: status===null };
+        renderUnits();
+      };
+
+      const u    = units[id];
+      const tsIp = u?.tailscale_ip;
+
+      setLabel('SENDING…');
+
+      // Try direct via Tailscale first (instant confirmation)
+      if (tsIp) {
+        try {
+          const endpoint = cmd === 'refresh' ? 'launches/invalidate' : cmd;
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/${endpoint}`, {method:'POST'}, 6000);
+          if (r.ok) {
+            setLabel('✓ SENT DIRECT', 'ok');
+            addLog(id, `${cmd} → ✓ direct via Tailscale`, 'ok');
+            setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+            return;
+          }
+        } catch(e) {
+          addLog(id, `Tailscale direct failed, trying relay…`, '');
+        }
+      }
+
+      // Relay fallback with ACK polling
+      let relayReached = false;
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id:id, command:cmd}),
+        }, 8000);
+        relayReached = r.ok;
+      } catch(e) { relayReached = false; }
+
+      if (!relayReached) {
+        setLabel('✗ RELAY DOWN', 'err');
+        addLog(id, `${cmd} → ✗ relay unreachable`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 6000);
+        return;
+      }
+
+      setLabel('⏳ WAITING…');
+      const deadline = Date.now() + ACK_WAIT * 1000;
+      let acked = false;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const ar = await fetchWithTimeout(`${RELAY}/api/unit/acks/${id}`, {}, 5000);
+          const acks = await ar.json();
+          if (acks.some(a => a.command===cmd)) { acked=true; break; }
+        } catch(e) {}
+        setLabel(`⏳ ${Math.round((deadline-Date.now())/1000)}s`);
+      }
+
+      if (acked) {
+        setLabel('✓ CONFIRMED', 'ok');
+        addLog(id, `${cmd} → ✓ Pi confirmed via relay`, 'ok');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 12000);
+      } else {
+        setLabel('✗ NO RESPONSE', 'err');
+        addLog(id, `${cmd} → ✗ no response after ${ACK_WAIT}s`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+      }
+    }
+
+    // ── Display mode (night/bright/auto) ─────────────────────────────────────
+    async function setDisplayMode(tsIp, id, mode) {
+      // Try Tailscale direct first, fall back to relay command
+      let ok = false;
+      if (tsIp) {
+        try {
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/settings`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({screen_mode: mode}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (!ok) {
+        // Relay fallback — Pi handles set_mode:<value> command
+        try {
+          const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({unit_id: id, command: `set_mode:${mode}`}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (ok) {
+        if (units[id]) units[id].screen_mode = mode;
+        addLog(id, `Display mode → ${mode.toUpperCase()}`, 'ok');
+        renderUnits();
+      } else {
+        addLog(id, `Mode change failed — no Tailscale or relay connection`, 'err');
+      }
+    }
+
+    // ── Brightness control — relay fallback for non-Tailscale browsers ───────
+    let _brightnessTimer = null;
+    function setBrightness(tsIp, id, value) {
+      clearTimeout(_brightnessTimer);
+      _brightnessTimer = setTimeout(async () => {
+        let ok = false;
+        // Try Tailscale direct first
+        if (tsIp) {
+          try {
+            const r = await fetchWithTimeout(`http://${tsIp}:5001/api/settings/brightness`,
+              {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({value:parseInt(value)})}, 5000);
+            ok = r.ok;
+          } catch(e) {}
+        }
+        // Relay fallback
+        if (!ok) {
+          try {
+            const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({unit_id: id, command: `set_brightness:${parseInt(value)}`}),
+            }, 5000);
+            ok = r.ok;
+          } catch(e) {}
+        }
+        if (ok) addLog('CTRL', `Brightness → ${value}%`, 'ok');
+        else addLog('CTRL', `Brightness failed`, 'err');
+      }, 400);
+    }
+
+    // ── Send notification to Pi screen ────────────────────────────────────────
+    async function sendNotify(tsIp, input, id) {
+      const msg = input.value.trim();
+      if (!msg) return;
+      let ok = false;
+      if (tsIp) {
+        try {
+          const r = await fetchWithTimeout(`http://${tsIp}:5001/api/notify-push`,
+            {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'MISSION CONTROL', msg})}, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (!ok) {
+        try {
+          const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({unit_id: id, command: `notify:MISSION CONTROL|${msg}`}),
+          }, 5000);
+          ok = r.ok;
+        } catch(e) {}
+      }
+      if (ok) { addLog('NOTIFY', `Sent: "${msg}"`, 'ok'); input.value = ''; }
+      else addLog('NOTIFY', `Send failed`, 'err');
+    }
+
+    // ── Pi server log viewer ──────────────────────────────────────────────────
+    async function openLog(unitId, tsIp) {
+      document.getElementById('log-box-title').textContent = `SERVER LOG — ${getNick(unitId)||unitId}`;
+      document.getElementById('log-box-lines').textContent = 'Loading…';
+      document.getElementById('log-modal').classList.add('open');
+      try {
+        const r = await fetchWithTimeout(`http://${tsIp}:5001/api/log?n=80`, {}, 8000);
+        const d = await r.json();
+        const el = document.getElementById('log-box-lines');
+        el.textContent = (d.lines||[]).join('\n') || '(empty)';
+        el.scrollTop = el.scrollHeight;
+      } catch(e) {
+        document.getElementById('log-box-lines').textContent = 'Failed to load: ' + e.message;
+      }
+    }
+    function closeLog() {
+      document.getElementById('log-modal').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeLog(); });
+
+    // ── Browser offline alerts ────────────────────────────────────────────────
+    function requestNotifPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+    function browserAlert(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {body, icon: ''});
+      }
+    }
+
+    // ── Command state machine ─────────────────────────────────────────────────
+    async function cmdUnit(id, cmd, btn) {
+      if (cmdState[id]?.active) return;
+
+      const labels = {update:'UPDATE', reboot:'REBOOT', refresh:'REFRESH DATA'};
+      const setLabel = (label, status=null) => {
+        cmdState[id] = { cmd, label, status, active: status===null };
+        renderUnits();
+      };
+
+      setLabel('SENDING…');
+
+      let relayReached = false;
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/unit/command`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({unit_id:id, command:cmd}),
+        }, 8000);
+        relayReached = r.ok;
+      } catch(e) {
+        relayReached = false;
+      }
+
+      if (!relayReached) {
+        setLabel('✗ RELAY DOWN', 'err');
+        addLog(id, `${cmd} → ✗ relay unreachable`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 6000);
+        return;
+      }
+
+      // Relay accepted — now wait for Pi to pick up and ACK
+      setLabel('⏳ WAITING…');
+      const deadline = Date.now() + ACK_WAIT * 1000;
+      let acked = false;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const ar = await fetchWithTimeout(`${RELAY}/api/unit/acks/${id}`, {}, 5000);
+          const acks = await ar.json();
+          if (acks.some(a => a.command===cmd)) { acked=true; break; }
+        } catch(e) {}
+        const remaining = Math.round((deadline-Date.now())/1000);
+        setLabel(`⏳ ${remaining}s`);
+      }
+
+      if (acked) {
+        setLabel('✓ CONFIRMED', 'ok');
+        addLog(id, `${cmd} → ✓ Pi confirmed — executing now`, 'ok');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, cmd==='reboot'?15000:30000);
+      } else {
+        setLabel('✗ NO RESPONSE', 'err');
+        addLog(id, `${cmd} → ✗ no response after ${ACK_WAIT}s — Pi offline or not polling`, 'err');
+        setTimeout(() => { delete cmdState[id]; renderUnits(); }, 8000);
+      }
+    }
+
+    // ── Bulk actions ──────────────────────────────────────────────────────────
+    function pushUpdate() {
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to update', 'warn'); return; }
+      if (!confirm(`Push update to ${online.length} online unit(s)?`)) return;
+      online.forEach(u => cmdUnit(u.unit_id, 'update', null));
+    }
+
+    function syncAll() {
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to sync', 'warn'); return; }
+      online.forEach(u => cmdUnit(u.unit_id, 'refresh', null));
+    }
+
+    function rebootAll() {
+      const online = Object.values(units).filter(u=>u._online);
+      if (!online.length) { addLog('ALL', 'No online units to reboot', 'warn'); return; }
+      if (!confirm(`Reboot ALL ${online.length} online unit(s)?`)) return;
+      online.forEach(u => cmdUnit(u.unit_id, 'reboot', null));
+    }
+
+    function removeUnit(id) {
+      if (!confirm(`Remove ${id} from list? It will reappear when it next pings in.`)) return;
+      delete units[id];
+      delete cmdState[id];
+      if (expandedId===id) expandedId=null;
+      updateStats(); renderUnits();
+    }
+
+    function exportLogs() {
+      const txt = logs.map(l=>`${l.ts} [${l.unit}] ${l.msg}`).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+      a.download = 'launchtracker_logs.txt';
+      a.click();
+    }
+
+    // ── Poll relay for live unit data ─────────────────────────────────────────
+    async function pollAll() {
+      const syncEl = document.getElementById('sync-time');
+      syncEl.textContent = 'SYNCING…';
+      try {
+        const r = await fetchWithTimeout(`${RELAY}/api/units`, {}, 8000);
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        relayOk = true;
+
+        const now = Date.now()/1000;
+        // Merge relay data into units dict
+        Object.entries(data).forEach(([id, u]) => {
+          const wasOnline = units[id]?._online;
+          u._online = (now - (u.last_seen||0)) < ONLINE_TTL;
+          units[id] = u;
+          // Log state changes
+          if (wasOnline===true && !u._online) {
+            addLog(id, `${getNick(id)||id} went OFFLINE`, 'err');
+            browserAlert(`⚠ ${getNick(id)||id} OFFLINE`, 'LaunchTracker unit lost connection to relay');
+          }
+          if (wasOnline===false && u._online)  addLog(id, `${getNick(id)||id} back ONLINE`, 'ok');
+          if (wasOnline===undefined && u._online) addLog(id, `${getNick(id)||id} discovered · v${(u.version||'?').slice(0,7)}`, 'ok');
+        });
+        // Mark units in our dict but not in relay response as offline
+        Object.keys(units).forEach(id => {
+          if (!data[id]) units[id]._online = false;
+        });
+
+        syncEl.textContent = 'LAST SYNC: ' + tsNow();
+        syncEl.style.color = '';
+      } catch(e) {
+        relayOk = false;
+        syncEl.textContent = '⚠ RELAY UNREACHABLE';
+        syncEl.style.color = '#ff4422';
+        addLog('RELAY', `Poll failed: ${e.message}`, 'err');
+      }
+      updateStats();
+      renderUnits();
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    requestNotifPermission();
+    renderLogs();
+    renderUnits();
+    loadNicknames();
+    pollAll();
+    setInterval(pollAll, POLL_MS);
+  </script>
+
+  <!-- Pi log viewer modal -->
+  <div id="log-modal">
+    <div id="log-box">
+      <div id="log-box-header">
+        <span id="log-box-title">SERVER LOG</span>
+        <button id="log-box-close" onclick="closeLog()">✕ CLOSE</button>
+      </div>
+      <div id="log-box-lines">Loading…</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+
+<style>
+.wrap { font-family: 'Courier New', monospace; padding: 12px 0; }
+.bar {
+  width: 800px;
+  height: 90px;
+  background: rgba(8,8,18,0.97);
+  display: flex;
+  border-top: 2px solid rgba(0,232,122,0.35);
+  overflow: hidden;
+}
+
+/* LEFT — mission name + status */
+.left {
+  flex: 1.3;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  min-width: 0;
+}
+.name-row { display: flex; align-items: center; gap: 10px; }
+.name { font-size: 22px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge { font-size: 10px; padding: 3px 9px; border-radius: 3px; background: rgba(0,232,122,0.15); border: 1px solid rgba(0,232,122,0.4); color: #00e87a; font-weight: bold; letter-spacing: 0.08em; flex-shrink: 0; }
+.sub { font-size: 12px; color: #4a9ede; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tap { font-size: 9px; color: rgba(0,232,122,0.45); letter-spacing: 0.06em; }
+
+/* CENTER — date + countdown + window */
+.center {
+  width: 230px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  padding: 8px 14px;
+}
+.date { font-size: 11px; color: #ffd93d; letter-spacing: 0.04em; }
+.cd { font-size: 14px; font-weight: bold; color: #00e87a; letter-spacing: 0.06em; }
+.win-wrap { width: 100%; }
+.win-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; margin: 4px 0 3px; }
+.win-fill { position: absolute; inset: 0; background: rgba(0,232,122,0.2); border-radius: 2px; }
+.win-dot { position: absolute; top: -4px; width: 12px; height: 12px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #080810; }
+.win-times { display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.22); }
+
+/* RIGHT — weather */
+.right {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 16px;
+  gap: 8px;
+}
+.wx-row { display: flex; gap: 0; }
+.wx-item { flex: 1; text-align: center; }
+.wx-val { font-size: 14px; font-weight: bold; color: #fff; line-height: 1; }
+.wx-lbl { font-size: 8px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.05em; }
+.ver { font-size: 8px; color: rgba(255,255,255,0.15); text-align: right; }
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <div class="left">
+      <div class="name-row">
+        <div class="name">Starlink Group 17-24</div>
+        <div class="badge">GO</div>
+      </div>
+      <div class="sub">Falcon 9 · SpaceX · SLC-4E · Vandenberg SFB</div>
+      <div class="tap">TAP FOR DETAILS →</div>
+    </div>
+
+    <div class="center">
+      <div class="date">Mar 17, 2026 · 02:37 UTC</div>
+      <div class="cd">T− 03:13:08</div>
+      <div class="win-wrap">
+        <div class="win-track">
+          <div class="win-fill"></div>
+          <div class="win-dot" style="left:0%;background:#ffd93d;"></div>
+          <div class="win-dot" style="left:38%;background:#00e87a;"></div>
+          <div class="win-dot" style="left:100%;background:#ffd93d;"></div>
+        </div>
+        <div class="win-times">
+          <span>02:37 OPEN</span>
+          <span>CLOSE 06:37</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="wx-row">
+        <div class="wx-item"><div class="wx-val">71°F</div><div class="wx-lbl">TEMP</div></div>
+        <div class="wx-item"><div class="wx-val">14mph</div><div class="wx-lbl">WIND</div></div>
+        <div class="wx-item"><div class="wx-val">98%</div><div class="wx-lbl">CLOUD</div></div>
+        <div class="wx-item"><div class="wx-val">0.1"</div><div class="wx-lbl">PRECIP</div></div>
+      </div>
+      <div class="ver">v1.0.0 · data 2m ago</div>
+    </div>
+  </div>
+</div>

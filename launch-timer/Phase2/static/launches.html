@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <title>Launches & Events</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>@font-face{font-family:"Press Start 2P";src:url("/static/fonts/PressStart2P.woff2") format("woff2");}</style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+    * { cursor: none !important; }
+    body {
+      background: #0a0e14;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      width: 800px;
+      height: 480px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 100;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      height: 28px; flex-shrink: 0;
+      background: #0d1620;
+      border-bottom: 3px solid #00e87a;
+      display: flex; align-items: center;
+      padding: 0 12px; gap: 10px;
+    }
+    .back-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      background: #0a1a10; border: 2px solid #00e87a;
+      color: #00e87a; padding: 0 12px; cursor: pointer;
+      align-self: stretch; display: flex; align-items: center;
+    }
+    .back-btn:hover { background: #0f2a18; }
+    .top-sqs { display: flex; gap: 5px; }
+    .top-sq { width: 9px; height: 9px; }
+    .top-title-wrap { flex: 1; text-align: center; }
+    .top-title { font-size: 8px; color: #fff; }
+    .top-sub { font-size: 5px; color: rgba(0,232,122,0.5); margin-top: 2px; }
+    .top-date { font-size: 7px; color: #ffd93d; background: #0a1a10; border: 2px solid #ffd93d; padding: 3px 8px; white-space: nowrap; }
+    #stale-bar {
+      display: none; flex-shrink: 0;
+      background: #1a1000; border-bottom: 2px solid #ffd93d;
+      padding: 4px 12px; align-items: center; gap: 8px;
+    }
+    #stale-bar.visible { display: flex; }
+    .stale-dot { width: 7px; height: 7px; background: #ffd93d; flex-shrink: 0; }
+    .stale-msg { font-size: 6px; color: #ffd93d; }
+
+    /* PANEL HEADER2 */
+    .phdr {
+      font-size: 6px; color: #00e87a;
+      background: #0d1620; padding: 4px 8px;
+      border-bottom: 2px solid #1a2030;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+    }
+    .phdr-dot { width: 6px; height: 6px; flex-shrink: 0; }
+
+    /* BODY */
+    .body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* UPCOMING */
+    .upcoming-section { flex-shrink: 0; height: 218px; display: flex; flex-direction: column; }
+    .upcoming-row { display: flex; gap: 4px; padding: 5px 8px; flex: 1; }
+    .launch-card {
+      flex: 1; min-width: 0; background: #080c12;
+      border: 2px solid #1a2030;
+      padding: 8px 8px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 6px;
+      position: relative; overflow: hidden;
+    }
+    .launch-card:hover { background: #0d1220; }
+    .launch-card.go   { border-color: rgba(0,232,122,0.4); }
+    .launch-card.hold { border-color: rgba(255,68,34,0.4); }
+    .launch-card.tbd  { border-color: rgba(255,211,61,0.2); }
+    .lc-accent { position: absolute; top: 0; left: 0; width: 100%; height: 2px; }
+    .lc-status { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; overflow: hidden; }
+    .status-dot { width: 5px; height: 5px; flex-shrink: 0; }
+    .status-dot.go   { background: #00e87a; }
+    .status-dot.tbd  { background: #ffd93d; }
+    .status-dot.hold { background: #ff4422; }
+    .status-text { font-size: 8px; }
+    .lc-status-date { margin-left: auto; font-size: 8px; color: rgba(255,255,255,0.55); flex-shrink: 0; white-space: nowrap; }
+    .lc-name { font-size: 11px; color: #fff; line-height: 1.8; }
+    .lc-vehicle { font-size: 9px; color: #4a9ede; margin-top: 1px; }
+    .lc-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3px; overflow: hidden; }
+    .lc-countdown { font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+    .lc-pad { font-size: 7px; color: rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cd-green  { color: #00e87a; }
+    .cd-yellow { color: #ffd93d; }
+    .cd-red    { color: #ff4422; }
+
+    .divider { height: 3px; background: #1a2030; flex-shrink: 0; }
+
+    /* LAUNCH CARDS */
+    .lc-date-loc { font-size: 9px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-name { font-size: 13px; color: #fff; line-height: 1.6; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; }
+    .lc-vehicle { font-size: 11px; color: #4a9ede; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-days { font-size: 15px; color: #fff; white-space: nowrap; }
+    .lc-hms  { font-size: 12px; white-space: nowrap; }
+    .lc-footer { display: flex; align-items: center; margin-top: auto; }
+    .lc-detail-hint {
+      margin-left: auto; font-size: 8px;
+      color: rgba(255,255,255,0.5);
+      pointer-events: none; white-space: nowrap;
+    }
+    @keyframes delayed-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .lc-slip-badge { font-size: 8px; color: #fff; background: #cc2200; padding: 2px 5px; flex-shrink: 0; animation: delayed-pulse 2s ease-in-out infinite; }
+    .lc-slip-amt { font-size: 9px; color: #fff; white-space: nowrap; flex-shrink: 0; margin-left: 6px; animation: delayed-pulse 2s ease-in-out infinite; }
+    .lc-date-orig { font-size: 6px; color: rgba(255,255,255,0.35); text-decoration: line-through; margin-right: 3px; }
+    .status-text { font-size: 9px; }
+
+    /* BOTTOM HALF */
+    .bottom-half { flex: 1; display: flex; overflow: hidden; }
+
+    /* LEADERBOARD */
+    .lb-col {
+      width: 260px; flex-shrink: 0;
+      border-right: 3px solid #1a2030;
+      display: flex; flex-direction: column;
+      background: #0a0e14;
+    }
+    .lb-total-block { padding: 6px 14px; border-bottom: 2px solid #1a2030; flex-shrink: 0; }
+    .lb-total-num { font-size: 40px; color: #ffd93d; line-height: 1; }
+    .lb-total-lbl { font-size: 7px; color: rgba(255,255,255,0.55); line-height: 2.0; margin-top: 0; }
+    .lb-rows { flex: 1; display: flex; flex-direction: column; }
+    .lb-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; border-bottom: 1px solid #0d1620; flex: 1;
+    }
+    .lb-rank { font-size: 13px; width: 16px; flex-shrink: 0; text-align: center; }
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .rank-n { color: rgba(255,255,255,0.55); }
+    .lb-name { font-size: 9px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-bar-wrap { width: 50px; height: 4px; background: #1a2030; flex-shrink: 0; }
+    .lb-bar { height: 100%; }
+    .lb-count { font-size: 12px; color: #ffd93d; width: 24px; text-align: right; flex-shrink: 0; }
+
+    /* EVENTS */
+    .events-col { flex: 1; display: flex; flex-direction: column; background: #080c12; }
+    .events-list { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .event-row {
+      display: grid;
+      grid-template-columns: 30px 1fr 82px;
+      gap: 10px; align-items: center;
+      padding: 0 12px; border-bottom: 1px solid #0d1620; flex: 1;
+      overflow: hidden;
+    }
+    .event-icon {
+      width: 30px; height: 30px;
+      border: 2px solid; display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .icon-eva     { border-color: rgba(255,153,51,0.5);  color: #ff9933; background: #ff99330a; }
+    .icon-dock    { border-color: rgba(74,158,222,0.5);  color: #4a9ede; background: #4a9ede0a; }
+    .icon-press   { border-color: rgba(255,255,255,0.15);color: rgba(255,255,255,0.4); }
+    .icon-land    { border-color: rgba(0,232,122,0.5);   color: #00e87a; background: #00e87a0a; }
+    .icon-default { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); }
+    .event-info { min-width: 0; overflow: hidden; }
+    .event-name { font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-meta { font-size: 8px; color: rgba(255,255,255,0.55); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-date { text-align: right; overflow: hidden; }
+    .event-day  { font-size: 11px; color: #fff; white-space: nowrap; }
+    .event-time { font-size: 7px; color: rgba(255,255,255,0.55); margin-top: 5px; white-space: nowrap; }
+
+    /* STATUS STRIP */
+    .status-strip {
+      height: 28px; flex-shrink: 0;
+      background: #0d1620; border-top: 3px solid #00e87a;
+      display: flex; align-items: center; padding: 0 10px;
+    }
+    .ss-item { display: flex; align-items: center; gap: 5px; padding: 0 10px; border-right: 1px solid #1a2030; }
+    .ss-item:first-child { padding-left: 0; }
+    .ss-lbl { font-size: 5px; color: #4a9ede; }
+    .ss-val { font-size: 6px; color: #fff; }
+    .ss-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .ss-right { margin-left: auto; border-right: none !important; }
+
+    .loading-msg { font-size: 6px; color: rgba(255,255,255,0.2); letter-spacing: 0.1em; text-align: center; padding: 12px; }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <div class="topbar">
+    <button class="back-btn" onclick="window.parent !== window ? window.parent.postMessage('spa-back','*') : (window.location='/')">← BACK</button>
+    <div class="top-sqs">
+      <div class="top-sq" style="background:#00e87a;"></div>
+      <div class="top-sq" style="background:#4a9ede;"></div>
+      <div class="top-sq" style="background:#ffd93d;"></div>
+    </div>
+    <div class="top-title-wrap">
+      <div class="top-title">LAUNCHES & EVENTS</div>
+    </div>
+    <div class="top-date" id="top-date">—</div>
+  </div>
+
+  <div id="stale-bar">
+    <div class="stale-dot"></div>
+    <div class="stale-msg" id="stale-msg">⚠ DATA STALE — NO SIGNAL FROM API</div>
+  </div>
+
+  <div class="body">
+    <div class="upcoming-section">
+      <div class="phdr"><div class="phdr-dot" style="background:#00e87a;"></div>> UPCOMING LAUNCHES</div>
+      <div class="upcoming-row" id="upcoming-row">
+        <div class="loading-msg">FETCHING MANIFEST...</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="bottom-half">
+
+      <!-- LEADERBOARD -->
+      <div class="lb-col">
+        <div class="phdr"><div class="phdr-dot" style="background:#ffd93d;"></div>> LEADERBOARD 2026</div>
+        <div class="lb-total-block">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="lb-total-num" id="lb-total">—</div>
+            <div class="lb-total-lbl">ORBITAL<br>LAUNCHES<br>THIS YEAR</div>
+          </div>
+        </div>
+        <div class="lb-rows" id="lb-rows">
+          <div class="loading-msg">LOADING...</div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="events-col">
+        <div class="phdr"><div class="phdr-dot" style="background:#ff9933;"></div>> SPACE EVENTS</div>
+        <div class="events-list" id="events-list">
+          <div class="loading-msg">LOADING...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="status-strip">
+    <div class="ss-item"><div class="ss-dot" style="background:#00e87a;"></div><div class="ss-lbl">UPLINK</div><div class="ss-val">ACTIVE</div></div>
+    <div class="ss-item"><div class="ss-lbl">UPCOMING</div><div class="ss-val" id="ss-upcoming">—</div></div>
+    <div class="ss-item"><div class="ss-lbl">NEXT LAUNCH</div><div class="ss-val" id="ss-next">—</div></div>
+    <div class="ss-item ss-right"><div class="ss-lbl">UPDATED</div><div class="ss-val" id="ss-updated">—</div></div>
+  </div>
+
+  <script>
+    const _esc = document.createElement('div');
+    function escHtml(s) {
+      _esc.textContent = String(s ?? '');
+      return _esc.innerHTML;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).toUpperCase(); }
+      catch(e) { return '—'; }
+    }
+    let settings = {};
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      try {
+        const useLocal = settings.time_format === 'local';
+        const tz = useLocal ? undefined : 'UTC';
+        return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+(useLocal?' LOCAL':' UTC');
+      } catch(e) { return '—'; }
+    }
+    function shorten(s) {
+      return (s||'')
+        // Location strings — all known LL2 variants
+        .replace('Vandenberg Space Force Base, California, USA','VSFB')
+        .replace('Vandenberg Space Force Base, CA, USA','VSFB')
+        .replace('Vandenberg SFB','VSFB')
+        .replace('Cape Canaveral, Florida, USA','CCSFS')
+        .replace('Cape Canaveral, FL, USA','CCSFS')
+        .replace('Cape Canaveral Space Force Station, FL, USA','CCSFS')
+        .replace('Cape Canaveral SFS','CCSFS')
+        .replace('Kennedy Space Center, Florida, USA','KSC')
+        .replace('Kennedy Space Center, FL, USA','KSC')
+        .replace('Boca Chica, Texas, USA','Boca Chica, TX')
+        .replace('Mahia Peninsula, New Zealand','Mahia, NZ')
+        .replace('Tanegashima, Kagoshima, Japan','Tanegashima')
+        .replace('Jiuquan Satellite Launch Center, Inner Mongolia, China','Jiuquan')
+        .replace('Xichang Satellite Launch Center, Sichuan, China','Xichang')
+        .replace('Wenchang Space Launch Site, Hainan, China','Wenchang')
+        .replace('Baikonur Cosmodrome, Kazakhstan','Baikonur')
+        .replace('Plesetsk Cosmodrome, Arkhangelsk Oblast, Russia','Plesetsk')
+        .replace('Vostochny Cosmodrome, Amur Oblast, Russia','Vostochny')
+        .replace('Guiana Space Centre, French Guiana, France','Kourou')
+        .replace('Sea Launch Commander, Pacific Ocean','Sea Launch')
+        // Pad names
+        .replace('Space Launch Complex 40','SLC-40')
+        .replace('Space Launch Complex 4E','SLC-4E')
+        .replace('Space Launch Complex 4W','SLC-4W')
+        .replace('Space Launch Complex 6','SLC-6')
+        .replace('Launch Complex 39A','LC-39A')
+        .replace('Launch Complex 39B','LC-39B')
+        .replace('Launch Complex 48','LC-48')
+        .replace('Rocket Lab Launch Complex 1','RL LC-1, Mahia')
+        .replace('Rocket Lab Launch Complex 2','RL LC-2, VA')
+        .replace('Starbase, Boca Chica','Starbase, TX')
+        .replace('Xichang Satellite Launch Center','Xichang')
+        .replace('Taiyuan Satellite Launch Center','Taiyuan')
+        .replace('Jiuquan Satellite Launch Center','Jiuquan')
+        .replace('Wenchang Space Launch Center','Wenchang')
+        .replace('Vandenberg Space Force Base','VSFB')
+        .replace('Cape Canaveral Space Force Station','CCSFS')
+        .replace('Kennedy Space Center','KSC')
+        .replace(/,.*/, ''); // fallback: strip after first comma
+    }
+    function countdown(t0, status) {
+      if (!t0) return { str:'TBD', cls:'cd-yellow' };
+      const sl = (status||'').toLowerCase();
+      if (sl.includes('hold')) return { str:'ON HOLD', cls:'cd-red' };
+      const diff = new Date(t0) - new Date();
+      if (diff <= 0) {
+        // Don't show LAUNCHED until LL2 confirms — show elapsed T+ instead
+        const elapsed = Math.floor((new Date() - new Date(t0)) / 1000);
+        const h=Math.floor(elapsed/3600), m=Math.floor((elapsed%3600)/60), s=elapsed%60;
+        return { str:`T+${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`, cls:'cd-red' };
+      }
+      const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      const str = d>0
+        ? `T-${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `T-${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return { str, cls: diff<3600000?'cd-red':diff<86400000?'cd-yellow':'cd-green' };
+    }
+    function eventIcon(type) {
+      const t=(type||'').toLowerCase();
+      if(t.includes('eva')||t.includes('spacewalk')) return {cls:'icon-eva',  char:'◈'};
+      if(t.includes('undock')||t.includes('docking')) return {cls:'icon-dock', char:'⊞'};
+      if(t.includes('press')||t.includes('brief'))    return {cls:'icon-press',char:'⊡'};
+      if(t.includes('land')||t.includes('splash'))    return {cls:'icon-land', char:'▽'};
+      return {cls:'icon-default',char:'◇'};
+    }
+
+    // ── Countdown tickers ─────────────────────────────────────────────────────
+    const cdEls = {}; // keyed by launch ID, stores {dayEl, hmsEl, t0, status}
+    function updateCdEls(dayEl, hmsEl, t0, status) {
+      if (!t0) { dayEl.textContent = 'TBD'; hmsEl.textContent = ''; return; }
+      const sl = (status||'').toLowerCase();
+      if (sl.includes('hold')) { dayEl.textContent = 'ON HOLD'; hmsEl.textContent = ''; dayEl.className='lc-days cd-red'; hmsEl.className='lc-hms cd-red'; return; }
+      const diff = new Date(t0) - new Date();
+      if (diff <= 0) {
+        const elapsed = Math.floor((new Date() - new Date(t0)) / 1000);
+        const h=Math.floor(elapsed/3600), m=Math.floor((elapsed%3600)/60), s=elapsed%60;
+        dayEl.textContent = 'T+'; dayEl.className = 'lc-days cd-red';
+        hmsEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; hmsEl.className = 'lc-hms cd-red';
+        return;
+      }
+      const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
+      const m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      const cls = diff<3600000?'cd-red':diff<86400000?'cd-yellow':'cd-green';
+      dayEl.textContent = d > 0 ? d + (d===1?' DAY':' DAYS') : 'TODAY';
+      dayEl.className = 'lc-days'; // always white
+      hmsEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      hmsEl.className = 'lc-hms ' + cls; // colored by urgency
+    }
+    function startTicker() {
+      setInterval(() => {
+        Object.values(cdEls).forEach(({dayEl, hmsEl, t0, status}) => updateCdEls(dayEl, hmsEl, t0, status));
+        const first = Object.values(cdEls)[0];
+        if (first) document.getElementById('ss-next').textContent = countdown(first.t0, first.status).str;
+      }, 1000);
+    }
+
+    // ── Render upcoming ───────────────────────────────────────────────────────
+    function renderUpcoming(launches) {
+      const row = document.getElementById('upcoming-row');
+      const upcoming = launches.filter(l => {
+        if (!l.t0) return false;
+        const sl = (l.status||'').toLowerCase();
+        if (sl.includes('hold')) return true;   // holds always shown even past T-0
+        return new Date(l.t0) > new Date();
+      });
+      if (!upcoming.length) { row.innerHTML='<div class="loading-msg">NO UPCOMING LAUNCHES</div>'; return; }
+      const cards = upcoming.slice(0,5).map(l => {
+        const sl  = (l.status||'').toLowerCase();
+        const cls = sl.includes('go')?'go':sl.includes('hold')?'hold':'tbd';
+        const ac  = sl.includes('go')?'#00e87a':sl.includes('hold')?'#ff4422':'#ffd93d';
+        const sc  = cls;
+        const st  = sl.includes('go')?'GO':sl.includes('hold')?'HOLD':'TBD';
+        const cd  = countdown(l.t0, l.status);
+        const veh = escHtml((l.vehicle||'')
+          .replace('Block 5','').replace('Falcon ','F')
+          .replace('South Korean ADD Solid-Fuel SLV','ADD SLV')
+          .replace('Solid Fuel','SF').replace('Liquid Fuel','LF')
+          .replace('Long March ','LM-').replace('Soyuz ','Soyuz-')
+          .trim());
+        const nm  = l.name||'TBD';
+        const pipeIdx = nm.indexOf(' | ');
+        const missionRaw = (pipeIdx >= 0 ? nm.slice(pipeIdx + 3) : nm)
+          .replace(/\s*\(.*?\)/g, '')
+          .replace('Starlink Group ', 'Starlink ')
+          .replace(/ Mission$/, '')
+          .replace(/ Satellite$/, '')
+          .trim();
+        const missionName = escHtml(missionRaw);
+        const locTxt  = escHtml(shorten(l.location || l.pad || ''));
+        const dateTxt = escHtml(fmtDate(l.t0));
+        let slipInline = '', origDateHtml = '';
+        if (l.original_t0 && l.original_t0 !== l.t0) {
+          const slipMs  = new Date(l.t0) - new Date(l.original_t0);
+          const absMs   = Math.abs(slipMs);
+          const slipD   = Math.floor(absMs / 86400000);
+          const slipH   = Math.floor((absMs % 86400000) / 3600000);
+          const slipM   = Math.floor((absMs % 3600000) / 60000);
+          const totalM  = Math.floor(absMs / 60000);
+          if (totalM >= 5) {
+            const slipStr = slipD > 0 ? `+${slipD}d` : slipH > 0 ? `+${slipH}h` : `+${slipM}m`;
+            slipInline   = `<span class="lc-slip-badge">DELAYED</span><span class="lc-slip-amt">${slipStr}</span>`;
+            origDateHtml = `<span class="lc-date-orig">${escHtml(fmtDate(l.original_t0))}</span>`;
+          }
+        }
+        const lid = l.id||'';
+        const t0Esc = escHtml(l.t0||''), stEsc = escHtml(l.status||'');
+        const d0 = Math.floor(Math.max(0, new Date(l.t0) - new Date()) / 86400000);
+        const daysInit = escHtml(d0 > 0 ? d0 + (d0===1?' DAY':' DAYS') : 'TODAY');
+        return `<div class="launch-card ${cls}" data-lid="${lid}" data-lname="${escHtml(nm)}">
+          <div class="lc-accent" style="background:${ac};"></div>
+          <div class="lc-status"><div class="status-dot ${sc}"></div><div class="status-text" style="color:${ac};">${st}</div><div class="lc-status-date">${origDateHtml}${dateTxt}</div></div>
+          <div class="lc-date-loc">${locTxt}</div>
+          <div class="lc-name">${missionName}</div>
+          <div class="lc-vehicle">${veh}</div>
+          <div class="lc-days" data-t0="${t0Esc}" data-status="${stEsc}">${daysInit}</div>
+          <div class="lc-hms ${cd.cls}"></div>
+          <div class="lc-footer">${slipInline}${slipInline ? '' : '<div class="lc-detail-hint">· DETAILS</div>'}</div>
+        </div>`;
+      });
+      row.innerHTML = cards.join('');
+      // Clear stale DOM refs before repopulating to prevent memory leak
+      Object.keys(cdEls).forEach(k => delete cdEls[k]);
+      row.querySelectorAll('.launch-card[data-lid]').forEach((card, i) => {
+        card.addEventListener('click', () => goMission(card.dataset.lid, card.dataset.lname));
+        const dayEl = card.querySelector('.lc-days');
+        const hmsEl = card.querySelector('.lc-hms');
+        if (dayEl && hmsEl) {
+          const t0 = dayEl.dataset.t0;
+          const status = dayEl.dataset.status || '';
+          if (t0) {
+            cdEls[i] = { dayEl, hmsEl, t0, status };
+            updateCdEls(dayEl, hmsEl, t0, status);
+          }
+        }
+      });
+      document.getElementById('ss-upcoming').textContent = upcoming.length;
+      if (upcoming[0]?.t0) document.getElementById('ss-next').textContent = countdown(upcoming[0].t0).str;
+    }
+
+    // ── Render leaderboard ────────────────────────────────────────────────────
+    function renderLeaderboard(launches) {
+      const counts = {};
+      const now = new Date();
+      // Only count launches that have already happened
+      const past = launches.filter(l => {
+        const t0 = l.window_start || l.net || l.t0;
+        return t0 && new Date(t0) < now;
+      });
+      past.forEach(l => {
+        let p = l.launch_service_provider?.name||l.provider||'Unknown';
+        p = p.replace('Space Exploration Technologies Corp.','SpaceX')
+             .replace('United Launch Alliance','ULA')
+             .replace('China Aerospace Science and Technology Corporation','CASC')
+             .replace('China Aerospace Science & Industry Corporation','CASIC');
+        counts[p] = (counts[p]||0)+1;
+      });
+      const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const max = sorted[0]?.[1]||1;
+      document.getElementById('lb-total').textContent = past.length;
+      const rCls  = ['rank-1','rank-2','rank-3','rank-n','rank-n'];
+      const rCol  = ['#00e87a','#4a9ede','#4a9ede','#4a9ede','#4a9ede'];
+      document.getElementById('lb-rows').innerHTML = sorted.map(([name,count],i)=>`
+        <div class="lb-row">
+          <div class="lb-rank ${rCls[i]}">${i+1}</div>
+          <div class="lb-name">${escHtml(name)}</div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(count/max*100)}%;background:${rCol[i]};"></div></div>
+          <div class="lb-count">${Number(count)}</div>
+        </div>`).join('');
+    }
+
+    // ── Render events ─────────────────────────────────────────────────────────
+    function renderEvents(events) {
+      const list = document.getElementById('events-list');
+      if (!events.length) { list.innerHTML='<div class="loading-msg">NO EVENTS</div>'; return; }
+      list.innerHTML = events.slice(0,5).map(e => {
+        const ic   = eventIcon(e.type?.name||'');
+        const loc  = escHtml((e.location||'').replace('International Space Station','ISS').slice(0,22));
+        const name = escHtml(e.name||'Unknown Event');
+        const type = escHtml((e.type?.name||'EVENT').toUpperCase());
+        const meta = [type, loc].filter(Boolean).join(' · ');
+        return `<div class="event-row">
+          <div class="event-icon ${ic.cls}">${ic.char}</div>
+          <div class="event-info">
+            <div class="event-name">${name}</div>
+            <div class="event-meta">${meta}</div>
+          </div>
+          <div class="event-date">
+            <div class="event-day">${fmtDate(e.date)}</div>
+            <div class="event-time">${fmtTime(e.date)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function goMission(id, name) {
+      const url = `/mission?id=${id}&name=${encodeURIComponent(name)}&from=/launches`;
+      if (window.parent !== window && window.parent.showPage) {
+        window.parent.showPage(url);
+      } else {
+        window.location = url;
+      }
+    }
+
+    // ── Load ──────────────────────────────────────────────────────────────────
+    async function loadAll() {
+      let data = {}, fetchOk = false;
+      try { data = await (await fetch('/api/data')).json(); fetchOk = true; } catch(e) {}
+      settings = data.settings || settings;
+
+      const age = data.age_seconds || 0;
+      const staleBar = document.getElementById('stale-bar');
+      const staleMsg = document.getElementById('stale-msg');
+      if (!fetchOk) {
+        staleMsg.textContent = '⚠ CANNOT REACH PI — CHECK CONNECTION';
+        staleBar.classList.add('visible');
+      } else if (age > 3600 && age < 604800) {
+        const h = Math.floor(age/3600), m = Math.floor((age%3600)/60);
+        staleMsg.textContent = `⚠ DATA STALE · LAST UPDATE ${h > 0 ? h+'H ' : ''}${m}M AGO`;
+        staleBar.classList.add('visible');
+      } else {
+        staleBar.classList.remove('visible');
+      }
+
+      document.getElementById('top-date').textContent =
+        new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
+      const useLocal = settings.time_format === 'local';
+      const tz = useLocal ? undefined : 'UTC';
+      const tzLabel = useLocal ? 'LOCAL' : 'UTC';
+      document.getElementById('ss-updated').textContent =
+        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:tz,hour12:false})+' '+tzLabel;
+
+      const upcoming = data.launches || [];
+      renderUpcoming(upcoming);
+
+      const yr = data.year_launches || [];
+      renderLeaderboard(yr.length ? yr : upcoming);
+
+      const events = data.events || [];
+      if (events.length) renderEvents(events);
+      else document.getElementById('events-list').innerHTML='<div class="loading-msg">NO EVENTS</div>';
+    }
+
+    startTicker();
+    loadAll();
+  </script>
+<script src="/static/js/notify.js"></script>
+</body>
+</html>
