@@ -72,8 +72,9 @@ const IMG = {};
 // Decode cache keyed by FILE so two names pointing at the same file
 // (launchTower + launchPad, rocket_generic + rocket_falcon9) share one decoded
 // bitmap instead of decoding it twice.
-const _imgByFile   = {};
+const _imgByFile     = {};
 const _rocketPending = {};
+const _rocketLastUsed = {};   // rocket key -> last time it was asked for
 
 function _loadImage(file) {
   if (_imgByFile[file]) return _imgByFile[file];
@@ -91,12 +92,38 @@ function _loadImage(file) {
 // handles a missing IMG[key] (they fall back to drawGenericRocket), so the first
 // frame or two after a new rocket appears just draws the fallback.
 function ensureRocket(key) {
-  if (!key || key in IMG || _rocketPending[key]) return;
-  const file = ROCKET_ASSETS[key];
-  if (!file) return;
+  if (!key || !(key in ROCKET_ASSETS)) return;
+  _rocketLastUsed[key] = Date.now();            // mark as in-use (before early return)
+  if (key in IMG || _rocketPending[key]) return;
   _rocketPending[key] = true;
-  _loadImage(file).then(img => { IMG[key] = img; delete _rocketPending[key]; });
+  _loadImage(ROCKET_ASSETS[key]).then(img => { IMG[key] = img; delete _rocketPending[key]; });
 }
+
+// Drop rocket images nobody has asked for recently, so memory stays bounded at
+// the 1-2 actually on screen instead of piling up as launches come and go.
+// Core assets are never touched. During sleep mode no rocket is requested, so
+// they all get released and simply reload on wake.
+const ROCKET_TTL_MS = 120000;   // 2 min grace
+function pruneRockets() {
+  const cutoff    = Date.now() - ROCKET_TTL_MS;
+  const liveFiles = new Set(Object.values(CORE_ASSETS));   // core files always live
+  const keep      = new Set();
+  for (const key of Object.keys(ROCKET_ASSETS)) {
+    if ((_rocketLastUsed[key] || 0) > cutoff) {
+      keep.add(key);
+      liveFiles.add(ROCKET_ASSETS[key]);
+    }
+  }
+  for (const key of Object.keys(ROCKET_ASSETS)) {
+    if (!keep.has(key) && key in IMG) delete IMG[key];
+  }
+  // Also release the file-level decode cache, or the bitmap stays referenced.
+  // Guarded by liveFiles so a file shared by two keys isn't dropped while in use.
+  for (const file of Object.keys(_imgByFile)) {
+    if (!liveFiles.has(file)) delete _imgByFile[file];
+  }
+}
+setInterval(pruneRockets, 60000);
 
 function loadAssets() {
   // Core set only — rockets load on demand (see ensureRocket).
