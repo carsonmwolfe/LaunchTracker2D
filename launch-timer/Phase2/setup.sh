@@ -230,12 +230,19 @@ blacklist snd_bcm2835_soc_i2s
 AUDIOEOF
 log "Onboard audio disabled (avoids bcm2835 DMA boot oops)"
 
-# Increase swap to 512MB (default is 100MB — not enough with Chromium on 512MB RAM)
+# Keep swap SMALL (100MB) on purpose. This was briefly raised to 512MB as a
+# "low-RAM optimisation", which backfired badly: swap lives on the SD card, and a
+# large swap lets the kernel limp along thrashing for hours instead of acting.
+# During that thrash everything starves — SSH, networking, touch input and the
+# display all stop responding, so the whole unit looks dead and needs a human to
+# power-cycle it. With a small swap the kernel instead OOM-kills the browser
+# quickly; start.sh's supervisor restarts it and the unit self-heals in ~20s
+# while staying reachable. Small swap = fast recoverable failure, not a dead Pi.
 if [ -f /etc/dphys-swapfile ]; then
-    sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=512/' /etc/dphys-swapfile
+    sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=100/' /etc/dphys-swapfile
     sudo dphys-swapfile setup > /dev/null 2>&1
     sudo dphys-swapfile swapon > /dev/null 2>&1
-    log "Swap set to 512MB"
+    log "Swap set to 100MB (small on purpose — see comment)"
 fi
 
 # ── 8. Cron jobs ─────────────────────────────────────────────────────────────

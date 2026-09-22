@@ -17,14 +17,22 @@
 //  Add real PNGs to /static/assets/ with these exact filenames and they will
 //  be used automatically.  Anything that fails to load falls back gracefully.
 // ─────────────────────────────────────────────────────────────────────────────
-const ASSETS = {
-  // Landscape / structures
+// Always-on-screen structures — preloaded at boot.
+const CORE_ASSETS = {
   vab:             'ground-VAB.png',
   launchTower:     'ground-LaunchPad.png',
   launchPad:       'ground-LaunchPad.png',
   floodlight:      'ground-floodlight.png',
   countdownClock:  'ground-countdownclock.png',  // New countdown clock display
   mlp:             'ground-MLP.png',
+  moon:            'moon.png',
+};
+
+// Rocket assets — 27 of them, but only the CURRENT launch's rocket is ever drawn.
+// Preloading them all cost ~70MB of decoded bitmaps (a 666x1000 PNG is ~2.7MB of
+// raw pixels no matter how small the file compresses to), which does not fit
+// alongside WebKit on a 512MB Pi. These now load on demand via ensureRocket().
+const ROCKET_ASSETS = {
   rocket_falcon9:   'rocket-falcon9.png',
   rocket_atlas:     'rocket-atlasV.png',
   rocket_vulcan:    'rocket-vulcan.png',
@@ -53,21 +61,48 @@ const ASSETS = {
   rocket_kinetica:     'rocket-Kinetica.png',
   rocket_falcon1st:    'rocket-Falcon1st.png',
   rocket_placeholder:  'rocket-placeholder.png',
-  moon:                'moon.png',
 };
 
-// Loaded Image objects (null = not yet loaded / unavailable)
+// Full name -> file map, kept for any consumer that wants it.
+const ASSETS = { ...CORE_ASSETS, ...ROCKET_ASSETS };
+
+// Loaded Image objects. undefined = not loaded yet, null = tried and unavailable.
 const IMG = {};
 
+// Decode cache keyed by FILE so two names pointing at the same file
+// (launchTower + launchPad, rocket_generic + rocket_falcon9) share one decoded
+// bitmap instead of decoding it twice.
+const _imgByFile   = {};
+const _rocketPending = {};
+
+function _loadImage(file) {
+  if (_imgByFile[file]) return _imgByFile[file];
+  _imgByFile[file] = new Promise(resolve => {
+    const img = new Image();
+    img.onload  = () => resolve(img);
+    img.onerror = () => resolve(null);   // graceful fallback
+    img.src = `/static/assets/${file}`;
+  });
+  return _imgByFile[file];
+}
+
+// Load a rocket image the first time it's actually needed. Safe to call every
+// frame — it no-ops once loaded or already in flight. Every caller already
+// handles a missing IMG[key] (they fall back to drawGenericRocket), so the first
+// frame or two after a new rocket appears just draws the fallback.
+function ensureRocket(key) {
+  if (!key || key in IMG || _rocketPending[key]) return;
+  const file = ROCKET_ASSETS[key];
+  if (!file) return;
+  _rocketPending[key] = true;
+  _loadImage(file).then(img => { IMG[key] = img; delete _rocketPending[key]; });
+}
+
 function loadAssets() {
+  // Core set only — rockets load on demand (see ensureRocket).
   return Promise.all(
-    Object.entries(ASSETS).map(([key, file]) =>
-      new Promise(resolve => {
-        const img = new Image();
-        img.onload  = () => { IMG[key] = img; resolve(); };
-        img.onerror = () => { IMG[key] = null;  resolve(); };   // graceful fallback
-        img.src = `/static/assets/${file}`;
-      })
+    Object.entries(CORE_ASSETS).map(([key, file]) =>
+      _loadImage(file).then(img => { IMG[key] = img; })
     )
   );
 }
@@ -843,7 +878,16 @@ function drawCars() {
 // rw at that scale ≈ 80px → center x ≈ 264 + 40 = 304
 
 
+// Resolve the rocket asset key AND kick off its lazy load. Every caller goes
+// through here before reading IMG[key], so hooking the load here covers all of
+// them without touching the draw code.
 function getRocketAssetKey(vehicle) {
+  const key = _resolveRocketAssetKey(vehicle);
+  ensureRocket(key);
+  return key;
+}
+
+function _resolveRocketAssetKey(vehicle) {
   if (!vehicle) return 'rocket_generic';
   const v = vehicle.toLowerCase();
   if (v.includes('starship'))  return 'rocket_starship';
