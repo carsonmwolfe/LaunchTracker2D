@@ -24,6 +24,27 @@ trap 'rm -f "$LOCK_FILE"' EXIT
 touch "$LOCK_FILE"
 date -u '+%Y-%m-%dT%H:%M:%SZ' > /home/pi/.rangetrack_last_check
 
+# ── Retire the nightly 4am reboot ──────────────────────────────────────────────
+# On these units the 4am reboot was the moment they dropped offline (some boots
+# come up without network until the next one), and start.sh now restarts a dead
+# browser itself. This runs on every hourly check, before the up-to-date exit,
+# because the run that pulls this change is still executing the old copy of this
+# script (bash keeps reading the file it opened), which re-adds the line once.
+# Only rewrites the crontab when it was read successfully and has the line, so a
+# failed `crontab -l` can never wipe the hourly update entry.
+if CURRENT_CRON=$(crontab -l 2>/dev/null) && echo "$CURRENT_CRON" | grep -q "rangetrack nightly reboot"; then
+    echo "$CURRENT_CRON" | grep -v "rangetrack nightly reboot" | crontab - \
+        && echo "$LOG_PREFIX Removed nightly 4am reboot from crontab"
+fi
+
+# ── WiFi watchdog ──────────────────────────────────────────────────────────────
+# Reconnects when NetworkManager has given up on every network (see
+# wifi_watchdog.sh). Also runs on every hourly check, before the up-to-date exit,
+# for the same reason as above. The installer writes only what changed, so it's
+# silent unless something was installed or failed.
+WD_INSTALLER="$REPO_DIR/launch-timer/Phase2/install_wifi_watchdog.sh"
+[ -f "$WD_INSTALLER" ] && bash "$WD_INSTALLER" 2>&1 | sed "s/^/$LOG_PREFIX /"
+
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 
 if [ ! -d "$REPO_DIR/.git" ]; then
@@ -132,12 +153,11 @@ chmod +x "$REPO_DIR/launch-timer/Phase2/start.sh"
 
 PHASE2="$REPO_DIR/launch-timer/Phase2"
 
-# Ensure the nightly 4am reboot is installed (single self-heal — clears any
-# wedged state overnight). health.py is intentionally NOT re-added: Flask is now
+# Strip retired cron jobs. The nightly 4am reboot is no longer installed (see the
+# note near the top). health.py is intentionally NOT re-added: Flask is now
 # supervised by systemd (rangetrack-server.service), and health.py would fight it.
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "health.py" | grep -v "webkit_launch" | grep -v "rangetrack nightly reboot" > "$CRON_TMP"
-echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" >> "$CRON_TMP"
 crontab "$CRON_TMP" && echo "$LOG_PREFIX Cron jobs provisioned"
 rm -f "$CRON_TMP"
 
@@ -196,11 +216,15 @@ if [ "$CUR_REG" != "$WIFI_COUNTRY" ]; then
     echo "$LOG_PREFIX WiFi country set to $WIFI_COUNTRY (enables 5GHz)"
 fi
 
-# WiFi reliability: on every saved wifi profile, disable power-save and never
-# give up reconnecting (NM's default gives up after 4 tries, leaving the unit
-# offline until reboot). nmcli only — on these units sudo is passwordless ONLY
-# for a whitelist (nmcli, systemctl restart NM, reboot...), so sudo tee/iw writes
-# silently fail. Idempotent, so new profiles get fixed on the next update.
+# WiFi reliability: on every saved wifi profile, disable power-save and retry
+# autoconnect forever. NOTE: autoconnect-retries does NOT stop NetworkManager from
+# giving up after a timed-out reconnect: that failure blocks the network as
+# "no-secrets", which this setting doesn't touch (seen on a field unit
+# 2026-10-16: a network that had it still sat blocked for 16 hours).
+# wifi_watchdog.sh is what handles that. Also, the WiFi screen recreates a
+# profile when you connect, which drops these settings until the next update.
+# nmcli only — on some units sudo is passwordless ONLY for a whitelist (nmcli,
+# systemctl restart NM, reboot...), so sudo tee/iw writes silently fail.
 nmcli -t -f NAME,TYPE con show 2>/dev/null | awk -F: '$2=="802-11-wireless"{print $1}' | while read -r P; do
     sudo nmcli connection modify "$P" 802-11-wireless.powersave 2 connection.autoconnect-retries 0 2>/dev/null || true
 done

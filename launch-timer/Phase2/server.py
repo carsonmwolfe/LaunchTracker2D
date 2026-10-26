@@ -1498,6 +1498,43 @@ def wifi_restart():
         print(f'[{_ts()}] NetworkManager restart failed: {e}')
         return jsonify({'ok': False, 'error': str(e)})
 
+# Telling a wrong password apart from a WiFi chip that simply failed to connect.
+# NetworkManager reports both as "Secrets were required": after a timed-out attempt
+# it asks for new secrets, and with no one to ask, fails exactly as for a bad key.
+# And the Pi's WiFi driver (brcmfmac) reports EVERY failed connect as status 16
+# "auth timeout", whatever the real cause. The log is what separates them: with a
+# wrong key the Pi does associate, then wpa_supplicant's own 4-way handshake fails
+# (it runs on the Pi here, not in the chip); when the chip is stuck it never
+# associates at all. Seen on a field unit 2026-10-25: 11x ASSOC-REJECT
+# status_code=16 with bssid 00:00:00:00:00:00, no handshake, and a reboot fixed it.
+_WIFI_BAD_KEY_MARKERS = ('pre-shared key may be incorrect', '4-way handshake failed',
+                         'reason=wrong_key', 'disconnected during association, asking for new key')
+_WIFI_NO_CONNECT_MARKERS = ('association took too long', 'ctrl-event-assoc-reject',
+                            'ctrl-event-auth-reject', 'status_code=', 'reason=conn_failed')
+
+def _classify_wifi_failure(nmcli_text, log_text):
+    """'wrong_password', 'no_connect' (never got as far as checking the key) or
+    'other', for a failed connect attempt."""
+    log = (log_text or '').lower()
+    if any(m in log for m in _WIFI_BAD_KEY_MARKERS):
+        return 'wrong_password'
+    if any(m in log for m in _WIFI_NO_CONNECT_MARKERS):
+        return 'no_connect'
+    nm = (nmcli_text or '').lower()
+    if any(k in nm for k in ('secret', 'psk', '(7)', 'pre-shared', 'invalid password')):
+        return 'wrong_password'   # no log evidence either way: previous behaviour
+    return 'other'
+
+def _wifi_log_since(t0):
+    """NetworkManager + wpa_supplicant journal since epoch t0 (best effort)."""
+    try:
+        return subprocess.run(
+            ['journalctl', '-u', 'NetworkManager', '-u', 'wpa_supplicant',
+             '--since', f'@{int(t0)}', '--no-pager', '--output=cat'],
+            capture_output=True, text=True, timeout=5).stdout
+    except Exception:
+        return ''
+
 @app.route('/api/wifi/connect', methods=['POST'])
 def wifi_connect():
     data      = request.get_json() or {}
@@ -1571,15 +1608,14 @@ def wifi_connect():
         result, connected = _attempt(1)
 
         # Fail fast on a wrong password — retrying an auth failure just doubles the
-        # wait. Only retry a NON-auth failure (flaky association).
+        # wait. Retry once on anything else (a connect that never got as far as
+        # checking the key, or a flaky association).
         if not connected:
-            err_txt = (result.stderr + result.stdout).lower()
-            wrong_pw = any(k in err_txt for k in
-                           ('secret', 'psk', '(7)', 'pre-shared', 'invalid password'))
-            if wrong_pw:
-                _wlog('classified as WRONG PASSWORD — failing fast (no retry)')
+            kind = _classify_wifi_failure(result.stderr + result.stdout, _wifi_log_since(t_start))
+            if kind == 'wrong_password':
+                _wlog('classified as WRONG PASSWORD (key rejected in the handshake) — failing fast (no retry)')
             else:
-                _wlog('classified as association/other failure — retrying once')
+                _wlog(f'classified as {kind} (not a password problem) — retrying once')
                 subprocess.run(['sudo', 'nmcli', 'dev', 'wifi', 'rescan'],
                                capture_output=True, timeout=10)
                 time.sleep(2)
@@ -1608,8 +1644,13 @@ def wifi_connect():
         except Exception as je:
             _wlog(f'journal read error: {je}')
 
-        _wlog(f'❌ FAILED after {round(time.time()-t_start,1)}s — EXACT ERROR: {err[:200]}')
-        return jsonify({'ok': False, 'error': err or 'Could not connect'})
+        kind = _classify_wifi_failure(result.stderr + result.stdout, _wifi_log_since(t_start))
+        _wlog(f'❌ FAILED after {round(time.time()-t_start,1)}s ({kind}) — EXACT ERROR: {err[:200]}')
+        if kind == 'wrong_password':
+            return jsonify({'ok': False, 'kind': kind, 'error': 'Wrong password — the router rejected the key'})
+        if kind == 'no_connect':
+            return jsonify({'ok': False, 'kind': kind, 'error': "Couldn't connect — not a password problem"})
+        return jsonify({'ok': False, 'kind': kind, 'error': err or 'Could not connect'})
 
     except subprocess.TimeoutExpired:
         _wlog(f'❌ TIMED OUT after {round(time.time()-t_start,1)}s (nmcli did not return within 30s)')

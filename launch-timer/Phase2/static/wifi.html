@@ -481,6 +481,11 @@
       if (r.includes('802.1x') || r.includes('enterprise') || r.includes('eap')) {
         return 'Enterprise WiFi not supported — needs IT setup';
       }
+      // The server checked the log: the attempt never got as far as checking the
+      // key (the WiFi chip couldn't connect). Must come before the password test.
+      if (r.includes('not a password problem')) {
+        return "Couldn't connect — not a password problem. It keeps retrying on its own; restarting the Pi also works";
+      }
       // Only call it a password problem on genuine auth failures — not on the
       // generic "802-11" string that appears in nearly every NM WiFi error.
       if (r.includes('secret') || r.includes('psk') || r.includes('pre-shared') ||

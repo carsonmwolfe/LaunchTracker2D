@@ -1,0 +1,180 @@
+# Real NetworkManager + wpa_supplicant lines from a field unit,
+# boot of 2026-10-25 08:02, captured by rtmon. WiFi chip failed to connect; a
+# reboot later fixed it. Trimmed to WiFi lines. PSKs are logged as <hidden>.
+2026-10-25T08:02:10-04:00 rangetrack1 wpa_supplicant[714]: Successfully initialized wpa_supplicant
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.1702] device (wlan0): driver supports Access Point (AP) mode
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.1730] manager: (wlan0): new 802.11 Wi-Fi device (/org/freedesktop/NetworkManager/Devices/3)
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.1755] device (wlan0): state change: unmanaged -> unavailable (reason 'managed', managed-type: 'external')
+2026-10-25T08:02:25-04:00 rangetrack1 wpa_supplicant[714]: nl80211: kernel reports: Registration to specific type not supported
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7277] device (wlan0): supplicant interface state: internal-starting -> disconnected
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7283] Wi-Fi P2P device controlled by interface wlan0 created
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7330] manager: (p2p-dev-wlan0): new 802.11 Wi-Fi P2P device (/org/freedesktop/NetworkManager/Devices/4)
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7469] device (p2p-dev-wlan0): state change: unmanaged -> unavailable (reason 'managed', managed-type: 'external')
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7600] device (wlan0): state change: unavailable -> disconnected (reason 'supplicant-available', managed-type: 'full')
+2026-10-25T08:02:25-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929745.7639] device (p2p-dev-wlan0): state change: unavailable -> disconnected (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6108] policy: auto-activating connection 'HomeNet 2.4' (3ae692d1-c727-45d6-9383-731f41dfd479)
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6138] device (wlan0): Activation: starting connection 'HomeNet 2.4' (3ae692d1-c727-45d6-9383-731f41dfd479)
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6148] device (wlan0): state change: disconnected -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6182] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6201] device (wlan0): Activation: (wifi) access point 'HomeNet 2.4' has security, but secrets are required.
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6221] device (wlan0): state change: config -> need-auth (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6229] sup-iface[8839748eed404663,0,wlan0]: wps: type pbc start...
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6290] device (wlan0): state change: need-auth -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6302] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:02:28-04:00 rangetrack1 wpa_supplicant[714]: wlan0: WPS-PBC-ACTIVE
+2026-10-25T08:02:28-04:00 rangetrack1 wpa_supplicant[714]: wlan0: WPS-CANCEL
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6473] device (wlan0): Activation: (wifi) connection 'HomeNet 2.4' has security, and secrets exist.  No new secrets needed.
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6494] Config: added 'ssid' value 'HomeNet 2.4'
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6612] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.6613] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:28-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.7247] device (wlan0): supplicant interface state: scanning -> inactive
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.7249] device (p2p-dev-wlan0): supplicant management interface state: scanning -> inactive
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.7440] device (wlan0): supplicant interface state: inactive -> associating
+2026-10-25T08:02:28-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929748.7441] device (p2p-dev-wlan0): supplicant management interface state: inactive -> associating
+2026-10-25T08:02:29-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929749.1636] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929749.1638] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:02:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929749.2593] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929749.2596] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929752.0875] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:02:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929752.0877] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:02:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929752.5529] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929752.5531] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:02:33-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929753.0464] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:33-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929753.0466] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:35-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:35-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929755.8975] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:02:35-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929755.8977] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:02:36-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:36-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929756.3257] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:36-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929756.3260] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:02:37-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929757.3303] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:37-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929757.3304] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:40-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:40-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929760.1547] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:02:40-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929760.1549] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:02:40-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:40-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=1 duration=10 reason=CONN_FAILED
+2026-10-25T08:02:40-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929760.5311] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:40-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929760.5313] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:02:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929765.5446] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929765.5447] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:50-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-REENABLED id=0 ssid="HomeNet 2.4"
+2026-10-25T08:02:50-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:50-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929770.3786] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:02:50-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929770.3788] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:02:50-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:50-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=2 duration=20 reason=CONN_FAILED
+2026-10-25T08:02:50-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929770.7559] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:50-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929770.7562] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929774.1285] device (wlan0): Activation: (wifi) association took too long
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1287] device (wlan0): state change: config -> need-auth (reason 'none', managed-type: 'full')
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1305] sup-iface[8839748eed404663,0,wlan0]: wps: type pbc start...
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929774.1319] device (wlan0): Activation: (wifi) asking for new secrets
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1430] device (wlan0): state change: need-auth -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1550] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1592] device (wlan0): Activation: (wifi) connection 'HomeNet 2.4' has security, and secrets exist.  No new secrets needed.
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.1596] Config: added 'ssid' value 'HomeNet 2.4'
+2026-10-25T08:02:54-04:00 rangetrack1 wpa_supplicant[714]: wlan0: WPS-CANCEL
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.2901] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:02:54-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929774.2903] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:02:57-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:02:57-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929777.1414] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:02:57-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929777.1417] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:02:57-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:02:57-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=1 duration=10 reason=CONN_FAILED
+2026-10-25T08:02:57-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929777.5166] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:02:57-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929777.5171] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:03:07-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929787.5410] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:03:07-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929787.5413] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:03:10-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-REENABLED id=0 ssid="HomeNet 2.4"
+2026-10-25T08:03:10-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:03:10-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929790.3855] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:03:10-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929790.3857] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:03:10-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:03:10-04:00 rangetrack1 wpa_supplicant[714]: BSSID 02:00:00:00:00:b8 ignore list count incremented to 2, ignoring for 10 seconds
+2026-10-25T08:03:10-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=2 duration=20 reason=CONN_FAILED
+2026-10-25T08:03:10-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929790.8269] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:03:10-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929790.8271] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929799.1360] device (wlan0): Activation: (wifi) association took too long
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1361] device (wlan0): state change: config -> need-auth (reason 'none', managed-type: 'full')
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1369] sup-iface[8839748eed404663,0,wlan0]: wps: type pbc start...
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929799.1377] device (wlan0): Activation: (wifi) asking for new secrets
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1415] device (wlan0): state change: need-auth -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1428] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1441] device (wlan0): Activation: (wifi) connection 'HomeNet 2.4' has security, and secrets exist.  No new secrets needed.
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1444] Config: added 'ssid' value 'HomeNet 2.4'
+2026-10-25T08:03:19-04:00 rangetrack1 wpa_supplicant[714]: wlan0: WPS-PBC-ACTIVE
+2026-10-25T08:03:19-04:00 rangetrack1 wpa_supplicant[714]: wlan0: WPS-CANCEL
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1759] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.1770] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:03:19-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:03:19-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.2562] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.2564] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:03:19-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=1 duration=10 reason=CONN_FAILED
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.2766] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:03:19-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929799.2770] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:03:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929809.2907] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:03:29-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929809.2909] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:03:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-REENABLED id=0 ssid="HomeNet 2.4"
+2026-10-25T08:03:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b8 (SSID='HomeNet 2.4' freq=2462 MHz)
+2026-10-25T08:03:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929812.1322] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:03:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929812.1323] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:03:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:03:32-04:00 rangetrack1 wpa_supplicant[714]: BSSID 02:00:00:00:00:b8 ignore list count incremented to 2, ignoring for 10 seconds
+2026-10-25T08:03:32-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet 2.4" auth_failures=2 duration=20 reason=CONN_FAILED
+2026-10-25T08:03:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929812.5446] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:03:32-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929812.5449] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:03:42-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929822.5543] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:03:42-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929822.5545] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:03:44-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929824.1284] device (wlan0): Activation: (wifi) association took too long
+2026-10-25T08:03:44-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929824.1286] device (wlan0): state change: config -> failed (reason 'no-secrets', managed-type: 'full')
+2026-10-25T08:03:44-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929824.1326] device (wlan0): Activation: failed for connection 'HomeNet 2.4'
+2026-10-25T08:03:44-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929824.1339] device (wlan0): state change: failed -> disconnected (reason 'none', managed-type: 'full')
+2026-10-25T08:03:44-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Reject scan trigger since one is already pending
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3716] device (wlan0): supplicant interface state: scanning -> disconnected
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3719] device (p2p-dev-wlan0): supplicant management interface state: scanning -> disconnected
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3759] policy: auto-activating connection 'HomeNet Guest' (3f1bae07-6e62-4db4-be78-c84e803448d4)
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3828] device (wlan0): Activation: starting connection 'HomeNet Guest' (3f1bae07-6e62-4db4-be78-c84e803448d4)
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3842] device (wlan0): state change: disconnected -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.3979] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4054] device (wlan0): Activation: (wifi) access point 'HomeNet Guest' has security, but secrets are required.
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4056] device (wlan0): state change: config -> need-auth (reason 'none', managed-type: 'full')
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4270] device (wlan0): state change: need-auth -> prepare (reason 'none', managed-type: 'full')
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4320] device (wlan0): state change: prepare -> config (reason 'none', managed-type: 'full')
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4370] device (wlan0): Activation: (wifi) connection 'HomeNet Guest' has security, and secrets exist.  No new secrets needed.
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.4374] Config: added 'ssid' value 'HomeNet Guest'
+2026-10-25T08:03:45-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b9 (SSID='HomeNet Guest' freq=2462 MHz)
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.5587] device (wlan0): supplicant interface state: disconnected -> associating
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.5590] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> associating
+2026-10-25T08:03:45-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:03:45-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet Guest" auth_failures=1 duration=10 reason=CONN_FAILED
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.9720] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:03:45-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929825.9722] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:03:55-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929835.9973] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:03:55-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929835.9975] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:03:58-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-REENABLED id=0 ssid="HomeNet Guest"
+2026-10-25T08:03:58-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Trying to associate with 02:00:00:00:00:b9 (SSID='HomeNet Guest' freq=2462 MHz)
+2026-10-25T08:03:58-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929838.8470] device (wlan0): supplicant interface state: scanning -> associating
+2026-10-25T08:03:58-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929838.8472] device (p2p-dev-wlan0): supplicant management interface state: scanning -> associating
+2026-10-25T08:03:59-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=00:00:00:00:00:00 status_code=16
+2026-10-25T08:03:59-04:00 rangetrack1 wpa_supplicant[714]: BSSID 02:00:00:00:00:b9 ignore list count incremented to 2, ignoring for 10 seconds
+2026-10-25T08:03:59-04:00 rangetrack1 wpa_supplicant[714]: wlan0: CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid="HomeNet Guest" auth_failures=2 duration=20 reason=CONN_FAILED
+2026-10-25T08:03:59-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929839.2663] device (wlan0): supplicant interface state: associating -> disconnected
+2026-10-25T08:03:59-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929839.2664] device (p2p-dev-wlan0): supplicant management interface state: associating -> disconnected
+2026-10-25T08:04:09-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929849.3066] device (wlan0): supplicant interface state: disconnected -> scanning
+2026-10-25T08:04:09-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929849.3071] device (p2p-dev-wlan0): supplicant management interface state: disconnected -> scanning
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929851.1309] device (wlan0): Activation: (wifi) association took too long
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929851.1311] device (wlan0): state change: config -> need-auth (reason 'none', managed-type: 'full')
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929851.1410] device (wlan0): Activation: (wifi) asking for new secrets
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929851.1484] device (wlan0): no secrets: No agents were available for this request.
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929851.1486] device (wlan0): state change: need-auth -> failed (reason 'no-secrets', managed-type: 'full')
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <warn>  [1792929851.1547] device (wlan0): Activation: failed for connection 'HomeNet Guest'
+2026-10-25T08:04:11-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929851.1608] device (wlan0): state change: failed -> disconnected (reason 'none', managed-type: 'full')
+2026-10-25T08:04:11-04:00 rangetrack1 wpa_supplicant[714]: wlan0: Reject scan trigger since one is already pending
+2026-10-25T08:04:12-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929852.1050] device (wlan0): supplicant interface state: scanning -> disconnected
+2026-10-25T08:04:12-04:00 rangetrack1 NetworkManager[713]: <info>  [1792929852.1052] device (p2p-dev-wlan0): supplicant management interface state: scanning -> disconnected

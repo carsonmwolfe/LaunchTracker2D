@@ -75,24 +75,22 @@ sudo sed -i 's/^#*RuntimeWatchdogSec=.*/RuntimeWatchdogSec=15/' /etc/systemd/sys
 grep -q '^dtparam=watchdog=on' /boot/firmware/config.txt \
     || echo 'dtparam=watchdog=on' | sudo tee -a /boot/firmware/config.txt >/dev/null
 
-# 8. WIFI — country enables 5GHz; power-save off (persisted) stops random drops
+# 8. WIFI — country enables 5GHz. install_wifi_watchdog.sh sets power-save off
+#    and longer association retries as NetworkManager defaults, and installs the
+#    watchdog that reconnects when NetworkManager has given up on every network.
 sudo raspi-config nonint do_wifi_country "$WIFI_COUNTRY"
-sudo tee /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off >/dev/null <<'PS'
-#!/bin/sh
-case "$1" in wlan*) [ "$2" = "up" ] && /usr/sbin/iw dev "$1" set power_save off ;; esac
-PS
-sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off
+bash "$PHASE2/install_wifi_watchdog.sh"
 
 # 9. FEWER SD WRITES (top cause of corruption): no swap; logs + tmp in RAM
 sudo systemctl disable --now dphys-swapfile 2>/dev/null || true
 grep -q ' /tmp ' /etc/fstab     || echo 'tmpfs /tmp     tmpfs defaults,noatime,size=64M 0 0' | sudo tee -a /etc/fstab >/dev/null
 grep -q ' /var/log ' /etc/fstab || echo 'tmpfs /var/log tmpfs defaults,noatime,size=32M 0 0' | sudo tee -a /etc/fstab >/dev/null
 
-# 10. SELF-MAINTENANCE — hourly update check + nightly 4am reboot (clears any
-#     wedged state). Flask is watched by systemd, so no health.py cron needed.
+# 10. SELF-MAINTENANCE — hourly update check. Flask is watched by systemd and the
+#     browser by start.sh, so no health.py cron and no nightly reboot (the 4am
+#     reboot is where units were dropping offline; any old entry is stripped).
 ( crontab -u pi -l 2>/dev/null | grep -v update.sh | grep -v 'nightly reboot'; \
-  echo "0 * * * * bash $PHASE2/update.sh >> /home/pi/update.log 2>&1"; \
-  echo "0 4 * * * sudo /sbin/reboot   # rangetrack nightly reboot" ) | sudo crontab -u pi -
+  echo "0 * * * * bash $PHASE2/update.sh >> /home/pi/update.log 2>&1" ) | sudo crontab -u pi -
 
 # 11. QUIET BOOT — no rainbow, penguin, cursor, or scrolling text (idempotent)
 grep -q 'logo.nologo' /boot/firmware/cmdline.txt || sudo sed -i \
