@@ -59,7 +59,8 @@ install_if_changed "$ROOT/etc/systemd/system/rangetrack-wifi-watchdog.timer" 644
 Description=Run the RangeTrack WiFi watchdog every 2 minutes
 
 [Timer]
-OnBootSec=3min
+# Early first run: if power was cut during a WiFi off/on, the radio boots off
+OnBootSec=1min
 OnUnitInactiveSec=2min
 
 [Install]

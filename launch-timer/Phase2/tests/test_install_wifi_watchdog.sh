@@ -60,7 +60,7 @@ check "3 files written" "$(ls "$INSTALL_ROOT/$CONF" "$INSTALL_ROOT/$SVC" "$INSTA
 check "auth-retries set" "$(grep -c '^connection.auth-retries=10$' "$INSTALL_ROOT/$CONF")" "1"
 check "powersave off" "$(grep -c '^wifi.powersave=2$' "$INSTALL_ROOT/$CONF")" "1"
 check "service runs the repo's watchdog" "$(grep '^ExecStart=' "$INSTALL_ROOT/$SVC")" "ExecStart=/bin/bash $PHASE2/wifi_watchdog.sh"
-check "timer every 2 min after first 3" "$(grep -E '^(OnBootSec|OnUnitInactiveSec)=' "$INSTALL_ROOT/$TMR" | tr '\n' ' ')" "OnBootSec=3min OnUnitInactiveSec=2min "
+check "timer every 2 min after first 1" "$(grep -E '^(OnBootSec|OnUnitInactiveSec)=' "$INSTALL_ROOT/$TMR" | tr '\n' ' ')" "OnBootSec=1min OnUnitInactiveSec=2min "
 check "files are 644" "$(find "$INSTALL_ROOT/$CONF" "$INSTALL_ROOT/$SVC" "$INSTALL_ROOT/$TMR" -perm 644 | wc -l | tr -d ' ')" "3"
 check "config reloaded once" "$(calls 'nmcli general reload conf')" "1"
 check "daemon-reload once" "$(calls 'systemctl daemon-reload')" "1"
