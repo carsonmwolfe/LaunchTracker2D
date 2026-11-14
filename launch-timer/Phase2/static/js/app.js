@@ -676,7 +676,8 @@ function drawUmbilicals() {
   ];
 
   arms.forEach(({ frac, cableColors }) => {
-    const pivotY = Math.round(cfg.y + launchOffset + cfg.h * frac);
+    // Never above the tower's top, or a tall rocket's top arm floats (Starship)
+    const pivotY = Math.max(TOWER_TOP_Y + 6, Math.round(cfg.y + launchOffset + cfg.h * frac));
 
     // ── Rigid swing arm: grey beam from tower face out to rocket ──
     ctx.strokeStyle = '#777777';
@@ -909,6 +910,9 @@ const ROCKET_CONFIG = {
 const PAD_Y_BASE = 359
 const NOZZLE_X   = 515;
 const NOZZLE_Y   = 280;
+// Top of the tower's visible structure: first opaque row of ground-LaunchPad.png
+// (row 111 of 800) as drawn by drawLaunchTower (y 160, height 250)
+const TOWER_TOP_Y = 195;
 
 function drawBackgroundPad() {
   if (!IMG.launchTower) return;
