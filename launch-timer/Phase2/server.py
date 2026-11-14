@@ -1560,38 +1560,57 @@ def wifi_connect():
 
         # Delete stale saved profile(s) for this SSID so a previous failed attempt's
         # cached wrong password can't poison this one — but NEVER the live connection.
+        # Profiles are handled by UUID: names can contain ':' (escaped by nmcli -t).
+        live_uuid = None   # live profile for this same SSID, reused below
         try:
-            active = subprocess.run(
-                ['nmcli', '-t', '-f', 'NAME', 'con', 'show', '--active'],
-                capture_output=True, text=True, timeout=5).stdout.splitlines()
+            active = set(subprocess.run(
+                ['nmcli', '-t', '-f', 'UUID', 'con', 'show', '--active'],
+                capture_output=True, text=True, timeout=5).stdout.split())
             con_list = subprocess.run(
-                ['sudo', 'nmcli', '-t', '-f', 'NAME,TYPE', 'con', 'show'],
+                ['sudo', 'nmcli', '-t', '-f', 'UUID,TYPE', 'con', 'show'],
                 capture_output=True, text=True, timeout=5
             )
+            def _prop(uuid, prop):
+                out = subprocess.run(['sudo', 'nmcli', '-g', prop, 'con', 'show', 'uuid', uuid],
+                                     capture_output=True, text=True, timeout=5).stdout.strip()
+                return out.replace('\\:', ':').replace('\\\\', '\\')
             for line in con_list.stdout.splitlines():
-                parts = line.split(':')
-                if len(parts) < 2 or parts[1] != '802-11-wireless':
+                uuid, _, ctype = line.partition(':')
+                if ctype != '802-11-wireless':
                     continue
-                profile_name = parts[0]
-                if profile_name in active:
+                profile_name, profile_ssid = _prop(uuid, 'connection.id'), _prop(uuid, '802-11-wireless.ssid')
+                if uuid in active:
+                    if profile_ssid == ssid:
+                        live_uuid = uuid
                     _wlog(f'keeping live profile "{profile_name}" (currently in use)')
                     continue
-                ssid_r = subprocess.run(
-                    ['sudo', 'nmcli', '-g', '802-11-wireless.ssid', 'con', 'show', profile_name],
-                    capture_output=True, text=True, timeout=5
-                )
-                if ssid_r.stdout.strip() == ssid:
-                    d = subprocess.run(['sudo', 'nmcli', 'con', 'delete', profile_name],
+                if profile_ssid == ssid:
+                    d = subprocess.run(['sudo', 'nmcli', 'con', 'delete', 'uuid', uuid],
                                        capture_output=True, text=True, timeout=5)
                     _wlog(f'deleted stale profile "{profile_name}" rc={d.returncode} {d.stderr.strip()}')
         except Exception as del_err:
             _wlog(f'profile cleanup error (non-fatal): {del_err}')
 
-        cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
-        if not is_open:
-            cmd += ['password', password]
-        if is_hidden:
-            cmd += ['hidden', 'yes']
+        if live_uuid:
+            # This network is already saved and in use (connected, or NetworkManager is
+            # still trying it). `nmcli dev wifi connect` would rewrite that profile, which
+            # NetworkManager 1.52 refuses ("802-11-wireless-security.key-mgmt: property
+            # is missing"), so it never even tried to connect (field unit 2026-11-03,
+            # while its WiFi was down). Put the password on the saved profile and bring
+            # it up instead; that also keeps the profile's other settings.
+            _wlog(f'reusing the saved profile for "{ssid}"')
+            if not is_open:
+                m = subprocess.run(['sudo', 'nmcli', 'con', 'modify', 'uuid', live_uuid,
+                                    '802-11-wireless-security.psk', password],
+                                   capture_output=True, text=True, timeout=10)
+                _wlog(f'password set on it: rc={m.returncode} {m.stderr.strip()}')
+            cmd = ['sudo', 'nmcli', '--wait', '25', 'con', 'up', 'uuid', live_uuid]
+        else:
+            cmd = ['sudo', 'nmcli', 'dev', 'wifi', 'connect', ssid]
+            if not is_open:
+                cmd += ['password', password]
+            if is_hidden:
+                cmd += ['hidden', 'yes']
         safe_cmd = ' '.join('****' if (password and c == password) else c for c in cmd)
 
         def _attempt(n):
@@ -1638,6 +1657,8 @@ def wifi_connect():
                     _wlog(f'  nm: {line.strip()}')
             for line in reversed(journal.stdout.splitlines()):
                 l = line.lower()
+                if 'dispatcher' in l:
+                    continue   # a dispatcher script failing isn't why the connect failed
                 if any(k in l for k in ['secret', 'password', 'psk', 'auth', 'wrong', 'failed', 'dhcp', 'timeout']):
                     err = line.strip()
                     break
