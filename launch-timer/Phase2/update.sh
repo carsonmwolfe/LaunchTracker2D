@@ -263,53 +263,32 @@ if [ -f /home/pi/server.log ]; then
     tail -500 /home/pi/server.log > /tmp/server.log.tmp && mv /tmp/server.log.tmp /home/pi/server.log
 fi
 
-# Restart Flask server
+# Restart the Flask server. It runs under systemd (rangetrack-server.service,
+# Restart=always). This used to start its own copy instead, which raced systemd
+# for port 5001: whenever the copy won, the service failed and restarted every
+# ~10 s until the next reboot (53,084 times on a field unit, ~6 s of CPU each).
 echo "$LOG_PREFIX Restarting server..."
-pkill -f "python3 server.py" 2>/dev/null
-fuser -k 5001/tcp 2>/dev/null || true
-sleep 2
-cd "$REPO_DIR/launch-timer/Phase2" || exit 1
-nohup nice -n -10 python3 server.py >> /home/pi/server.log 2>&1 &
-SERVER_PID=$!
-
-# Wait for server to actually respond before reloading Chromium (max 20s)
-for i in $(seq 1 13); do
+pkill -f "python3 server.py" 2>/dev/null   # a copy left by an older version of this script
+sudo systemctl restart rangetrack-server
+for i in $(seq 1 20); do
     if curl -s -o /dev/null http://localhost:5001/ --max-time 1 2>/dev/null; then
-        echo "$LOG_PREFIX Server ready (PID $SERVER_PID)"
+        echo "$LOG_PREFIX Server ready (PID $(systemctl show -p MainPID --value rangetrack-server))"
         break
     fi
     sleep 1.5
 done
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
-fi
+systemctl is-active --quiet rangetrack-server \
+    || echo "$LOG_PREFIX ERROR: server failed to start — check server.log"
 
-# Restart browser — same logic as start.sh: Chromium for >700MB RAM, WebKit2GTK otherwise
-pkill -f webkit_launch.py 2>/dev/null
-pkill -f chromium 2>/dev/null
-sleep 2
-MEM_MB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
-CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium 2>/dev/null)
-if [ "$MEM_MB" -gt 700 ] && [ -n "$CHROMIUM_BIN" ]; then
-    rm -f /home/pi/.config/chromium/Singleton* 2>/dev/null
-    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
-        nohup "$CHROMIUM_BIN" --kiosk --no-memcheck --noerrdialogs --disable-infobars \
-        --disable-features=ChromeWhatsNew,Translate --no-default-browser-check \
-        --disable-background-networking --disable-session-crashed-bubble \
-        --window-size=800,480 --disable-notifications --disable-popup-blocking \
-        --no-first-run --use-angle=gles --ozone-platform=wayland \
-        --password-store=basic --disable-renderer-accessibility \
-        --disable-extensions --disable-sync --disable-component-update \
-        --renderer-process-limit=1 --app="http://localhost:5001/" \
-        >> /home/pi/server.log 2>&1 &
-    echo $! > /tmp/rangetrack_browser.pid
-    echo "$LOG_PREFIX Chromium restarted (PID $!)"
+# Restart the browser so it loads the new pages. start.sh (run by the desktop
+# session) supervises it and relaunches it within ~15 s. This used to launch one
+# itself as well, and when the two overlapped a second browser was left running.
+if pgrep -f "launch-timer/Phase2/start.sh" >/dev/null; then
+    pkill -f webkit_launch.py 2>/dev/null
+    pkill -f chromium 2>/dev/null
+    echo "$LOG_PREFIX Browser stopped; start.sh relaunches it"
 else
-    XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 DISPLAY=:0 \
-        nohup python3 "$PHASE2/webkit_launch.py" http://localhost:5001/ \
-        >> /home/pi/server.log 2>&1 &
-    echo $! > /tmp/rangetrack_browser.pid
-    echo "$LOG_PREFIX WebKit restarted (PID $!)"
+    echo "$LOG_PREFIX WARNING: start.sh isn't running, so the browser wasn't restarted"
 fi
 
 # ── Log the update ─────────────────────────────────────────────────────────────
