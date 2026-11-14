@@ -12,7 +12,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/carsonmwolfe/LaunchTracker2D.git"
-BRANCH="release"
+BRANCH="Phase4"      # the branch every Pi 3B+ runs
 APP_DIR="/home/pi/Desktop/LaunchTracker2D"
 PHASE2="$APP_DIR/launch-timer/Phase2"
 WIFI_COUNTRY="US"

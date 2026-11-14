@@ -6,8 +6,9 @@
 #   0 * * * * /home/pi/Desktop/LaunchTracker2D/launch-timer/Phase2/update.sh >> /home/pi/update.log 2>&1
 
 REPO_DIR="/home/pi/Desktop/LaunchTracker2D"
-# Default to release branch — override by creating /home/pi/.rangetrack_branch
-BRANCH="release"
+# Phase4 is the branch every Pi 3B+ runs. Override per unit by writing a branch
+# name to /home/pi/.rangetrack_branch (the relay's set_branch command does that).
+BRANCH="Phase4"
 if [ -f /home/pi/.rangetrack_branch ]; then
     BRANCH=$(cat /home/pi/.rangetrack_branch | tr -d '[:space:]')
 fi
@@ -63,11 +64,13 @@ fi
 # Check we are on the right branch (or switch to it). Force the switch, discarding
 # local changes to tracked files (e.g. settings.json the app writes) — we hard-reset
 # to origin below anyway, so a dirty tree must not block a channel switch.
+SWITCHED=""
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
     echo "$LOG_PREFIX WARNING: on branch '$CURRENT_BRANCH', switching to '$BRANCH'"
     git fetch origin "$BRANCH" --quiet 2>/dev/null
     git checkout -f -B "$BRANCH" "origin/$BRANCH" --quiet || { echo "$LOG_PREFIX ERROR: cannot checkout $BRANCH"; exit 1; }
+    SWITCHED=1
 fi
 
 # ── Fetch ──────────────────────────────────────────────────────────────────────
@@ -86,7 +89,9 @@ if [ -z "$REMOTE" ]; then
     exit 1
 fi
 
-if [ "$LOCAL" = "$REMOTE" ]; then
+# Right after a branch switch HEAD already matches the remote, but the app that's
+# running is still the old branch's: carry on so the steps below run and restart it.
+if [ "$LOCAL" = "$REMOTE" ] && [ -z "$SWITCHED" ]; then
     echo "$LOG_PREFIX Already up to date ($LOCAL)"
     exit 0
 fi
@@ -197,12 +202,11 @@ sudo systemctl daemon-reload
 sudo systemctl enable rangetrack-server >/dev/null 2>&1
 echo "$LOG_PREFIX rangetrack-server.service provisioned"
 
-# Persist WiFi power-save OFF via a NM dispatcher script (runs as root on connect)
-sudo tee /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off >/dev/null <<'PS'
-#!/bin/sh
-case "$1" in wlan*) [ "$2" = "up" ] && /usr/sbin/iw dev "$1" set power_save off ;; esac
-PS
-sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off
+# WiFi power-save is kept off by NetworkManager's own config (wifi.powersave=2,
+# written by install_wifi_watchdog.sh). The dispatcher script this used to install
+# called /usr/sbin/iw, which isn't installed, so it failed on every WiFi event and
+# its failure lines ended up as the WiFi screen's error message. Remove it.
+sudo rm -f /etc/NetworkManager/dispatcher.d/99-wifi-powersave-off
 
 # Ensure WiFi country is set — REQUIRED for 5GHz to work on Raspberry Pi.
 # Without a regulatory country the radio refuses ALL 5GHz channels, so any
